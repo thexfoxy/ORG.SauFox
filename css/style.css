@@ -1125,6 +1125,450 @@ main {
   }
 }
 
+/* ==========================================================================
+   Login page (login.html)
+   Background: slanted strips of artwork across the whole screen, dimmed.
+   Centre: one card. Left half has the studio logo, Login / Sign Up tabs
+   whose forms slide past each other, and Google / Apple buttons. Right
+   half has three curved layers of artwork.
+   ========================================================================== */
+
+.login-page {
+  min-height: 100vh;
+}
+
+/* ---------- Background strips (built by js/main.js) ---------- */
+
+.login-bg {
+  --n: 6;
+  --slant: 12%;
+  --gap: 6px;
+  --w: calc((100% + var(--slant)) / var(--n));
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.login-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 12, 0.66);
+}
+
+.login-bg__strip {
+  --x0: calc(var(--i) * var(--w));
+  --x1: calc((var(--i) + 1) * var(--w));
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(
+    calc(var(--x0) + var(--gap)) 0,
+    calc(var(--x1) - var(--gap)) 0,
+    calc(var(--x1) - var(--slant) - var(--gap)) 100%,
+    calc(var(--x0) - var(--slant) + var(--gap)) 100%
+  );
+  animation: hero-in 1s var(--ease-out) both;
+  animation-delay: calc(var(--i) * 80ms);
+}
+
+.login-bg__strip:first-child {
+  --x0: -30%;
+}
+
+.login-bg__strip:last-child {
+  --x1: 130%;
+}
+
+.login-bg__art {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--i) * var(--w) - var(--slant));
+  width: calc(var(--w) + var(--slant));
+  background: center / cover no-repeat;
+  animation: slow-drift 24s ease-in-out infinite alternate;
+}
+
+@keyframes slow-drift {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: scale(1.14);
+  }
+}
+
+/* ---------- Layout ---------- */
+
+.login {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  min-height: 100vh;
+  padding: 32px var(--gutter);
+}
+
+.login__brand {
+  font: 400 40px/1 var(--font-logo);
+  text-decoration: none;
+}
+
+.login__brand span {
+  color: var(--muted);
+}
+
+.auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  width: min(980px, 100%);
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  animation: fade-in 0.8s ease 0.2s both;
+}
+
+.auth__main {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  min-width: 0;
+  padding: clamp(24px, 4vw, 48px);
+}
+
+/* ---------- Logo and tabs ---------- */
+
+.auth__top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.auth__logo {
+  display: grid;
+  place-items: center;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--accent);
+  font: 400 36px/1 var(--font-logo);
+  padding-top: 4px;
+}
+
+.auth__tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.auth__tab {
+  position: relative;
+  z-index: 1;
+  height: 44px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: italic 700 20px/1 var(--font-action);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.35s ease;
+}
+
+.auth__tab[aria-selected="true"] {
+  color: var(--text);
+}
+
+.auth__tab-marker {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 9px;
+  background: var(--surface-2);
+  transition: transform 0.55s var(--ease-out);
+}
+
+.auth[data-mode="signup"] .auth__tab-marker {
+  transform: translateX(100%);
+}
+
+/* ---------- Sliding forms ---------- */
+
+.auth__viewport {
+  overflow: hidden;
+  transition: height 0.55s var(--ease-out); /* height set by js/main.js */
+}
+
+.auth__slider {
+  display: flex;
+  align-items: flex-start;
+  width: 200%;
+  transition: transform 0.6s var(--ease-out);
+}
+
+.auth[data-mode="signup"] .auth__slider {
+  transform: translateX(-50%);
+}
+
+.auth__form {
+  display: grid;
+  gap: 16px;
+  flex: 0 0 50%;
+  min-width: 0;
+  transition: opacity 0.45s ease;
+}
+
+.auth__form[inert] {
+  opacity: 0;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field__label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field__box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 50px;
+  padding: 0 6px 0 14px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  border: 1px solid transparent;
+  transition: border-color 0.25s ease;
+}
+
+.field__box:focus-within {
+  border-color: var(--accent);
+}
+
+.field__icon {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+}
+
+.field input {
+  flex: 1;
+  width: 0; /* drop the input's built-in width so it never overflows */
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: 400 15px/1 var(--font-body);
+  outline: none;
+}
+
+.field input::placeholder {
+  color: #5f5d66;
+}
+
+.field input:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  box-shadow: 0 0 0 100px var(--bg) inset;
+}
+
+.field__reveal {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.field__reveal:hover {
+  color: var(--text);
+}
+
+.field__reveal svg {
+  width: 19px;
+  height: 19px;
+}
+
+.field__reveal .eye-shut,
+.field__reveal[aria-pressed="true"] .eye-open {
+  display: none;
+}
+
+.field__reveal[aria-pressed="true"] .eye-shut {
+  display: block;
+}
+
+.auth__message {
+  margin: 0;
+  font-size: 13px;
+  color: #ff8a7a;
+}
+
+.auth__message:empty {
+  display: none;
+}
+
+.auth__message.is-ok {
+  color: #3ecf8e;
+}
+
+.auth__submit {
+  height: 52px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #1a0d04;
+  font: italic 700 21px/1 var(--font-action);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background-color 0.25s;
+}
+
+.auth__submit:hover {
+  background: #ff8c3a;
+}
+
+/* ---------- Or / social ---------- */
+
+.auth__or {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.auth__or::before,
+.auth__or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.auth__social {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: 500 14px/1 var(--font-body);
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+
+.social:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.social svg {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- Curved art layers (right half) ---------- */
+
+.auth__art {
+  position: relative;
+  min-height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.auth__band {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  background: center / cover no-repeat;
+  border-top-left-radius: 100% 100%;
+  box-shadow: 0 0 0 6px var(--surface);
+  transition: top 0.9s var(--ease-out), left 0.9s var(--ease-out);
+}
+
+.auth__band--1 {
+  top: 0;
+  left: 0;
+}
+
+.auth__band--2 {
+  top: 34%;
+  left: 26%;
+}
+
+.auth__band--3 {
+  top: 58%;
+  left: 54%;
+}
+
+/* The inner layers grow a little from the corner when switching to Sign Up. */
+.auth[data-mode="signup"] .auth__band--2 {
+  top: 26%;
+  left: 18%;
+}
+
+.auth[data-mode="signup"] .auth__band--3 {
+  top: 46%;
+  left: 42%;
+}
+
+@media (max-width: 760px) {
+  .auth {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auth__art {
+    display: none;
+  }
+
+  .login-bg {
+    --n: 4;
+    --slant: 18%;
+    --gap: 4px;
+  }
+
+  .login__brand {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 420px) {
+  .auth__social {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1135,7 +1579,10 @@ main {
 
   .cta__char,
   .hero__panel,
-  .slogan__quote {
+  .slogan__quote,
+  .login-bg__strip,
+  .login-bg__art,
+  .auth {
     animation: none;
   }
 }

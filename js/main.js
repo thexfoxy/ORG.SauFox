@@ -512,3 +512,112 @@ const CATALOG = [
     document.addEventListener(type, (e) => { if (!isField(e.target)) e.preventDefault(); })
   );
 })();
+
+// Login page — background strips, curved art layers, Login / Sign Up tabs
+// with sliding forms, and password reveal.
+// There is no account server yet: a valid form only marks this browser as
+// signed in (localStorage) so the header shows the profile button.
+(function loginPage() {
+  const auth = document.querySelector(".auth");
+  if (!auth) return;
+
+  const shuffled = WORKS.slice().sort(() => Math.random() - 0.5);
+
+  // Background strips
+  const bg = document.querySelector(".login-bg");
+  const count = window.matchMedia("(max-width: 760px)").matches ? 4 : 6;
+  bg.style.setProperty("--n", count);
+  shuffled.slice(0, count).forEach((src, i) => {
+    const strip = document.createElement("div");
+    strip.className = "login-bg__strip";
+    strip.style.setProperty("--i", i);
+    const art = document.createElement("span");
+    art.className = "login-bg__art";
+    art.style.backgroundImage = `url("${src}")`;
+    strip.append(art);
+    bg.append(strip);
+  });
+
+  // Curved art layers
+  auth.querySelectorAll(".auth__band").forEach((band, i) => {
+    band.style.backgroundImage = `url("${shuffled[count + i]}")`;
+  });
+
+  // Tabs and sliding forms
+  const tabs = { login: auth.querySelector("#tab-login"), signup: auth.querySelector("#tab-signup") };
+  const forms = { login: auth.querySelector("#form-login"), signup: auth.querySelector("#form-signup") };
+  const viewport = auth.querySelector(".auth__viewport");
+  let mode = location.hash === "#signup" ? "signup" : "login";
+
+  const fitHeight = () => (viewport.style.height = `${forms[mode].offsetHeight}px`);
+
+  const setMode = (next) => {
+    mode = next;
+    auth.dataset.mode = mode;
+    Object.keys(tabs).forEach((key) => {
+      tabs[key].setAttribute("aria-selected", String(key === mode));
+      forms[key].inert = key !== mode;
+    });
+    fitHeight();
+    history.replaceState(null, "", mode === "signup" ? "#signup" : location.pathname + location.search);
+  };
+
+  Object.keys(tabs).forEach((key) => tabs[key].addEventListener("click", () => setMode(key)));
+  window.addEventListener("resize", fitHeight);
+  setMode(mode);
+
+  // Password reveal
+  auth.querySelectorAll(".field__reveal").forEach((button) => {
+    const input = button.parentElement.querySelector("input");
+    button.addEventListener("click", () => {
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      button.setAttribute("aria-pressed", String(show));
+      button.setAttribute("aria-label", show ? "Hide password" : "Show password");
+      input.focus();
+    });
+  });
+
+  // Submitting
+  const say = (el, text, ok) => {
+    el.textContent = text;
+    el.classList.toggle("is-ok", Boolean(ok));
+    fitHeight();
+  };
+
+  const problem = (form) => {
+    for (const input of form.querySelectorAll("input")) {
+      if (input.validity.valid) continue;
+      const name = input.closest(".field").querySelector(".field__label").textContent;
+      input.focus();
+      if (input.validity.valueMissing) return `Enter your ${name.toLowerCase()}.`;
+      if (input.validity.typeMismatch) return "Enter an email address like name@example.com.";
+      if (input.validity.tooShort) return `Use at least ${input.minLength} characters for your password.`;
+      return `Check your ${name.toLowerCase()}.`;
+    }
+    return "";
+  };
+
+  Object.entries(forms).forEach(([key, form]) =>
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const message = form.querySelector(".auth__message");
+      const error = problem(form);
+      if (error) return say(message, error);
+
+      try {
+        localStorage.setItem("saufox.session", form.querySelector('input[type="email"]').value);
+        localStorage.setItem("saufox.hasAccount", "1");
+      } catch (e) {}
+      say(message, key === "login" ? "Welcome back. Taking you home…" : "Account created. Taking you home…", true);
+      setTimeout(() => (location.href = "index.html"), 1100);
+    })
+  );
+
+  const socialMessage = auth.querySelector(".auth__message--social");
+  auth.querySelectorAll(".social").forEach((button) =>
+    button.addEventListener("click", () =>
+      say(socialMessage, `${button.dataset.provider} sign-in isn't connected yet. Use your email for now.`)
+    )
+  );
+})();

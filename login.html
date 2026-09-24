@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login · SauFox Entertainment</title>
+  <meta name="description" content="Log in to SauFox Entertainment or create an account.">
+  <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+  <!-- Background: slanted strips of artwork from the studio's releases,
+       filled at random by js/main.js. -->
+  <div class="login-bg" aria-hidden="true"></div>
+
+  <main class="login">
+    <a class="login__brand" href="index.html">SauFox <span>Entertainment</span></a>
+
+    <div class="auth">
+      <!-- Left: tabs and the two forms, which slide past each other. -->
+      <div class="auth__main">
+        <div class="auth__top">
+          <span class="auth__logo" aria-hidden="true">S</span>
+          <div class="auth__tabs" role="tablist" aria-label="Log in or sign up">
+            <button class="auth__tab" id="tab-login" type="button" role="tab" aria-selected="true" aria-controls="form-login">Login</button>
+            <button class="auth__tab" id="tab-signup" type="button" role="tab" aria-selected="false" aria-controls="form-signup">Sign Up</button>
+            <span class="auth__tab-marker" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <div class="auth__viewport">
+          <div class="auth__slider">
+            <form class="auth__form" id="form-login" role="tabpanel" aria-labelledby="tab-login" novalidate>
+              <label class="field">
+                <span class="field__label">Email</span>
+                <span class="field__box">
+                  <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6 8.5-6"/></svg>
+                  <input id="login-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+                </span>
+              </label>
+
+              <label class="field">
+                <span class="field__label">Password</span>
+                <span class="field__box">
+                  <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
+                  <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Your password" required>
+                  <button class="field__reveal" type="button" aria-label="Show password" aria-pressed="false">
+                    <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="eye-shut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                  </button>
+                </span>
+              </label>
+
+              <p class="auth__message" role="status" aria-live="polite"></p>
+              <button class="auth__submit" type="submit">Login</button>
+            </form>
+
+            <form class="auth__form" id="form-signup" role="tabpanel" aria-labelledby="tab-signup" novalidate>
+              <label class="field">
+                <span class="field__label">Name</span>
+                <span class="field__box">
+                  <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+                  <input id="signup-name" name="name" type="text" autocomplete="name" placeholder="Your name" required>
+                </span>
+              </label>
+
+              <label class="field">
+                <span class="field__label">Email</span>
+                <span class="field__box">
+                  <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6 8.5-6"/></svg>
+                  <input id="signup-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+                </span>
+              </label>
+
+              <label class="field">
+                <span class="field__label">Password</span>
+                <span class="field__box">
+                  <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
+                  <input id="signup-password" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required>
+                  <button class="field__reveal" type="button" aria-label="Show password" aria-pressed="false">
+                    <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="eye-shut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                  </button>
+                </span>
+              </label>
+
+              <p class="auth__message" role="status" aria-live="polite"></p>
+              <button class="auth__submit" type="submit">Create account</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="auth__or"><span>or</span></div>
+
+        <div class="auth__social">
+          <button class="social" type="button" data-provider="Google">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.3c0-.8-.1-1.5-.2-2.3H12v4.3h6c-.3 1.4-1 2.5-2.2 3.3v2.8h3.6c2.1-1.9 3.2-4.8 3.2-8.1z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.9C3.9 20.6 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.8 14.1c-.2-.7-.4-1.4-.4-2.1s.1-1.5.4-2.1V7H2.1C1.4 8.5 1 10.2 1 12s.4 3.5 1.1 5l3.7-2.9z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2C17.5 2.1 15 1 12 1 7.7 1 3.9 3.4 2.1 7l3.7 2.9C6.7 7.3 9.1 5.4 12 5.4z"/></svg>
+            <span>Continue with Google</span>
+          </button>
+          <button class="social" type="button" data-provider="Apple">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9-1.7 0-3.3 1-4.2 2.6-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.7-1-2.7-4.1zM13.9 5c.7-.9 1.2-2 1-3.2-1 .1-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.1 1.2.1 2.4-.6 3.1-1.5z"/></svg>
+            <span>Continue with Apple</span>
+          </button>
+        </div>
+        <p class="auth__message auth__message--social" role="status" aria-live="polite"></p>
+      </div>
+
+      <!-- Right: three curved layers of artwork (1, 2, 3 in the sketch). -->
+      <div class="auth__art" aria-hidden="true">
+        <span class="auth__band auth__band--1"></span>
+        <span class="auth__band auth__band--2"></span>
+        <span class="auth__band auth__band--3"></span>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/main.js" defer></script>
+</body>
+</html>

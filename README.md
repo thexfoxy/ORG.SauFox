@@ -13,6 +13,7 @@ npx serve .
 ## Structure
 
 - `index.html`: home page
+- `login.html`: login / sign-up page
 - `css/style.css`: styles; design tokens live in `:root`
 - `js/main.js`: scripts
 - `assets/`: default avatar, artwork (`works/`), and self-hosted fonts (Great Vibes,
@@ -61,6 +62,12 @@ Home page:
       On hover each box gets a soft light that follows the
       pointer (white on Basic, orange on Premium). Plan features and prices are placeholders.
 
-Login page:
-- [ ] Login / Sign up with sliding switch, email, password with show/hide,
-      Google and Apple sign-in, diagonal artwork background
+Login page (`login.html`):
+- [x] Slanted artwork strips behind everything; a card with the studio logo,
+      Login / Sign Up tabs whose forms slide past each other, email and
+      password (with show / hide), and Google / Apple buttons. Three curved
+      artwork layers fill the card's right half. `login.html#signup` opens
+      the Sign Up tab.
+- [ ] Real accounts: there is no account server yet. A valid form only marks
+      this browser as signed in (localStorage) so the header shows the
+      profile button; Google and Apple buttons say they aren't connected yet.
