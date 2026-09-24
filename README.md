@@ -37,7 +37,7 @@ Home page:
       place, and the text glows softly. Add `?demo=new|returning|member` to
       the URL to preview each state.
 - [x] 2. Hero: full-width collage of seven slanted panels (five on phones)
-      with a deep curved bottom edge. Each load shows a random mix of works,
+      whose bottom edge steps down from left to right in a smooth S-curve. Each load shows a random mix of works,
       and every few seconds one panel crossfades to another. Hovering a panel
       zooms its art and dims the rest. Artwork list: `WORKS` in `js/main.js`
       (placeholders in `assets/works/` for now).

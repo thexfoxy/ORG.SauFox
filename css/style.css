@@ -436,7 +436,8 @@ a {
    Full width with no box around it. js/main.js builds --n panels; each is
    clipped to a parallelogram (top corners at --i and --i + 1 panel widths,
    bottom corners shifted left by --slant). The whole collage is masked so
-   its bottom edge falls away in a deep curve, lowest on the right.
+   its bottom edge runs flat on the left, steps down in a smooth S-curve in
+   the middle, then runs flat again, lower, on the right.
    ========================================================================== */
 
 .hero {
@@ -447,8 +448,8 @@ a {
   height: clamp(380px, 52vw, 720px);
   margin-top: var(--gap);
   overflow: hidden;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520C1060 520 480 430 0 230Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520C1060 520 480 430 0 230Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520H1010C900 520 760 370 662 370H0Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520H1010C900 520 760 370 662 370H0Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
 }
 
 .hero__panel {
