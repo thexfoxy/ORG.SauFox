@@ -74,11 +74,12 @@ Login page (`login.html`):
       profile button; Google and Apple buttons say they aren't connected yet.
 
 Profile page (`profile.html`):
-- [x] Cover: a shorter copy of the home collage. Under its curve, the avatar
-      (the header chip's pinched shape, larger), name, email, membership date
-      and current plan. Tabs: Library, Wishlist, Orders (empty states for
+- [x] The avatar (the header chip's pinched shape, larger) with the name,
+      email, membership date and current plan beside it. Tabs: Library, Wishlist, Orders (empty states for
       now) and Settings (profile photo, name, default currency, log out).
       Signed-out visitors are sent to the login page. The photo also shows in
       the header's profile button, and the currency choice carries over to
       the home page. All of it lives in this browser until there's an
       account server.
+- [ ] Later: a cover image above the profile that subscribers can set
+      themselves, once there are more works to choose from.

@@ -1571,32 +1571,27 @@ main {
 
 /* ==========================================================================
    Profile page (profile.html)
-   A shorter copy of the home collage as the cover; the avatar (the header
-   chip's pinched shape, larger) and the name sit under its curve on the
-   left. Below: Library / Wishlist / Orders / Settings tabs.
+   The avatar (the header chip's pinched shape, larger) with the name,
+   email, membership date and plan beside it. Below: Library / Wishlist /
+   Orders / Settings tabs.
    ========================================================================== */
 
 main.profile-page {
-  --hero-h: clamp(240px, 30vw, 400px);
   padding-bottom: 120px;
 }
 
 .profile-head {
-  position: relative;
-  z-index: 3;
   display: flex;
   align-items: center;
   gap: 24px;
   max-width: 1440px;
-  min-height: calc(var(--hero-h) * 0.2885 - 16px);
-  margin: calc(var(--hero-h) * -0.2885 + 16px) auto 0;
+  margin: clamp(32px, 5vw, 64px) auto 0;
   padding: 0 var(--gutter);
 }
 
 .profile-head__text {
   display: grid;
   gap: 6px;
-  max-width: calc(44% - 174px);
   min-width: 0;
 }
 
@@ -1882,21 +1877,6 @@ main.profile-page {
 
 .settings__logout:hover {
   border-color: rgba(255, 138, 122, 0.5);
-}
-
-@media (max-width: 900px) {
-  main.profile-page {
-    --hero-h: clamp(200px, 44vw, 300px);
-  }
-
-  .profile-head {
-    min-height: 0;
-    margin-top: 24px;
-  }
-
-  .profile-head__text {
-    max-width: none;
-  }
 }
 
 @media (max-width: 520px) {
