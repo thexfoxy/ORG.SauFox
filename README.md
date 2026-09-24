@@ -27,7 +27,9 @@ Home page:
       mouse softly blurs); the right side depends on the visitor:
       - first visit or no account: "Wanna create an account?"
       - has an account but signed out: "Login"
-      - signed in: no button; a profile chip on the left that expands on hover or tap
+      - signed in: no button; on the left a profile button whose top and bottom
+        edges bow downward. On hover or tap the avatar fades in blurred, comes
+        into focus, "Profile" appears over it and the edges straighten.
 
       The button is bare text with no box. Its letters loop orange to white one after another; on hover the
       letters leave one by one, "Sign Up Now" / "Welcome Back" rises in their
