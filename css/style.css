@@ -76,6 +76,25 @@ img {
   max-width: 100%;
 }
 
+/* No text selection or copying, and images can't be dragged out, long-press
+   saved or right-click saved (js/main.js also blocks the menu and copy). */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+img {
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
 a {
   color: inherit;
 }
@@ -463,7 +482,15 @@ main {
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520H1200C900 520 780 370 460 370H0Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
 }
 
+/* The section itself ignores the pointer; only the panels (clipped to their
+   visible shape by js/main.js) respond, so the cards under the curve stay
+   clickable and draggable. */
+.hero {
+  pointer-events: none;
+}
+
 .hero__panel {
+  pointer-events: auto;
   --x0: calc(var(--i) * var(--w));
   --x1: calc((var(--i) + 1) * var(--w));
   position: absolute;
@@ -589,7 +616,7 @@ main {
    A sliding row of cards tucked right under the slogan. Where the hero comes
    further down (on the right), the cards slide underneath it: js/main.js
    masks the row with the hero's curve so the cards fade out as they reach
-   it. Below the row: currency and max-price controls, and prev/next arrows.
+   it. Moved by dragging (mouse) or swiping (touch); currency buttons below.
    Each card: image slider, price strip, separate status box.
    ========================================================================== */
 
@@ -626,11 +653,6 @@ main {
   scroll-snap-type: none;
   scroll-behavior: auto;
   user-select: none;
-}
-
-.works__empty {
-  padding: 48px 0;
-  color: var(--muted);
 }
 
 /* ---------- Controls row ---------- */
@@ -680,57 +702,6 @@ main {
 .segmented button[aria-pressed="true"] {
   background: var(--surface-2);
   color: var(--accent);
-}
-
-.works__range {
-  width: clamp(120px, 14vw, 180px);
-  accent-color: var(--accent);
-}
-
-.works__max {
-  min-width: 9ch;
-  font-size: 13px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.works__count {
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.works__arrows {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.works__arrow {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-  transition: background-color 0.25s, color 0.25s, opacity 0.25s;
-}
-
-.works__arrow:hover {
-  background: var(--surface-2);
-  color: var(--accent);
-}
-
-.works__arrow:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.works__arrow svg {
-  width: 18px;
-  height: 18px;
 }
 
 /* ---------- Card ---------- */
@@ -904,10 +875,6 @@ main {
     padding: 0 var(--gutter);
     scroll-padding: 0 var(--gutter);
   }
-
-  .works__arrows {
-    display: none;
-  }
 }
 
 /* ==========================================================================
@@ -1056,6 +1023,53 @@ main {
 }
 
 /* Always side by side; on small screens everything inside scales down. */
+/* Basic: on hover a soft light follows the pointer across the box, its
+   edge catches the same light, and the box lifts a little. */
+.plan--basic {
+  --mx: 50%;
+  --my: 0%;
+  position: relative;
+  isolation: isolate;
+  transition: transform 0.5s var(--ease-out), border-color 0.3s ease;
+}
+
+.plan--basic::before,
+.plan--basic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+.plan--basic::before {
+  z-index: -1;
+  background: radial-gradient(420px circle at var(--mx) var(--my), rgba(255, 255, 255, 0.12), transparent 65%);
+}
+
+.plan--basic::after {
+  inset: -1px;
+  padding: 1px;
+  background: radial-gradient(320px circle at var(--mx) var(--my), rgba(255, 255, 255, 0.85), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+
+@media (hover: hover) {
+  .plan--basic:hover {
+    transform: translateY(-4px);
+    border-color: transparent;
+  }
+
+  .plan--basic:hover::before,
+  .plan--basic:hover::after {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 760px) {
   .plans__grid {
     gap: 10px;

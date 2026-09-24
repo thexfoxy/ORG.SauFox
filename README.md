@@ -18,6 +18,13 @@ npx serve .
 - `assets/`: default avatar, artwork (`works/`), and self-hosted fonts (Great Vibes,
   Barlow Condensed, Inter; all SIL Open Font License)
 
+## Content protection
+
+Text can't be selected or copied, and images can't be dragged out or saved
+from the right-click / long-press menu (`css/style.css` base rules plus
+`protectContent` in `js/main.js`). This stops casual copying; anything shown
+in a browser can still be captured by a determined visitor.
+
 ## Build progress
 
 Built one section at a time from the hand-drawn sketches.
@@ -44,14 +51,15 @@ Home page:
 - [x] 3. Studio slogan: a short line, "And my success is not but through God."
       (Qur'an 11:88), in the space under the hero's curve
 - [x] 4. Work cards: a sliding row tucked right under the slogan; on the right
-      the cards fade out under the hero's curve. Drag, swipe or use the arrows
-      to move through them. Controls: currency (Auto cycles USD / EUR / Rials,
-      or pin one) and a max-price slider. Each card has an image slider, a
-      price strip and a status box. Data: `CATALOG` in `js/main.js`
-      (placeholder titles and prices for now).
+      the cards fade out under the hero's curve. Moved only by dragging, like a
+      touch screen: swipe on phones, drag with the mouse on desktop (it glides
+      on and settles on a card). Currency buttons below (Auto cycles USD / EUR /
+      Rials, or pin one). Each card has an image slider, a price strip and a
+      status box. Data: `CATALOG` in `js/main.js` (placeholders for now).
 - [x] 5. Subscriptions: Basic and Premium boxes, side by side at every
       screen size. Prices follow the currency chosen above the work cards.
-      Plan features and prices are placeholders.
+      On hover the Basic box gets a soft light that follows the
+      pointer. Plan features and prices are placeholders.
 
 Login page:
 - [ ] Login / Sign up with sliding switch, email, password with show/hide,

@@ -68,6 +68,29 @@
   });
 })();
 
+// The hero's bottom edge, shared by the hero and the work cards. Same shape
+// as the hero's mask in css/style.css, in its 1440 x 520 viewBox: flat at
+// y=370 up to x=460, a cubic down to (1200, 520), then flat. Takes x as a
+// fraction of the hero's width, returns y in viewBox units.
+const heroEdgeY = (() => {
+  const P = [[1200, 520], [900, 520], [780, 370], [460, 370]];
+  const at = (t, k) =>
+    (1 - t) ** 3 * P[0][k] + 3 * (1 - t) ** 2 * t * P[1][k] + 3 * (1 - t) * t ** 2 * P[2][k] + t ** 3 * P[3][k];
+  return (fraction) => {
+    const x = fraction * 1440;
+    if (x <= 460) return 370;
+    if (x >= 1200) return 520;
+    let lo = 0;
+    let hi = 1; // x falls as t rises
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      if (at(mid, 0) > x) lo = mid;
+      else hi = mid;
+    }
+    return at((lo + hi) / 2, 1);
+  };
+})();
+
 // Section 2 — Hero: collage of random artwork from the studio's releases.
 // Placeholders for now: replace or extend WORKS with real artwork
 // (portrait images work best).
@@ -134,8 +157,53 @@ const WORKS = Array.from({ length: 14 }, (_, i) =>
     }, 1600);
   };
 
+  // Clip each panel to exactly what shows: its slanted strip, cut off along
+  // the curved bottom edge. Besides looking the same as the mask, this keeps
+  // the hero from catching clicks and drags meant for the cards that slide
+  // in underneath its curve.
+  const clipPanels = () => {
+    const W = hero.clientWidth;
+    const H = hero.clientHeight;
+    if (!W || !H) return;
+    const css = getComputedStyle(hero);
+    const slant = (parseFloat(css.getPropertyValue("--slant")) / 100) * W;
+    const gap = parseFloat(css.getPropertyValue("--gap"));
+    const panels = [...hero.children];
+    const w = (W + slant) / panels.length;
+    const curve = (x) => (heroEdgeY(x / W) * H) / 520;
+
+    // Where a slanted edge (top x -> bottom x) meets the curve.
+    const meet = (top, bottom) => {
+      const edge = (y) => top + ((bottom - top) * y) / H;
+      let lo = 0;
+      let hi = H;
+      for (let i = 0; i < 20; i++) {
+        const mid = (lo + hi) / 2;
+        if (mid < curve(edge(mid))) lo = mid;
+        else hi = mid;
+      }
+      return [edge(hi), hi];
+    };
+
+    panels.forEach((panel, i) => {
+      const x0 = i === 0 ? -0.3 * W : i * w;
+      const x1 = i === panels.length - 1 ? 1.3 * W : (i + 1) * w;
+      const [rx, ry] = meet(x1 - gap, x1 - slant - gap);
+      const [lx, ly] = meet(x0 + gap, x0 - slant + gap);
+      const points = [[x0 + gap, 0], [x1 - gap, 0], [rx, ry]];
+      for (let x = rx - 8; x > lx; x -= 8) points.push([x, curve(x)]);
+      points.push([lx, ly]);
+      panel.style.clipPath = `polygon(${points.map(([x, y]) => `${x.toFixed(1)}px ${y.toFixed(1)}px`).join(", ")})`;
+    });
+  };
+
   build();
-  narrow.addEventListener("change", build);
+  clipPanels();
+  narrow.addEventListener("change", () => {
+    build();
+    clipPanels();
+  });
+  new ResizeObserver(clipPanels).observe(hero);
   setInterval(swap, SWAP_EVERY);
 })();
 
@@ -164,12 +232,7 @@ const CATALOG = [
   if (!track) return;
 
   const hero = document.querySelector(".hero");
-  const empty = section.querySelector(".works__empty");
-  const count = section.querySelector(".works__count");
-  const range = section.querySelector("#max-price");
-  const maxOut = section.querySelector(".works__max");
   const currencyButtons = [...section.querySelectorAll("[data-currency]")];
-  const arrows = [...section.querySelectorAll(".works__arrow")];
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   const CURRENCIES = ["USD", "EUR", "IRR"];
@@ -276,76 +339,27 @@ const CATALOG = [
   });
 
   // ---------- Currency buttons ----------
-  const filterCurrency = () => (mode === "auto" ? "USD" : mode);
-
   currencyButtons.forEach((button) =>
     button.addEventListener("click", () => {
-      const fraction = (range.value - range.min) / (range.max - range.min || 1);
       mode = button.dataset.currency;
       currencyButtons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
       if (mode !== "auto") cards.forEach((c) => c.showCurrency(CURRENCIES.indexOf(mode)));
       document.dispatchEvent(new CustomEvent("currencymode", { detail: mode }));
-      setupRange(fraction);
     })
   );
 
-  // ---------- Max price filter ----------
-  // The slider works in the chosen currency (USD while on Auto); switching
-  // currency keeps the handle where it was.
-  const setupRange = (fraction = 1) => {
-    const code = filterCurrency();
-    const values = CATALOG.map((w) => w.prices[code]);
-    const stepSize = code === "IRR" ? 100000 : 0.5;
-    const min = Math.floor(Math.min(...values) / stepSize) * stepSize;
-    const max = Math.ceil(Math.max(...values) / stepSize) * stepSize;
-    range.min = min;
-    range.max = max;
-    range.step = stepSize;
-    range.value = min + fraction * (max - min);
-    applyFilter();
-  };
-
-  const applyFilter = () => {
-    const code = filterCurrency();
-    const limit = Number(range.value);
-    maxOut.textContent = money[code](limit);
-    let shown = 0;
-    cards.forEach(({ work, card }) => {
-      const fits = work.prices[code] <= limit;
-      card.hidden = !fits;
-      if (fits) shown++;
-    });
-    count.textContent = shown === cards.length ? `${shown} works` : `${shown} of ${cards.length} works`;
-    empty.hidden = shown > 0;
-    track.scrollLeft = 0;
-    updateArrows();
-  };
-
-  range.addEventListener("input", applyFilter);
-
-  // ---------- Sliding: arrows and mouse drag ----------
-  const cardStep = () => {
-    const first = cards.find((c) => !c.card.hidden);
-    if (!first) return 0;
-    return first.card.getBoundingClientRect().width + parseFloat(getComputedStyle(track).columnGap);
-  };
-
-  const updateArrows = () => {
-    const end = track.scrollWidth - track.clientWidth - 2;
-    arrows[0].disabled = track.scrollLeft <= 2;
-    arrows[1].disabled = track.scrollLeft >= end;
-  };
-
-  arrows.forEach((arrow) =>
-    arrow.addEventListener("click", () => track.scrollBy({ left: Number(arrow.dataset.dir) * cardStep() }))
-  );
-  track.addEventListener("scroll", updateArrows, { passive: true });
-
+  // ---------- Sliding: drag, like a touch screen, on every device ----------
+  // Phones use native touch scrolling. With a mouse the row follows the
+  // pointer, then glides on with the release speed and settles on a card.
   let drag = null;
+  let glide = 0;
+
   track.addEventListener("pointerdown", (event) => {
     if (event.pointerType !== "mouse" || event.button !== 0) return;
-    drag = { x: event.clientX, left: track.scrollLeft, moved: false };
+    cancelAnimationFrame(glide);
+    drag = { x: event.clientX, left: track.scrollLeft, moved: false, v: 0, lastX: event.clientX, lastT: performance.now() };
   });
+
   window.addEventListener("pointermove", (event) => {
     if (!drag) return;
     const dx = event.clientX - drag.x;
@@ -353,39 +367,40 @@ const CATALOG = [
       drag.moved = true;
       track.classList.add("is-dragging");
     }
-    if (drag.moved) track.scrollLeft = drag.left - dx;
+    if (!drag.moved) return;
+    track.scrollLeft = drag.left - dx;
+    const now = performance.now();
+    const dt = Math.max(now - drag.lastT, 1);
+    drag.v = 0.8 * ((event.clientX - drag.lastX) / dt) + 0.2 * drag.v; // px per ms
+    drag.lastX = event.clientX;
+    drag.lastT = now;
   });
+
   window.addEventListener("pointerup", () => {
     if (!drag) return;
-    const moved = drag.moved;
+    const { moved } = drag;
+    let v = drag.v * 16; // px per frame
     drag = null;
-    track.classList.remove("is-dragging");
+    if (!moved) return;
+
     // Swallow the click that ends a drag so it doesn't hit a card button.
-    if (moved) track.addEventListener("click", (e) => e.stopPropagation(), { capture: true, once: true });
+    track.addEventListener("click", (e) => e.stopPropagation(), { capture: true, once: true });
+
+    const settle = () => track.classList.remove("is-dragging"); // snapping resumes
+    if (calm.matches || Math.abs(v) < 0.5) return settle();
+    const tick = () => {
+      track.scrollLeft -= v;
+      v *= 0.94;
+      if (Math.abs(v) > 0.5) glide = requestAnimationFrame(tick);
+      else settle();
+    };
+    glide = requestAnimationFrame(tick);
   });
 
   // ---------- Fade under the hero ----------
-  // The hero's bottom edge (see its mask in css/style.css), in its
-  // 1440 x 520 viewBox: flat at y=370 up to x=460, a cubic down to
-  // (1200, 520), then flat. The row gets a mask that is transparent above
-  // that edge and fades in over FADE px below it.
+  // The row gets a mask that is transparent above the hero's bottom edge
+  // (heroEdgeY) and fades in over FADE px below it.
   const FADE = 90;
-  const P = [[1200, 520], [900, 520], [780, 370], [460, 370]];
-  const heroEdgeY = (fraction) => {
-    const x = fraction * 1440;
-    if (x <= 460) return 370;
-    if (x >= 1200) return 520;
-    const at = (t, k) =>
-      (1 - t) ** 3 * P[0][k] + 3 * (1 - t) ** 2 * t * P[1][k] + 3 * (1 - t) * t ** 2 * P[2][k] + t ** 3 * P[3][k];
-    let lo = 0;
-    let hi = 1; // x falls as t rises
-    for (let i = 0; i < 24; i++) {
-      const mid = (lo + hi) / 2;
-      if (at(mid, 0) > x) lo = mid;
-      else hi = mid;
-    }
-    return at((lo + hi) / 2, 1);
-  };
 
   const updateMask = () => {
     if (!hero) return;
@@ -412,7 +427,6 @@ const CATALOG = [
     track.style.setProperty("--curve-mask", `url("data:image/svg+xml,${encodeURIComponent(svg)}")`);
   };
 
-  setupRange();
   updateMask();
   new ResizeObserver(updateMask).observe(track);
   window.addEventListener("resize", updateMask);
@@ -475,4 +489,26 @@ const CATALOG = [
     if (document.hidden || calm.matches || mode !== "auto") return;
     show((current + 1) % CODES.length);
   }, 2600);
+})();
+
+// Section 5 — Subscriptions: the Basic box's hover light follows the pointer.
+(function basicPlanLight() {
+  const plan = document.querySelector(".plan--basic");
+  if (!plan) return;
+  plan.addEventListener("pointermove", (event) => {
+    const box = plan.getBoundingClientRect();
+    plan.style.setProperty("--mx", `${event.clientX - box.left}px`);
+    plan.style.setProperty("--my", `${event.clientY - box.top}px`);
+  });
+})();
+
+// Site-wide: no copying text and no saving images (right-click menu,
+// dragging images out, copy / cut). Form fields keep working normally.
+(function protectContent() {
+  const isField = (el) => el instanceof Element && el.closest("input, textarea, [contenteditable]");
+  document.addEventListener("contextmenu", (e) => { if (!isField(e.target)) e.preventDefault(); });
+  document.addEventListener("dragstart", (e) => { if (e.target instanceof HTMLImageElement) e.preventDefault(); });
+  ["copy", "cut"].forEach((type) =>
+    document.addEventListener(type, (e) => { if (!isField(e.target)) e.preventDefault(); })
+  );
 })();
