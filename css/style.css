@@ -263,15 +263,15 @@ a {
 }
 
 /* ---------- Profile button (signed-in users only) ----------
-   A plain rectangle whose top and bottom edges both bow downward. On hover
-   (desktop) or first tap (touch) the avatar fades in blurred, then comes into
-   focus, "Profile" appears over it, and meanwhile the curved edges
-   straighten. Both shapes use the same path commands so clip-path can
+   A pinched rectangle: the short sides are straight, the long top and bottom
+   sides curve inward toward each other. At rest the avatar shows blurred.
+   On hover (desktop) or first tap (touch) it comes into focus, "Profile"
+   appears over it, and meanwhile the curved sides straighten. Both shapes use the same path commands so clip-path can
    morph between them. */
 
 .profile-chip {
-  --shape-curved: path("M0 0 Q52 12 104 0 L104 40 Q52 52 0 40 Z");
-  --shape-flat: path("M0 4 Q52 4 104 4 L104 44 Q52 44 0 44 Z");
+  --shape-curved: path("M0 0 Q52 12 104 0 L104 48 Q52 36 0 48 Z");
+  --shape-flat: path("M0 0 Q52 0 104 0 L104 48 Q52 48 0 48 Z");
   grid-area: left;
   justify-self: start;
   display: grid;
@@ -295,13 +295,11 @@ a {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0;
-  filter: blur(10px);
-  transform: scale(1.15);
+  filter: blur(5px);
+  transform: scale(1.12);
   transition:
-    opacity 0.3s ease 0.1s,
-    filter 0.3s ease,
-    transform 0.4s var(--ease-out);
+    filter 0.4s ease,
+    transform 0.5s var(--ease-out);
 }
 
 /* Darkens the photo a touch so the label reads on any picture. */
@@ -337,19 +335,17 @@ a {
 
 .profile-chip.is-open img,
 .profile-chip:focus-visible img {
-  opacity: 1;
   filter: blur(0);
   transform: none;
   transition:
-    opacity 0.25s ease,
-    filter 0.5s ease 0.2s,
-    transform 0.7s var(--ease-out) 0.2s;
+    filter 0.55s ease 0.05s,
+    transform 0.7s var(--ease-out) 0.05s;
 }
 
 .profile-chip.is-open .profile-chip__avatar::after,
 .profile-chip:focus-visible .profile-chip__avatar::after {
   opacity: 1;
-  transition-delay: 0.45s;
+  transition-delay: 0.3s;
 }
 
 .profile-chip.is-open .profile-chip__label,
@@ -357,8 +353,8 @@ a {
   opacity: 1;
   transform: none;
   transition:
-    opacity 0.35s ease 0.5s,
-    transform 0.45s var(--ease-out) 0.5s;
+    opacity 0.35s ease 0.35s,
+    transform 0.45s var(--ease-out) 0.35s;
 }
 
 @media (hover: hover) {
@@ -367,26 +363,24 @@ a {
   }
 
   .profile-chip:hover img {
-    opacity: 1;
     filter: blur(0);
     transform: none;
     transition:
-      opacity 0.25s ease,
-      filter 0.5s ease 0.2s,
-      transform 0.7s var(--ease-out) 0.2s;
+      filter 0.55s ease 0.05s,
+      transform 0.7s var(--ease-out) 0.05s;
   }
 
   .profile-chip:hover .profile-chip__avatar::after {
     opacity: 1;
-    transition-delay: 0.45s;
+    transition-delay: 0.3s;
   }
 
   .profile-chip:hover .profile-chip__label {
     opacity: 1;
     transform: none;
     transition:
-      opacity 0.35s ease 0.5s,
-      transform 0.45s var(--ease-out) 0.5s;
+      opacity 0.35s ease 0.35s,
+      transform 0.45s var(--ease-out) 0.35s;
   }
 }
 
@@ -407,8 +401,8 @@ a {
   }
 
   .profile-chip {
-    --shape-curved: path("M0 0 Q42 10 84 0 L84 35 Q42 45 0 35 Z");
-    --shape-flat: path("M0 3 Q42 3 84 3 L84 39 Q42 39 0 39 Z");
+    --shape-curved: path("M0 0 Q42 10 84 0 L84 42 Q42 32 0 42 Z");
+    --shape-flat: path("M0 0 Q42 0 84 0 L84 42 Q42 42 0 42 Z");
     width: 84px;
     height: 42px;
   }
