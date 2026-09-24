@@ -533,14 +533,14 @@ main {
 
 /* ==========================================================================
    Section 3 — Studio slogan
-   A short, quiet line. On wide screens it tucks up into the dark space the
-   hero's curve leaves on the left (the curve's flat left part ends at ~71%
-   of the hero height).
+   A short, quiet line. On wide screens it sits in the left corner right
+   under the hero's flat left edge, which ends at 370/520 (~71%) of the hero
+   height, so it moves up by the remaining ~29% less a small gap.
    ========================================================================== */
 
 .slogan {
   max-width: 1440px;
-  margin: calc(var(--hero-h) * -0.22) auto 0;
+  margin: calc(var(--hero-h) * -0.2885 + 22px) auto 0;
   padding: 0 var(--gutter);
 }
 
@@ -556,6 +556,7 @@ main {
   margin: 0;
   font: 500 clamp(20px, 1.8vw, 26px)/1.35 var(--font-body);
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 .slogan__quote cite {
