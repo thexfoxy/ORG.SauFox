@@ -167,9 +167,7 @@ a {
 .cta:hover,
 .cta:focus-visible {
   background: var(--surface-2);
-  box-shadow:
-    0 0 0 1px rgba(255, 122, 26, 0.35),
-    0 0 22px 2px rgba(255, 122, 26, 0.22);
+  box-shadow: 0 0 22px 2px rgba(255, 122, 26, 0.22);
   text-shadow: 0 0 12px rgba(255, 190, 140, 0.55);
 }
 
