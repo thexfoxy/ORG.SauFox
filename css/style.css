@@ -448,8 +448,8 @@ a {
   height: clamp(380px, 52vw, 720px);
   margin-top: var(--gap);
   overflow: hidden;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520H1010C900 520 760 370 662 370H0Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520H1010C900 520 760 370 662 370H0Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520H1200C900 520 780 370 460 370H0Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520H1200C900 520 780 370 460 370H0Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
 }
 
 .hero__panel {
