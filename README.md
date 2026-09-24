@@ -17,7 +17,7 @@ npx serve .
 - `profile.html`: profile page (signed-in visitors only)
 - `css/style.css`: styles; design tokens live in `:root`
 - `js/main.js`: scripts
-- `assets/`: default avatar, artwork (`works/`), and self-hosted fonts (Great Vibes,
+- `assets/`: default avatar, placeholder icons standing in for artwork (`works/`), and self-hosted fonts (Great Vibes,
   Barlow Condensed, Inter; all SIL Open Font License)
 
 ## Content protection
