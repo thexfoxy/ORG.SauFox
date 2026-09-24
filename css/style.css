@@ -1,0 +1,264 @@
+/* ==========================================================================
+   SauFox Entertainment — base styles
+   ========================================================================== */
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #14141c;
+  --surface-2: #1c1c27;
+  --line: rgba(255, 255, 255, 0.09);
+  --text: #f4f2ef;
+  --muted: #9a98a6;
+  --accent: #ff7a1a;
+  --accent-soft: rgba(255, 122, 26, 0.18);
+  --accent-2: #8b5cf6;
+
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Sora", var(--font-body);
+
+  --radius: 12px;
+  --header-h: 72px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: var(--radius);
+  font: 600 15px/1 var(--font-body);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.btn--outline {
+  border: 1px solid var(--accent);
+  color: var(--text);
+  background: transparent;
+}
+
+.btn--outline:hover {
+  background: var(--accent);
+  color: #140a04;
+  box-shadow: 0 6px 24px -6px rgba(255, 122, 26, 0.6);
+}
+
+/* ==========================================================================
+   Section 1 — Header
+   ========================================================================== */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(10, 10, 15, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+
+.site-header__inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: var(--header-h);
+  padding: 0 var(--gutter);
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.site-header__inner > :first-child {
+  justify-self: start;
+}
+
+.site-header__inner > :last-child {
+  justify-self: end;
+}
+
+/* Brand */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.brand__mark {
+  width: 34px;
+  height: 34px;
+}
+
+.brand__name {
+  font: 700 20px/1 var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+.brand__sub {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Profile chip: a small square showing a cropped avatar. On hover (desktop)
+   or first tap (touch) it stretches into a rectangle, the full avatar is
+   revealed and the "Profile" label slides in. */
+
+.profile-chip {
+  --chip: 46px;
+  display: inline-flex;
+  align-items: center;
+  width: var(--chip);
+  height: var(--chip);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  transition: width 0.4s var(--ease-out), border-color 0.25s, box-shadow 0.25s;
+}
+
+.profile-chip__avatar {
+  flex: 0 0 auto;
+  width: calc(var(--chip) - 2px);
+  height: calc(var(--chip) - 2px);
+  overflow: hidden;
+}
+
+.profile-chip__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.7) translateY(6%);
+  transition: transform 0.4s var(--ease-out);
+}
+
+.profile-chip__label {
+  padding: 0 16px 0 12px;
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: opacity 0.25s, transform 0.4s var(--ease-out);
+}
+
+.profile-chip.is-open,
+.profile-chip:focus-visible {
+  width: 138px;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.profile-chip.is-open img,
+.profile-chip:focus-visible img {
+  transform: none;
+}
+
+.profile-chip.is-open .profile-chip__label,
+.profile-chip:focus-visible .profile-chip__label {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.08s;
+}
+
+@media (hover: hover) {
+  .profile-chip:hover {
+    width: 138px;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+
+  .profile-chip:hover img {
+    transform: none;
+  }
+
+  .profile-chip:hover .profile-chip__label {
+    opacity: 1;
+    transform: none;
+    transition-delay: 0.08s;
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    --header-h: 64px;
+  }
+
+  .brand__sub {
+    display: none;
+  }
+
+  .brand__mark {
+    width: 30px;
+    height: 30px;
+  }
+
+  .btn--outline {
+    height: 40px;
+    padding: 0 16px;
+  }
+
+  .profile-chip {
+    --chip: 42px;
+  }
+
+  /* No room for both: the brand steps aside while the chip is open. */
+  .brand {
+    transition: opacity 0.25s;
+  }
+
+  .site-header:has(.profile-chip.is-open) .brand {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
