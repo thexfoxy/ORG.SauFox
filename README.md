@@ -15,7 +15,7 @@ npx serve .
 - `index.html`: home page
 - `css/style.css`: styles; design tokens live in `:root`
 - `js/main.js`: scripts
-- `assets/`: default avatar, images, and self-hosted fonts (Great Vibes,
+- `assets/`: default avatar, artwork (`works/`), and self-hosted fonts (Great Vibes,
   Barlow Condensed, Inter; all SIL Open Font License)
 
 ## Build progress
@@ -36,10 +36,11 @@ Home page:
       letters leave one by one, "Sign Up Now" / "Welcome Back" rises in their
       place, and the text glows softly. Add `?demo=new|returning|member` to
       the URL to preview each state.
-- [x] 2. Hero: full-width collage of four slanted panels (Games, Animation,
-      Films, Novels) with a curved bottom edge. Hovering a panel zooms its art
-      and dims the others. Placeholder colours for now; add real art with
-      `style="--art: url(assets/hero/<file>.jpg)"` on a panel.
+- [x] 2. Hero: full-width collage of seven slanted panels (five on phones)
+      with a deep curved bottom edge. Each load shows a random mix of works,
+      and every few seconds one panel crossfades to another. Hovering a panel
+      zooms its art and dims the rest. Artwork list: `WORKS` in `js/main.js`
+      (placeholders in `assets/works/` for now).
 - [ ] 3. Studio slogan
 - [ ] 4. Works grid: image slider, price cycling through currencies, release status
 - [ ] 5. Subscriptions: Basic and Premium

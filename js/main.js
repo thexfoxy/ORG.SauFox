@@ -67,3 +67,74 @@
     if (!chip.contains(event.target)) chip.classList.remove("is-open");
   });
 })();
+
+// Section 2 — Hero: collage of random artwork from the studio's releases.
+// Placeholders for now: replace or extend WORKS with real artwork
+// (portrait images work best).
+const WORKS = Array.from({ length: 14 }, (_, i) =>
+  `assets/works/placeholder-${String(i + 1).padStart(2, "0")}.svg`
+);
+
+(function heroCollage() {
+  const hero = document.querySelector(".hero");
+  if (!hero) return;
+
+  const narrow = window.matchMedia("(max-width: 700px)");
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const SWAP_EVERY = 4500;
+
+  const shuffle = (list) => {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  const art = (src) => {
+    const el = document.createElement("span");
+    el.className = "hero__art";
+    el.style.backgroundImage = `url("${src}")`;
+    el.dataset.src = src;
+    return el;
+  };
+
+  const build = () => {
+    const count = narrow.matches ? 5 : 7;
+    hero.style.setProperty("--n", count);
+    hero.replaceChildren(
+      ...shuffle(WORKS)
+        .slice(0, count)
+        .map((src, i) => {
+          const panel = document.createElement("div");
+          panel.className = "hero__panel";
+          panel.style.setProperty("--i", i);
+          panel.append(art(src));
+          return panel;
+        })
+    );
+  };
+
+  // Every few seconds one random panel crossfades to a work not on screen.
+  const swap = () => {
+    if (document.hidden || calm.matches) return;
+    const panels = [...hero.children];
+    const shown = new Set(panels.map((p) => p.lastElementChild.dataset.src));
+    const unused = WORKS.filter((src) => !shown.has(src));
+    if (!unused.length) return;
+
+    const panel = panels[Math.floor(Math.random() * panels.length)];
+    const next = art(unused[Math.floor(Math.random() * unused.length)]);
+    next.classList.add("is-entering");
+    panel.append(next);
+    requestAnimationFrame(() => requestAnimationFrame(() => next.classList.remove("is-entering")));
+    setTimeout(() => {
+      while (panel.children.length > 1) panel.firstElementChild.remove();
+    }, 1600);
+  };
+
+  build();
+  narrow.addEventListener("change", build);
+  setInterval(swap, SWAP_EVERY);
+})();

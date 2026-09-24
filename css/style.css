@@ -432,31 +432,30 @@ a {
 }
 
 /* ==========================================================================
-   Section 2 — Hero: collage of the studio's works
-   Four slanted panels, full width with no box around it. Each panel is
-   clipped to a parallelogram; the whole collage is masked so its bottom edge
-   falls away in a curve, lowest on the right.
-   Per panel: --x0/--x1 are the top corners, --slant shifts the bottom
-   corners left, --il/--iw place the artwork box under the strip, and --lift
-   raises the label above the curve at that point.
+   Section 2 — Hero: collage of random artwork from the studio's releases
+   Full width with no box around it. js/main.js builds --n panels; each is
+   clipped to a parallelogram (top corners at --i and --i + 1 panel widths,
+   bottom corners shifted left by --slant). The whole collage is masked so
+   its bottom edge falls away in a deep curve, lowest on the right.
    ========================================================================== */
 
 .hero {
-  --slant: 10%;
-  --gap: 6px;
+  --slant: 9%;
+  --gap: 5px;
+  --w: calc((100% + var(--slant)) / var(--n, 7));
   position: relative;
-  height: clamp(340px, 46vw, 640px);
+  height: clamp(380px, 52vw, 720px);
   margin-top: var(--gap);
   overflow: hidden;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520C1000 505 520 450 0 380Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520C1000 505 520 450 0 380Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520C1060 520 480 430 0 230Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520C1060 520 480 430 0 230Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
 }
 
 .hero__panel {
+  --x0: calc(var(--i) * var(--w));
+  --x1: calc((var(--i) + 1) * var(--w));
   position: absolute;
   inset: 0;
-  display: block;
-  text-decoration: none;
   clip-path: polygon(
     calc(var(--x0) + var(--gap)) 0,
     calc(var(--x1) - var(--gap)) 0,
@@ -464,13 +463,17 @@ a {
     calc(var(--x0) - var(--slant) + var(--gap)) 100%
   );
   animation: hero-in 0.9s var(--ease-out) both;
-  animation-delay: calc(var(--n) * 90ms);
+  animation-delay: calc(var(--i) * 70ms);
 }
 
-.hero__panel--games     { --n: 0; --x0: -20%; --x1: 30%;  --il: 0%;  --iw: 30%; --lift: 26%; }
-.hero__panel--animation { --n: 1; --x0: 30%;  --x1: 57%;  --il: 20%; --iw: 37%; --lift: 19%; }
-.hero__panel--films     { --n: 2; --x0: 57%;  --x1: 84%;  --il: 47%; --iw: 37%; --lift: 10%; }
-.hero__panel--novels    { --n: 3; --x0: 84%;  --x1: 120%; --il: 74%; --iw: 26%; --lift: 4%; }
+/* Outer panels run past the page edges so no sliver of background shows. */
+.hero__panel:first-child {
+  --x0: -30%;
+}
+
+.hero__panel:last-child {
+  --x1: 130%;
+}
 
 @keyframes hero-in {
   from {
@@ -479,68 +482,27 @@ a {
   }
 }
 
-/* Artwork: real image via --art, placeholder colour fields underneath. */
+/* Artwork box sits under the strip: from the bottom-left corner to the
+   top-right corner, so "cover" frames each image to its own strip. */
 .hero__art {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: var(--il);
-  width: var(--iw);
-  background: var(--art, none) center / cover no-repeat, var(--placeholder);
+  left: calc(var(--i) * var(--w) - var(--slant));
+  width: calc(var(--w) + var(--slant));
+  background: center / cover no-repeat;
   transform: scale(1.02);
-  transition: transform 1.2s var(--ease-out), filter 0.6s ease;
+  transition:
+    transform 1.2s var(--ease-out),
+    filter 0.6s ease,
+    opacity 1.4s ease;
 }
 
-.hero__panel--games {
-  --placeholder:
-    radial-gradient(120% 80% at 70% 20%, #3f5bd8 0%, transparent 60%),
-    linear-gradient(160deg, #1b2447 0%, #0d1024 100%);
-}
-
-.hero__panel--animation {
-  --placeholder:
-    radial-gradient(90% 70% at 40% 30%, #ffb35c 0%, transparent 65%),
-    linear-gradient(170deg, #ff7a1a 0%, #b8400f 100%);
-}
-
-.hero__panel--films {
-  --placeholder:
-    radial-gradient(80% 60% at 60% 25%, #8a2b4a 0%, transparent 70%),
-    linear-gradient(165deg, #3a1422 0%, #150810 100%);
-}
-
-.hero__panel--novels {
-  --placeholder:
-    radial-gradient(90% 70% at 50% 20%, #e9dcc3 0%, transparent 70%),
-    linear-gradient(170deg, #b9a47e 0%, #5b4a32 100%);
-}
-
-/* Label sits near the panel's lower-left edge, above the curve. The slanted
-   edge at label height is about 70% of the way down, hence the 0.7. */
-.hero__label {
-  position: absolute;
-  left: calc(max(var(--x0) - var(--slant) * 0.7, 0%) + clamp(20px, 3vw, 40px));
-  bottom: calc(var(--lift) + clamp(18px, 3vw, 36px));
-  display: grid;
-  gap: 6px;
-  color: #fff;
-  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.35);
-}
-
-.hero__kind {
-  font: 400 clamp(34px, 4.2vw, 60px)/1 var(--font-logo);
-}
-
-.hero__more {
-  font: italic 700 15px/1 var(--font-action);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+/* A newly swapped-in image fades in over the old one. */
+.hero__art.is-entering {
   opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.35s ease, transform 0.45s var(--ease-out);
 }
 
-/* Hover: the panel's art leans in, the others step back. */
 @media (hover: hover) {
   .hero:hover .hero__panel:not(:hover) .hero__art {
     filter: brightness(0.55) saturate(0.8);
@@ -549,44 +511,14 @@ a {
   .hero__panel:hover .hero__art {
     transform: scale(1.08);
   }
-
-  .hero__panel:hover .hero__more {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.hero__panel:focus-visible {
-  outline: none;
-}
-
-.hero__panel:focus-visible .hero__more {
-  opacity: 1;
-  transform: none;
 }
 
 @media (max-width: 700px) {
   .hero {
-    --slant: 14%;
-    --gap: 4px;
-    height: clamp(300px, 90vw, 420px);
+    --slant: 12%;
+    --gap: 3px;
+    height: clamp(320px, 100vw, 460px);
   }
-
-  .hero__label {
-    left: calc(max(var(--x0) - var(--slant) * 0.7, 0%) + 10px);
-  }
-
-  .hero__kind {
-    font-size: clamp(20px, 5.6vw, 30px);
-  }
-
-  .hero__more {
-    display: none;
-  }
-
-  .hero__panel--animation { --il: 16%; --iw: 41%; }
-  .hero__panel--films     { --il: 43%; --iw: 41%; }
-  .hero__panel--novels    { --il: 70%; --iw: 30%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
