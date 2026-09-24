@@ -49,8 +49,8 @@ Home page:
       or pin one) and a max-price slider. Each card has an image slider, a
       price strip and a status box. Data: `CATALOG` in `js/main.js`
       (placeholder titles and prices for now).
-- [x] 5. Subscriptions: Basic and Premium boxes side by side (stacked on
-      phones). Prices follow the currency chosen above the work cards.
+- [x] 5. Subscriptions: Basic and Premium boxes, side by side at every
+      screen size. Prices follow the currency chosen above the work cards.
       Plan features and prices are placeholders.
 
 Login page:

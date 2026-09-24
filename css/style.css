@@ -912,7 +912,7 @@ main {
 
 /* ==========================================================================
    Section 5 — Subscriptions
-   Two large boxes side by side. Premium is set apart by a lighter surface
+   Two large boxes, always side by side. Premium is set apart by a lighter surface
    and a filled orange button, nothing louder.
    ========================================================================== */
 
@@ -1055,9 +1055,62 @@ main {
   text-shadow: none;
 }
 
+/* Always side by side; on small screens everything inside scales down. */
 @media (max-width: 760px) {
   .plans__grid {
-    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .plan {
+    gap: 14px;
+    padding: 18px 14px;
+  }
+
+  .plan__name {
+    font-size: 36px;
+  }
+
+  .plan__blurb,
+  .plan__list li {
+    font-size: 13px;
+  }
+
+  .plan__price {
+    flex-wrap: wrap;
+    gap: 0 6px;
+  }
+
+  .plan__amounts {
+    height: 30px;
+  }
+
+  .plan__amounts .card__amount {
+    font-size: 20px;
+    line-height: 30px;
+  }
+
+  .plan__per {
+    font-size: 13px;
+  }
+
+  .plan__list {
+    gap: 10px;
+    padding-top: 14px;
+  }
+
+  .plan__list li {
+    gap: 8px;
+  }
+
+  .plan__check {
+    flex-basis: 15px;
+    width: 15px;
+    height: 15px;
+  }
+
+  .plan__button {
+    height: 44px;
+    font-size: 17px;
   }
 }
 
