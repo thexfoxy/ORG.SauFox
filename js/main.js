@@ -284,6 +284,7 @@ const CATALOG = [
       mode = button.dataset.currency;
       currencyButtons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
       if (mode !== "auto") cards.forEach((c) => c.showCurrency(CURRENCIES.indexOf(mode)));
+      document.dispatchEvent(new CustomEvent("currencymode", { detail: mode }));
       setupRange(fraction);
     })
   );
@@ -416,4 +417,62 @@ const CATALOG = [
   new ResizeObserver(updateMask).observe(track);
   window.addEventListener("resize", updateMask);
   if (document.fonts) document.fonts.ready.then(updateMask);
+})();
+
+// Section 5 — Subscriptions: plan prices use the same currency ticker as the
+// work cards and follow the currency chosen there ("auto" keeps cycling).
+(function planPrices() {
+  const boxes = [...document.querySelectorAll(".plan__amounts")];
+  if (!boxes.length) return;
+
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const CODES = ["USD", "EUR", "IRR"];
+  const format = {
+    USD: (n) => `$${n.toFixed(2)}`,
+    EUR: (n) => `€${n.toFixed(2)}`,
+    IRR: (n) => `${Math.round(n).toLocaleString("en-US")} Rials`,
+  };
+
+  const tickers = boxes.map((box) => {
+    const items = CODES.map((code, i) => {
+      const span = document.createElement("span");
+      span.className = "card__amount" + (i === 0 ? " is-active" : "");
+      span.textContent = format[code](Number(box.dataset[code.toLowerCase()]));
+      box.append(span);
+      return span;
+    });
+    return items;
+  });
+
+  let mode = "auto";
+  let current = 0;
+  // Each box is as wide as the price it shows, so "/ month" sits right after.
+  const fit = () =>
+    boxes.forEach((box, b) => (box.style.width = `${tickers[b][current].offsetWidth}px`));
+  const show = (i) => {
+    if (i === current) return;
+    current = i;
+    fit();
+    tickers.forEach((items) =>
+      items.forEach((item, k) => {
+        const was = item.classList.contains("is-active");
+        item.classList.toggle("is-active", k === i);
+        item.classList.toggle("is-leaving", was && k !== i);
+      })
+    );
+  };
+
+  fit();
+  if (document.fonts) document.fonts.ready.then(fit);
+  window.addEventListener("resize", fit);
+
+  document.addEventListener("currencymode", (event) => {
+    mode = event.detail;
+    if (mode !== "auto") show(CODES.indexOf(mode));
+  });
+
+  setInterval(() => {
+    if (document.hidden || calm.matches || mode !== "auto") return;
+    show((current + 1) % CODES.length);
+  }, 2600);
 })();

@@ -101,7 +101,43 @@
       </div>
     </section>
 
-    <!-- Next sections: subscriptions -->
+    <!-- Section 5: Subscriptions. Two plans side by side, Basic and
+         Premium. Prices follow the currency chosen above the work cards. -->
+    <section class="plans" aria-labelledby="plans-title">
+      <h2 class="plans__title" id="plans-title">Subscriptions</h2>
+      <div class="plans__grid">
+        <article class="plan" data-plan="basic">
+          <h3 class="plan__name">Basic</h3>
+          <p class="plan__blurb">Stream and read the studio&rsquo;s catalogue.</p>
+          <div class="plan__price">
+            <span class="plan__amounts" data-usd="4.99" data-eur="4.59" data-irr="3100000"></span>
+            <span class="plan__per">/ month</span>
+          </div>
+          <ul class="plan__list">
+            <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Watch every animation and short film</li>
+            <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Read all novels in the online reader</li>
+            <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Studio news and trailers first</li>
+          </ul>
+          <a class="plan__button" href="login.html#signup">Choose Basic</a>
+        </article>
+
+        <article class="plan plan--premium" data-plan="premium">
+          <h3 class="plan__name">Premium</h3>
+          <p class="plan__blurb">Everything SauFox makes, first and in full.</p>
+          <div class="plan__price">
+            <span class="plan__amounts" data-usd="12.99" data-eur="11.99" data-irr="8100000"></span>
+            <span class="plan__per">/ month</span>
+          </div>
+          <ul class="plan__list">
+            <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Everything in Basic</li>
+            <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Feature films and early access to new games</li>
+            <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>20% off physical editions, with free shipping</li>
+            <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Behind-the-scenes videos and art books</li>
+          </ul>
+          <a class="plan__button" href="login.html#signup">Go Premium</a>
+        </article>
+      </div>
+    </section>
   </main>
 
   <script src="js/main.js" defer></script>
