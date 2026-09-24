@@ -29,7 +29,8 @@ Home page:
       - signed in: no button; a profile chip on the left that expands on hover or tap
 
       The button is bare text with no box. Its letters loop orange to white one after another; on hover the
-      loop stops and the text glows softly. Add `?demo=new|returning|member` to
+      letters leave one by one, "Sign Up Now" / "Welcome Back" rises in their
+      place, and the text glows softly. Add `?demo=new|returning|member` to
       the URL to preview each state.
 - [ ] 2. Hero: diagonal panels with images of the studio's works
 - [ ] 3. Studio slogan

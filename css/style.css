@@ -127,13 +127,16 @@ a {
 }
 
 /* ---------- Call to action: Login / Wanna create an account? ----------
-   Bare text, no box. Letters cycle orange -> white one after another in an
-   endless wave; on hover the wave stops and the text glows softly. */
+   Bare text, no box. At rest the letters cycle orange -> white one after
+   another in an endless wave. On hover the resting text leaves letter by
+   letter, the hover text ("Sign Up Now" / "Welcome Back") rises in the same
+   way, and once it has landed the text glows softly. Leaving reverses it. */
 
 .cta {
   grid-area: right;
   justify-self: end;
-  display: inline-flex;
+  display: inline-grid;
+  justify-items: end;
   align-items: center;
   height: 44px;
   padding: 0 4px;
@@ -142,13 +145,28 @@ a {
   white-space: nowrap;
   text-decoration: none;
   color: var(--accent);
-  transition: text-shadow 0.45s ease;
+  transition: text-shadow 0.4s ease;
+}
+
+/* Both lines share one grid cell and swap in place. */
+.cta__line {
+  grid-area: 1 / 1;
 }
 
 .cta__char {
+  display: inline-block;
+  white-space: pre;
+  transition:
+    transform 0.5s var(--ease-out),
+    opacity 0.4s ease,
+    filter 0.5s ease;
+}
+
+/* Resting line: wave, and returns (after the hover line has left) on unhover. */
+.cta__line--rest .cta__char {
   color: var(--accent);
   animation: letter-wave 2.6s ease-in-out infinite;
-  transition: color 0.3s ease;
+  transition-delay: calc(180ms + var(--i) * 22ms);
 }
 
 @keyframes letter-wave {
@@ -162,17 +180,38 @@ a {
   }
 }
 
+/* Hover line: waits below, hidden. */
+.cta__line--hover .cta__char {
+  color: #fff;
+  opacity: 0;
+  transform: translateY(70%);
+  filter: blur(4px);
+  transition-delay: calc(var(--i) * 14ms);
+}
+
+.cta:hover .cta__line--rest .cta__char,
+.cta:focus-visible .cta__line--rest .cta__char {
+  opacity: 0;
+  transform: translateY(-70%);
+  filter: blur(4px);
+  transition-delay: calc(var(--i) * 22ms);
+}
+
+.cta:hover .cta__line--hover .cta__char,
+.cta:focus-visible .cta__line--hover .cta__char {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  transition-delay: calc(220ms + var(--i) * 32ms);
+}
+
+/* The glow arrives once the new text has landed. */
 .cta:hover,
 .cta:focus-visible {
   text-shadow:
     0 0 10px rgba(255, 190, 140, 0.7),
     0 0 24px rgba(255, 122, 26, 0.45);
-}
-
-.cta:hover .cta__char,
-.cta:focus-visible .cta__char {
-  animation: none;
-  color: #fff;
+  transition-delay: 0.55s;
 }
 
 .cta:focus-visible {
@@ -319,6 +358,7 @@ a {
   *::before,
   *::after {
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
   }
 
   .cta__char {
