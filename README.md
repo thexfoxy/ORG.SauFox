@@ -14,6 +14,7 @@ npx serve .
 
 - `index.html`: home page
 - `login.html`: login / sign-up page
+- `profile.html`: profile page (signed-in visitors only)
 - `css/style.css`: styles; design tokens live in `:root`
 - `js/main.js`: scripts
 - `assets/`: default avatar, artwork (`works/`), and self-hosted fonts (Great Vibes,
@@ -71,3 +72,13 @@ Login page (`login.html`):
 - [ ] Real accounts: there is no account server yet. A valid form only marks
       this browser as signed in (localStorage) so the header shows the
       profile button; Google and Apple buttons say they aren't connected yet.
+
+Profile page (`profile.html`):
+- [x] Cover: a shorter copy of the home collage. Under its curve, the avatar
+      (the header chip's pinched shape, larger), name, email, membership date
+      and current plan. Tabs: Library, Wishlist, Orders (empty states for
+      now) and Settings (profile photo, name, default currency, log out).
+      Signed-out visitors are sent to the login page. The photo also shows in
+      the header's profile button, and the currency choice carries over to
+      the home page. All of it lives in this browser until there's an
+      account server.

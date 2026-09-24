@@ -53,6 +53,11 @@
   const chip = document.querySelector(".profile-chip");
   if (!chip) return;
 
+  try {
+    const avatar = localStorage.getItem("saufox.avatar");
+    if (avatar) chip.querySelector("img").src = avatar;
+  } catch (e) {}
+
   const canHover = window.matchMedia("(hover: hover)").matches;
 
   chip.addEventListener("click", (event) => {
@@ -345,8 +350,18 @@ const CATALOG = [
       currencyButtons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
       if (mode !== "auto") cards.forEach((c) => c.showCurrency(CURRENCIES.indexOf(mode)));
       document.dispatchEvent(new CustomEvent("currencymode", { detail: mode }));
+      try {
+        localStorage.setItem("saufox.currency", mode);
+      } catch (e) {}
     })
   );
+
+  // Start in the currency the visitor chose last time (here or in Settings).
+  try {
+    const saved = localStorage.getItem("saufox.currency");
+    const button = saved && currencyButtons.find((b) => b.dataset.currency === saved);
+    if (button && saved !== "auto") setTimeout(() => button.click());
+  } catch (e) {}
 
   // ---------- Sliding: drag, like a touch screen, on every device ----------
   // Phones use native touch scrolling. With a mouse the row follows the
@@ -609,6 +624,9 @@ const CATALOG = [
       try {
         localStorage.setItem("saufox.session", form.querySelector('input[type="email"]').value);
         localStorage.setItem("saufox.hasAccount", "1");
+        const name = form.querySelector('input[name="name"]');
+        if (name) localStorage.setItem("saufox.name", name.value.trim());
+        if (!localStorage.getItem("saufox.since")) localStorage.setItem("saufox.since", new Date().toISOString());
       } catch (e) {}
       say(message, key === "login" ? "Welcome back. Taking you home…" : "Account created. Taking you home…", true);
       setTimeout(() => (location.href = "index.html"), 1100);
@@ -621,4 +639,140 @@ const CATALOG = [
       say(socialMessage, `${button.dataset.provider} sign-in isn't connected yet. Use your email for now.`)
     )
   );
+})();
+
+// Profile page — name, email and membership date from this browser's
+// sign-in, tabs, and settings (photo, name, default currency, log out).
+(function profilePage() {
+  const page = document.querySelector(".profile-page");
+  if (!page) return;
+
+  const store = {
+    get: (key) => {
+      try {
+        return localStorage.getItem(`saufox.${key}`);
+      } catch (e) {
+        return null;
+      }
+    },
+    set: (key, value) => {
+      try {
+        if (value == null) localStorage.removeItem(`saufox.${key}`);
+        else localStorage.setItem(`saufox.${key}`, value);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+  };
+
+  const DEFAULT_AVATAR = document.querySelector(".profile-avatar__img").getAttribute("src");
+  const email = store.get("session") || "";
+  const fallbackName = email.split("@")[0] || "SauFox fan";
+
+  // ---------- Header info ----------
+  const showName = (name) =>
+    page.querySelectorAll('[data-profile="name"]').forEach((el) => (el.textContent = name));
+  const showAvatar = (src) =>
+    document.querySelectorAll(".profile-avatar__img, .profile-chip img").forEach((img) => (img.src = src));
+
+  if (!store.get("since")) store.set("since", new Date().toISOString());
+  const since = new Date(store.get("since"));
+  page.querySelector('[data-profile="email"]').textContent = email;
+  page.querySelector('[data-profile="since"]').textContent = since.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+  showName(store.get("name") || fallbackName);
+  showAvatar(store.get("avatar") || DEFAULT_AVATAR);
+
+  // ---------- Tabs ----------
+  const tabList = page.querySelector(".profile-tabs");
+  const tabs = [...tabList.querySelectorAll(".profile-tab")];
+  const select = (index) => {
+    tabs.forEach((tab, i) => {
+      tab.setAttribute("aria-selected", String(i === index));
+      document.getElementById(tab.getAttribute("aria-controls")).hidden = i !== index;
+    });
+    tabList.style.setProperty("--tab", index);
+  };
+  tabs.forEach((tab, i) => tab.addEventListener("click", () => select(i)));
+  const fromHash = tabs.findIndex((tab) => `#${tab.id.replace("tab-", "")}` === location.hash);
+  select(Math.max(fromHash, 0));
+
+  // ---------- Settings ----------
+  const form = page.querySelector(".settings");
+  const message = form.querySelector(".auth__message");
+  const nameInput = form.querySelector("#settings-name");
+  const fileInput = form.querySelector("#avatar-input");
+  const preview = form.querySelector(".profile-avatar__img");
+  const currencyButtons = [...form.querySelectorAll("[data-currency]")];
+
+  let pendingAvatar = store.get("avatar");
+  let currency = store.get("currency") || "auto";
+
+  nameInput.value = store.get("name") || fallbackName;
+  preview.src = pendingAvatar || DEFAULT_AVATAR;
+
+  const pressCurrency = () =>
+    currencyButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.currency === currency)));
+  pressCurrency();
+  currencyButtons.forEach((b) =>
+    b.addEventListener("click", () => {
+      currency = b.dataset.currency;
+      pressCurrency();
+    })
+  );
+
+  const say = (text, ok) => {
+    message.textContent = text;
+    message.classList.toggle("is-ok", Boolean(ok));
+  };
+
+  // Photos are shrunk to 320px on the long side so they fit in storage.
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return say("Choose an image file, such as a JPG or PNG.");
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 320 / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      pendingAvatar = canvas.toDataURL("image/jpeg", 0.85);
+      preview.src = pendingAvatar;
+      URL.revokeObjectURL(img.src);
+      say("Photo ready. Save changes to keep it.", true);
+    };
+    img.onerror = () => say("That image couldn't be opened. Try another file.");
+    img.src = URL.createObjectURL(file);
+    fileInput.value = "";
+  });
+
+  form.querySelector('[data-action="remove-photo"]').addEventListener("click", () => {
+    pendingAvatar = null;
+    preview.src = DEFAULT_AVATAR;
+    say("Photo removed. Save changes to keep it that way.", true);
+  });
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const name = nameInput.value.trim();
+    if (!name) {
+      nameInput.focus();
+      return say("Enter your name.");
+    }
+    const saved = store.set("name", name) && store.set("avatar", pendingAvatar) && store.set("currency", currency);
+    if (!saved) return say("Your browser didn't let us save. Try a smaller photo.");
+    showName(name);
+    showAvatar(pendingAvatar || DEFAULT_AVATAR);
+    say("Saved.", true);
+  });
+
+  form.querySelector('[data-action="logout"]').addEventListener("click", () => {
+    store.set("session", null);
+    location.href = "index.html";
+  });
 })();

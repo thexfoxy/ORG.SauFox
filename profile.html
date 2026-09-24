@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en" data-auth="member">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profile · SauFox Entertainment</title>
+  <meta name="description" content="Your SauFox Entertainment profile: library, wishlist, orders and settings.">
+  <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Signed-out visitors go to the login page instead.
+    try {
+      if (!localStorage.getItem("saufox.session")) location.replace("login.html");
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="profile-chip" href="profile.html" aria-label="Profile" aria-current="page">
+        <span class="profile-chip__avatar">
+          <img src="assets/avatar-default.svg" alt="">
+        </span>
+        <span class="profile-chip__label">Profile</span>
+      </a>
+
+      <a class="brand" href="index.html" aria-label="SauFox Entertainment">
+        <span class="brand__text">SauFox<span class="brand__sub"> Entertainment</span></span>
+        <span class="brand__blur" aria-hidden="true">SauFox<span class="brand__sub"> Entertainment</span></span>
+      </a>
+    </div>
+  </header>
+
+  <main class="profile-page">
+    <!-- Cover: the same slanted collage as the home page, shorter. -->
+    <section class="hero" aria-label="Artwork from SauFox releases"></section>
+
+    <!-- Avatar, name and plan, tucked under the cover's curve. -->
+    <section class="profile-head">
+      <div class="profile-avatar">
+        <img class="profile-avatar__img" src="assets/avatar-default.svg" alt="Your profile photo">
+      </div>
+      <div class="profile-head__text">
+        <h1 class="profile-head__name" data-profile="name">Your name</h1>
+        <p class="profile-head__meta">
+          <span data-profile="email"></span>
+          <span aria-hidden="true">·</span>
+          <span>Member since <span data-profile="since"></span></span>
+        </p>
+        <p class="profile-head__plan">
+          <span class="plan-badge">No subscription</span>
+          <a href="index.html#plans">See plans</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <section class="profile-body">
+      <div class="profile-tabs" role="tablist" aria-label="Profile sections">
+        <button class="profile-tab" type="button" role="tab" id="tab-library" aria-controls="panel-library" aria-selected="true">Library</button>
+        <button class="profile-tab" type="button" role="tab" id="tab-wishlist" aria-controls="panel-wishlist" aria-selected="false">Wishlist</button>
+        <button class="profile-tab" type="button" role="tab" id="tab-orders" aria-controls="panel-orders" aria-selected="false">Orders</button>
+        <button class="profile-tab" type="button" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false">Settings</button>
+        <span class="profile-tabs__marker" aria-hidden="true"></span>
+      </div>
+
+      <div class="profile-panel" id="panel-library" role="tabpanel" aria-labelledby="tab-library">
+        <div class="empty">
+          <p class="empty__title">Your library is empty</p>
+          <p class="empty__text">Games, films, animations and novels you buy or unlock with a subscription will appear here.</p>
+          <a class="empty__button" href="index.html">Browse works</a>
+        </div>
+      </div>
+
+      <div class="profile-panel" id="panel-wishlist" role="tabpanel" aria-labelledby="tab-wishlist" hidden>
+        <div class="empty">
+          <p class="empty__title">Nothing on your wishlist yet</p>
+          <p class="empty__text">Save the works you&rsquo;re waiting for and they&rsquo;ll be kept here.</p>
+          <a class="empty__button" href="index.html">Browse works</a>
+        </div>
+      </div>
+
+      <div class="profile-panel" id="panel-orders" role="tabpanel" aria-labelledby="tab-orders" hidden>
+        <div class="empty">
+          <p class="empty__title">No orders yet</p>
+          <p class="empty__text">Physical editions you order, and where they are on their way to you, will show up here.</p>
+          <a class="empty__button" href="index.html">Browse works</a>
+        </div>
+      </div>
+
+      <div class="profile-panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+        <form class="settings" novalidate>
+          <div class="settings__row">
+            <span class="settings__label">Profile photo</span>
+            <div class="settings__photo">
+              <div class="profile-avatar profile-avatar--small">
+                <img class="profile-avatar__img" src="assets/avatar-default.svg" alt="">
+              </div>
+              <label class="settings__file">
+                <input id="avatar-input" type="file" accept="image/*">
+                <span>Upload a photo</span>
+              </label>
+              <button class="settings__link" type="button" data-action="remove-photo">Remove</button>
+            </div>
+          </div>
+
+          <label class="settings__row field" for="settings-name">
+            <span class="settings__label">Name</span>
+            <span class="field__box">
+              <input id="settings-name" name="name" type="text" autocomplete="name" maxlength="40" required>
+            </span>
+          </label>
+
+          <div class="settings__row">
+            <span class="settings__label" id="currency-pref-label">Currency</span>
+            <div class="segmented" role="group" aria-labelledby="currency-pref-label">
+              <button type="button" data-currency="auto" aria-pressed="true">Auto</button>
+              <button type="button" data-currency="USD" aria-pressed="false">USD</button>
+              <button type="button" data-currency="EUR" aria-pressed="false">EUR</button>
+              <button type="button" data-currency="IRR" aria-pressed="false">Rials</button>
+            </div>
+          </div>
+
+          <p class="auth__message" role="status" aria-live="polite"></p>
+
+          <div class="settings__actions">
+            <button class="auth__submit" type="submit">Save changes</button>
+            <button class="settings__logout" type="button" data-action="logout">Log out</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/main.js" defer></script>
+</body>
+</html>

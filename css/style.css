@@ -1569,6 +1569,355 @@ main {
   }
 }
 
+/* ==========================================================================
+   Profile page (profile.html)
+   A shorter copy of the home collage as the cover; the avatar (the header
+   chip's pinched shape, larger) and the name sit under its curve on the
+   left. Below: Library / Wishlist / Orders / Settings tabs.
+   ========================================================================== */
+
+main.profile-page {
+  --hero-h: clamp(240px, 30vw, 400px);
+  padding-bottom: 120px;
+}
+
+.profile-head {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  max-width: 1440px;
+  min-height: calc(var(--hero-h) * 0.2885 - 16px);
+  margin: calc(var(--hero-h) * -0.2885 + 16px) auto 0;
+  padding: 0 var(--gutter);
+}
+
+.profile-head__text {
+  display: grid;
+  gap: 6px;
+  max-width: calc(44% - 174px);
+  min-width: 0;
+}
+
+.profile-head__name {
+  margin: 0;
+  font: 400 clamp(40px, 4vw, 56px)/1 var(--font-logo);
+  overflow-wrap: anywhere;
+}
+
+.profile-head__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.profile-head__plan {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.profile-head__plan a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.profile-head__plan a:hover {
+  text-decoration: underline;
+}
+
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.plan-badge::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+/* ---------- Avatar: the header chip's pinched shape, straightening on hover ---------- */
+
+.profile-avatar {
+  --shape-curved: path("M0 0 Q75 14 150 0 L150 112 Q75 98 0 112 Z");
+  --shape-flat: path("M0 0 Q75 0 150 0 L150 112 Q75 112 0 112 Z");
+  flex: 0 0 150px;
+  width: 150px;
+  height: 112px;
+  background: var(--surface-2);
+  clip-path: var(--shape-curved);
+  transition: clip-path 0.55s var(--ease-out);
+}
+
+.profile-avatar:hover {
+  clip-path: var(--shape-flat);
+}
+
+.profile-avatar__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar--small {
+  --shape-curved: path("M0 0 Q45 9 90 0 L90 68 Q45 59 0 68 Z");
+  --shape-flat: path("M0 0 Q45 0 90 0 L90 68 Q45 68 0 68 Z");
+  flex-basis: 90px;
+  width: 90px;
+  height: 68px;
+}
+
+/* ---------- Tabs and panels ---------- */
+
+.profile-body {
+  max-width: 1440px;
+  margin: 40px auto 0;
+  padding: 0 var(--gutter);
+}
+
+.profile-tabs {
+  --tab: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  max-width: 560px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.profile-tab {
+  position: relative;
+  z-index: 1;
+  height: 44px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: italic 700 19px/1 var(--font-action);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.35s ease;
+}
+
+.profile-tab[aria-selected="true"] {
+  color: var(--text);
+}
+
+.profile-tabs__marker {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(25% - 2px);
+  border-radius: 9px;
+  background: var(--surface-2);
+  transform: translateX(calc(var(--tab) * 100%));
+  transition: transform 0.55s var(--ease-out);
+}
+
+.profile-panel {
+  margin-top: 28px;
+  animation: panel-in 0.5s var(--ease-out) both;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: clamp(40px, 6vw, 72px) 24px;
+  border-radius: 16px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.empty__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.empty__text {
+  max-width: 44ch;
+  margin: 0;
+  color: var(--muted);
+}
+
+.empty__button {
+  display: inline-flex;
+  align-items: center;
+  height: 46px;
+  margin-top: 10px;
+  padding: 0 24px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font: italic 700 19px/1 var(--font-action);
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition: text-shadow 0.4s;
+}
+
+.empty__button:hover {
+  text-shadow: 0 0 12px rgba(255, 190, 140, 0.7);
+}
+
+/* ---------- Settings ---------- */
+
+.settings {
+  display: grid;
+  gap: 22px;
+  max-width: 560px;
+}
+
+.settings__row {
+  display: grid;
+  gap: 8px;
+}
+
+.settings__label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* The page behind is --bg, so fields and toggles sit on --surface here. */
+.settings .field__box,
+.settings .field input:-webkit-autofill {
+  background: var(--surface);
+}
+
+.settings .field input:-webkit-autofill {
+  box-shadow: 0 0 0 100px var(--surface) inset;
+}
+
+.settings .segmented {
+  justify-self: start;
+}
+
+.settings__photo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.settings__file {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.settings__file:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.settings__file input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.settings__link {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: 500 14px/1 var(--font-body);
+  cursor: pointer;
+}
+
+.settings__link:hover {
+  color: var(--text);
+}
+
+.settings__actions {
+  display: flex;
+  gap: 12px;
+}
+
+.settings__actions .auth__submit {
+  flex: 1;
+}
+
+.settings__logout {
+  height: 52px;
+  padding: 0 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: none;
+  color: #ff8a7a;
+  font: 500 15px/1 var(--font-body);
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+
+.settings__logout:hover {
+  border-color: rgba(255, 138, 122, 0.5);
+}
+
+@media (max-width: 900px) {
+  main.profile-page {
+    --hero-h: clamp(200px, 44vw, 300px);
+  }
+
+  .profile-head {
+    min-height: 0;
+    margin-top: 24px;
+  }
+
+  .profile-head__text {
+    max-width: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .profile-head {
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .profile-avatar:not(.profile-avatar--small) {
+    --shape-curved: path("M0 0 Q48 10 96 0 L96 72 Q48 62 0 72 Z");
+    --shape-flat: path("M0 0 Q48 0 96 0 L96 72 Q48 72 0 72 Z");
+    flex-basis: 96px;
+    width: 96px;
+    height: 72px;
+  }
+
+  .profile-tab {
+    font-size: 16px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1582,7 +1931,8 @@ main {
   .slogan__quote,
   .login-bg__strip,
   .login-bg__art,
-  .auth {
+  .auth,
+  .profile-panel {
     animation: none;
   }
 }
