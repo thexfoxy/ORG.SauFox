@@ -58,8 +58,8 @@ Home page:
       status box. Data: `CATALOG` in `js/main.js` (placeholders for now).
 - [x] 5. Subscriptions: Basic and Premium boxes, side by side at every
       screen size. Prices follow the currency chosen above the work cards.
-      On hover the Basic box gets a soft light that follows the
-      pointer. Plan features and prices are placeholders.
+      On hover each box gets a soft light that follows the
+      pointer (white on Basic, orange on Premium). Plan features and prices are placeholders.
 
 Login page:
 - [ ] Login / Sign up with sliding switch, email, password with show/hide,

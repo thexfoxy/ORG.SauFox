@@ -911,19 +911,10 @@ main {
   border-radius: calc(var(--radius) + 4px);
   background: var(--surface);
   border: 1px solid transparent;
-  transition: border-color 0.3s ease;
-}
-
-.plan:hover {
-  border-color: var(--line);
 }
 
 .plan--premium {
   background: var(--surface-2);
-}
-
-.plan--premium:hover {
-  border-color: rgba(255, 122, 26, 0.35);
 }
 
 .plan__name {
@@ -1023,18 +1014,24 @@ main {
 }
 
 /* Always side by side; on small screens everything inside scales down. */
-/* Basic: on hover a soft light follows the pointer across the box, its
-   edge catches the same light, and the box lifts a little. */
-.plan--basic {
+/* Both plans: on hover a soft light follows the pointer across the box,
+   its edge catches the same light, and the box lifts a little. Basic's
+   light is white, Premium's orange. */
+.plan {
   --mx: 50%;
   --my: 0%;
+  --light: 255, 255, 255;
   position: relative;
   isolation: isolate;
   transition: transform 0.5s var(--ease-out), border-color 0.3s ease;
 }
 
-.plan--basic::before,
-.plan--basic::after {
+.plan--premium {
+  --light: 255, 122, 26;
+}
+
+.plan::before,
+.plan::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -1044,28 +1041,28 @@ main {
   transition: opacity 0.45s ease;
 }
 
-.plan--basic::before {
+.plan::before {
   z-index: -1;
-  background: radial-gradient(420px circle at var(--mx) var(--my), rgba(255, 255, 255, 0.12), transparent 65%);
+  background: radial-gradient(420px circle at var(--mx) var(--my), rgba(var(--light), 0.12), transparent 65%);
 }
 
-.plan--basic::after {
+.plan::after {
   inset: -1px;
   padding: 1px;
-  background: radial-gradient(320px circle at var(--mx) var(--my), rgba(255, 255, 255, 0.85), transparent 70%);
+  background: radial-gradient(320px circle at var(--mx) var(--my), rgba(var(--light), 0.85), transparent 70%);
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
 }
 
 @media (hover: hover) {
-  .plan--basic:hover {
+  .plan:hover {
     transform: translateY(-4px);
     border-color: transparent;
   }
 
-  .plan--basic:hover::before,
-  .plan--basic:hover::after {
+  .plan:hover::before,
+  .plan:hover::after {
     opacity: 1;
   }
 }

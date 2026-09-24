@@ -491,15 +491,15 @@ const CATALOG = [
   }, 2600);
 })();
 
-// Section 5 — Subscriptions: the Basic box's hover light follows the pointer.
-(function basicPlanLight() {
-  const plan = document.querySelector(".plan--basic");
-  if (!plan) return;
-  plan.addEventListener("pointermove", (event) => {
-    const box = plan.getBoundingClientRect();
-    plan.style.setProperty("--mx", `${event.clientX - box.left}px`);
-    plan.style.setProperty("--my", `${event.clientY - box.top}px`);
-  });
+// Section 5 — Subscriptions: each plan's hover light follows the pointer.
+(function planLight() {
+  document.querySelectorAll(".plan").forEach((plan) =>
+    plan.addEventListener("pointermove", (event) => {
+      const box = plan.getBoundingClientRect();
+      plan.style.setProperty("--mx", `${event.clientX - box.left}px`);
+      plan.style.setProperty("--my", `${event.clientY - box.top}px`);
+    })
+  );
 })();
 
 // Site-wide: no copying text and no saving images (right-click menu,
