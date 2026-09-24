@@ -541,6 +541,9 @@ main {
 .slogan {
   max-width: 1440px;
   margin: calc(var(--hero-h) * -0.2885 + 22px) auto 0;
+  /* Fill the rest of the hero's height so the next section clears the
+     hero's lower right side. */
+  min-height: calc(var(--hero-h) * 0.2885 - 22px);
   padding: 0 var(--gutter);
 }
 
@@ -574,10 +577,207 @@ main {
 @media (max-width: 900px) {
   .slogan {
     margin-top: 28px;
+    min-height: 0;
   }
 
   .slogan__quote {
     max-width: 34rem;
+  }
+}
+
+/* ==========================================================================
+   Section 4 — Work cards
+   Image slider on top, price strip under it (cycles through currencies),
+   and a separate status box below.
+   ========================================================================== */
+
+.works {
+  max-width: 1440px;
+  margin: clamp(56px, 7vw, 96px) auto 0;
+  padding: 0 var(--gutter) 96px;
+}
+
+.works__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(16px, 2vw, 28px);
+}
+
+.card {
+  display: grid;
+  gap: 10px;
+}
+
+/* ---------- Image slider ---------- */
+
+.card__media {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  max-width: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.card__slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.06);
+  transition: opacity 0.9s ease, transform 1.4s var(--ease-out);
+}
+
+.card__slide.is-active {
+  opacity: 1;
+  transform: none;
+}
+
+.card__caption {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  gap: 2px;
+  padding: 48px 16px 16px;
+  background: linear-gradient(to top, rgba(8, 8, 10, 0.78), transparent);
+}
+
+.card__title {
+  margin: 0;
+  font: 600 18px/1.2 var(--font-body);
+}
+
+.card__kind {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.card__dots {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.card__dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.3s;
+}
+
+.card__dot.is-active {
+  background: #fff;
+  transform: scale(1.25);
+}
+
+/* ---------- Price strip: one currency at a time, sliding up ---------- */
+
+.card__price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.card__price-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.card__price-track {
+  position: relative;
+  height: 24px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.card__amount {
+  position: absolute;
+  inset: 0;
+  text-align: right;
+  font: 600 17px/24px var(--font-body);
+  font-variant-numeric: tabular-nums;
+  transform: translateY(100%);
+  opacity: 0;
+  transition: transform 0.6s var(--ease-out), opacity 0.4s ease;
+}
+
+.card__amount.is-active {
+  transform: none;
+  opacity: 1;
+}
+
+.card__amount.is-leaving {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+/* ---------- Status box ---------- */
+
+.card__status {
+  --dot: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.card__status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+
+.card__status--released   { --dot: #3ecf8e; }
+.card__status--preorder   { --dot: #5b8cff; }
+.card__status--coming     { --dot: var(--accent); }
+.card__status--production { --dot: var(--muted); }
+
+@media (max-width: 1000px) {
+  .works__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Phones: one row you swipe through, edge to edge. */
+@media (max-width: 520px) {
+  .works__grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 78%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin: 0 calc(var(--gutter) * -1);
+    padding: 0 var(--gutter);
+    scroll-padding: 0 var(--gutter);
+  }
+
+  .works__grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .card {
+    scroll-snap-align: start;
   }
 }
 

@@ -138,3 +138,137 @@ const WORKS = Array.from({ length: 14 }, (_, i) =>
   narrow.addEventListener("change", build);
   setInterval(swap, SWAP_EVERY);
 })();
+
+// Section 4 — Work cards. Placeholder catalogue until the real one exists.
+// images: 1-based positions in WORKS.
+// status: released | preorder | coming | production
+const CATALOG = [
+  {
+    title: "Ember Road",
+    kind: "Game",
+    images: [2, 7, 13],
+    prices: { USD: 19.99, EUR: 18.99, IRR: 12500000 },
+    status: "released",
+  },
+  {
+    title: "Paper Foxes",
+    kind: "Animated series",
+    images: [6, 1, 11],
+    prices: { USD: 9.99, EUR: 9.49, IRR: 6200000 },
+    status: "preorder",
+  },
+  {
+    title: "The Quiet Hour",
+    kind: "Short film",
+    images: [3, 10, 14],
+    prices: { USD: 4.99, EUR: 4.79, IRR: 3100000 },
+    status: "coming",
+  },
+  {
+    title: "Salt and Ash",
+    kind: "Novel",
+    images: [4, 9, 12],
+    prices: { USD: 14.99, EUR: 13.99, IRR: 9400000 },
+    status: "production",
+  },
+];
+
+(function workCards() {
+  const grid = document.querySelector(".works__grid");
+  if (!grid) return;
+
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const STATUS = {
+    released: "Released",
+    preorder: "Pre-order",
+    coming: "Coming soon",
+    production: "In production",
+  };
+  const money = {
+    USD: (n) => `$${n.toFixed(2)}`,
+    EUR: (n) => `€${n.toFixed(2)}`,
+    IRR: (n) => `${n.toLocaleString("en-US")} Rials`,
+  };
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+
+  // Shows item `next` in a list of absolutely stacked items.
+  const step = (items, next, leavingClass) => {
+    items.forEach((item, i) => {
+      const wasActive = item.classList.contains("is-active");
+      item.classList.toggle("is-active", i === next);
+      if (leavingClass) item.classList.toggle(leavingClass, wasActive && i !== next);
+    });
+  };
+
+  CATALOG.forEach((work, index) => {
+    const card = el("article", "card");
+
+    // Image slider
+    const media = el("div", "card__media");
+    const slides = work.images.map((n, i) => {
+      const img = el("img", "card__slide" + (i === 0 ? " is-active" : ""));
+      img.src = WORKS[n - 1];
+      img.alt = i === 0 ? `${work.title} artwork` : "";
+      img.loading = "lazy";
+      return img;
+    });
+    const dots = el("div", "card__dots");
+    const dotButtons = slides.map((_, i) => {
+      const dot = el("button", "card__dot" + (i === 0 ? " is-active" : ""));
+      dot.type = "button";
+      dot.setAttribute("aria-label", `Show image ${i + 1} of ${slides.length}`);
+      dots.append(dot);
+      return dot;
+    });
+    const caption = el("div", "card__caption");
+    caption.append(el("h2", "card__title", work.title), el("span", "card__kind", work.kind));
+    media.append(...slides, caption, dots);
+
+    // Price strip
+    const price = el("div", "card__price");
+    const track = el("div", "card__price-track");
+    const amounts = Object.entries(work.prices).map(([code, value], i) => {
+      const amount = el("span", "card__amount" + (i === 0 ? " is-active" : ""), money[code](value));
+      track.append(amount);
+      return amount;
+    });
+    price.append(el("span", "card__price-label", "Price"), track);
+
+    // Status box
+    const status = el("span", `card__status card__status--${work.status}`, STATUS[work.status]);
+
+    card.append(media, price, status);
+    grid.append(card);
+
+    // Motion: slides every 4s, prices every 2.6s, staggered per card.
+    // Hovering the image pauses its slider.
+    let slide = 0;
+    let paused = false;
+    const showSlide = (i) => {
+      slide = i;
+      step(slides, i);
+      step(dotButtons, i);
+    };
+    dotButtons.forEach((dot, i) => dot.addEventListener("click", () => showSlide(i)));
+    media.addEventListener("pointerenter", () => (paused = true));
+    media.addEventListener("pointerleave", () => (paused = false));
+
+    let currency = 0;
+    setTimeout(() => {
+      setInterval(() => {
+        if (document.hidden || calm.matches || paused) return;
+        showSlide((slide + 1) % slides.length);
+      }, 4000);
+      setInterval(() => {
+        if (document.hidden || calm.matches) return;
+        currency = (currency + 1) % amounts.length;
+        step(amounts, currency, "is-leaving");
+      }, 2600);
+    }, index * 350);
+  });
+})();
