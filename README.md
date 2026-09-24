@@ -41,8 +41,8 @@ Home page:
       and every few seconds one panel crossfades to another. Hovering a panel
       zooms its art and dims the rest. Artwork list: `WORKS` in `js/main.js`
       (placeholders in `assets/works/` for now).
-- [x] 3. Studio slogan: "Stories you can play, watch, read and hold." (placeholder
-      copy) tucked into the space under the hero's curve; words rise in one by one
+- [x] 3. Studio slogan: a short line, "And my success is not but through God."
+      (Qur'an 11:88), in the space under the hero's curve
 - [ ] 4. Works grid: image slider, price cycling through currencies, release status
 - [ ] 5. Subscriptions: Basic and Premium
 

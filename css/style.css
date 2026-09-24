@@ -533,63 +533,41 @@ main {
 
 /* ==========================================================================
    Section 3 — Studio slogan
-   On wide screens it tucks up into the dark space the hero's curve leaves
-   on the left (the curve's flat left part ends at ~71% of the hero height
-   and starts falling at ~32% of the width). Words rise in one by one once
-   the collage has landed.
+   A short, quiet line. On wide screens it tucks up into the dark space the
+   hero's curve leaves on the left (the curve's flat left part ends at ~71%
+   of the hero height).
    ========================================================================== */
 
 .slogan {
-  position: relative;
   max-width: 1440px;
-  margin: calc(var(--hero-h) * -0.27) auto 0;
+  margin: calc(var(--hero-h) * -0.22) auto 0;
   padding: 0 var(--gutter);
 }
 
-.slogan__line {
+.slogan__quote {
+  display: grid;
+  gap: 8px;
   max-width: 40%;
   margin: 0;
-  font: 600 clamp(26px, 2.6vw, 40px)/1.15 var(--font-body);
-  letter-spacing: -0.02em;
-  text-wrap: balance;
+  animation: fade-in 1s ease 0.8s both;
 }
 
-.slogan__word {
-  display: inline-block;
-  animation: word-in 0.7s var(--ease-out) both;
-  animation-delay: calc(0.7s + var(--w, 0) * 70ms);
+.slogan__quote p {
+  margin: 0;
+  font: 500 clamp(20px, 1.8vw, 26px)/1.35 var(--font-body);
+  letter-spacing: -0.01em;
 }
 
-.slogan__word:nth-child(2) { --w: 1; }
-.slogan__word:nth-child(3) { --w: 2; }
-.slogan__word:nth-child(4) { --w: 3; }
-.slogan__word:nth-child(5) { --w: 4; }
-.slogan__word:nth-child(6) { --w: 5; }
-.slogan__word:nth-child(7) { --w: 6; }
-.slogan__word:nth-child(8) { --w: 7; }
-
-/* The four verbs, one per kind of release, in the logotype's script. */
-em.slogan__word {
-  font: 400 1.35em/0.9 var(--font-logo);
-  letter-spacing: 0;
-  color: var(--accent);
-  padding-right: 0.08em;
+.slogan__quote cite {
+  font-style: normal;
+  font-size: 14px;
+  color: var(--muted);
 }
 
-@keyframes word-in {
+@keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(0.5em);
-    filter: blur(4px);
   }
-}
-
-.slogan__sub {
-  max-width: 40%;
-  margin: 14px 0 0;
-  color: var(--muted);
-  font-size: 15px;
-  animation: word-in 0.7s var(--ease-out) 1.3s both;
 }
 
 @media (max-width: 900px) {
@@ -597,8 +575,7 @@ em.slogan__word {
     margin-top: 28px;
   }
 
-  .slogan__line,
-  .slogan__sub {
+  .slogan__quote {
     max-width: 34rem;
   }
 }
@@ -613,8 +590,7 @@ em.slogan__word {
 
   .cta__char,
   .hero__panel,
-  .slogan__word,
-  .slogan__sub {
+  .slogan__quote {
     animation: none;
   }
 }
