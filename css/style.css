@@ -1504,7 +1504,7 @@ main {
   position: relative;
   min-height: 100%;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--bg) center / cover no-repeat; /* image set by js/main.js */
 }
 
 .auth__band {

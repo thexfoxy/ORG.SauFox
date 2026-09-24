@@ -538,10 +538,11 @@ const CATALOG = [
     bg.append(strip);
   });
 
-  // Curved art layers
+  // Curved art layers, plus one more image in the corner behind them
   auth.querySelectorAll(".auth__band").forEach((band, i) => {
     band.style.backgroundImage = `url("${shuffled[count + i]}")`;
   });
+  auth.querySelector(".auth__art").style.backgroundImage = `url("${shuffled[count + 3]}")`;
 
   // Tabs and sliding forms
   const tabs = { login: auth.querySelector("#tab-login"), signup: auth.querySelector("#tab-signup") };

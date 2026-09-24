@@ -65,8 +65,8 @@ Home page:
 Login page (`login.html`):
 - [x] Slanted artwork strips behind everything; a card with the studio logo,
       Login / Sign Up tabs whose forms slide past each other, email and
-      password (with show / hide), and Google / Apple buttons. Three curved
-      artwork layers fill the card's right half. `login.html#signup` opens
+      password (with show / hide), and Google / Apple buttons. The card's
+      right half has an image with three curved artwork layers over it. `login.html#signup` opens
       the Sign Up tab.
 - [ ] Real accounts: there is no account server yet. A valid form only marks
       this browser as signed in (localStorage) so the header shows the
