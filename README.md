@@ -15,14 +15,22 @@ npx serve .
 - `index.html`: home page
 - `css/style.css`: styles; design tokens live in `:root`
 - `js/main.js`: scripts
-- `assets/`: logo, default avatar and images
+- `assets/`: default avatar, images, and self-hosted fonts (Great Vibes,
+  Barlow Condensed, Inter; all SIL Open Font License)
 
 ## Build progress
 
 Built one section at a time from the hand-drawn sketches.
 
 Home page:
-- [x] 1. Header: profile chip (expands on hover or tap), logo, Login button
+- [x] 1. Header: script logotype in the centre; the right side depends on the visitor:
+      - first visit or no account: "Wanna create an account?"
+      - has an account but signed out: "Login"
+      - signed in: no button; a profile chip on the left that expands on hover or tap
+
+      The button's letters loop orange to white one after another; on hover the
+      loop stops and the button glows softly. Add `?demo=new|returning|member` to
+      the URL to preview each state.
 - [ ] 2. Hero: diagonal panels with images of the studio's works
 - [ ] 3. Studio slogan
 - [ ] 4. Works grid: image slider, price cycling through currencies, release status

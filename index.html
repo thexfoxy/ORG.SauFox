@@ -1,15 +1,30 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-auth="new">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SauFox Entertainment</title>
   <meta name="description" content="SauFox Entertainment — games, animation, short films, feature films and novels, in physical and digital editions.">
-  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Set the auth state before first paint so the header never flickers.
+    // member    = signed in              -> profile chip, no CTA
+    // returning = has an account, signed out -> "Login"
+    // new       = first visit / no account   -> "Wanna create an account?"
+    // `?demo=<state>` overrides it for previews.
+    (function () {
+      var state = "new";
+      try {
+        var demo = new URLSearchParams(location.search).get("demo");
+        if (demo === "new" || demo === "returning" || demo === "member") state = demo;
+        else if (localStorage.getItem("saufox.session")) state = "member";
+        else if (localStorage.getItem("saufox.hasAccount")) state = "returning";
+      } catch (e) {}
+      document.documentElement.dataset.auth = state;
+    })();
+  </script>
 </head>
 <body>
   <!-- Section 1: Header -->
@@ -22,12 +37,10 @@
         <span class="profile-chip__label">Profile</span>
       </a>
 
-      <a class="brand" href="index.html" aria-label="SauFox Entertainment home">
-        <img class="brand__mark" src="assets/logo.svg" alt="">
-        <span class="brand__name">SauFox <span class="brand__sub">Entertainment</span></span>
-      </a>
+      <a class="brand" href="index.html">SauFox<span class="brand__sub"> Entertainment</span></a>
 
-      <a class="btn btn--outline" href="login.html">Login</a>
+      <a class="cta cta--login" href="login.html" data-animate-letters>Login</a>
+      <a class="cta cta--signup" href="login.html#signup" data-animate-letters>Wanna create an account?</a>
     </div>
   </header>
 
