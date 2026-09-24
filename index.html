@@ -48,7 +48,42 @@
   </header>
 
   <main>
-    <!-- Next sections: hero (works), slogan, works grid, subscriptions -->
+    <!-- Section 2: Hero — a free-standing collage of the studio's works.
+         Four slanted panels; the bottom edge falls away in a curve.
+         To use real artwork, add style="--art: url(assets/hero/<file>.jpg)"
+         to a panel; until then each panel shows its placeholder colours. -->
+    <section class="hero" aria-label="SauFox works">
+      <a class="hero__panel hero__panel--games" href="#games">
+        <span class="hero__art"></span>
+        <span class="hero__label">
+          <span class="hero__kind">Games</span>
+          <span class="hero__more">Explore</span>
+        </span>
+      </a>
+      <a class="hero__panel hero__panel--animation" href="#animation">
+        <span class="hero__art"></span>
+        <span class="hero__label">
+          <span class="hero__kind">Animation</span>
+          <span class="hero__more">Explore</span>
+        </span>
+      </a>
+      <a class="hero__panel hero__panel--films" href="#films">
+        <span class="hero__art"></span>
+        <span class="hero__label">
+          <span class="hero__kind">Films</span>
+          <span class="hero__more">Short &amp; feature</span>
+        </span>
+      </a>
+      <a class="hero__panel hero__panel--novels" href="#novels">
+        <span class="hero__art"></span>
+        <span class="hero__label">
+          <span class="hero__kind">Novels</span>
+          <span class="hero__more">Explore</span>
+        </span>
+      </a>
+    </section>
+
+    <!-- Next sections: slogan, works grid, subscriptions -->
   </main>
 
   <script src="js/main.js" defer></script>
