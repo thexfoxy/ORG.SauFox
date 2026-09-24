@@ -126,6 +126,50 @@ a {
   padding-top: 4px; /* optical centering for the script's tall caps */
 }
 
+/* Cursor blur (desktop only): a blurred copy of the logotype sits on top of
+   the sharp one. A soft circle that follows the mouse shows the blurred copy
+   and hides the sharp text under it. --blur-r grows from 0 on hover. */
+
+@property --blur-r {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+.brand__blur {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .brand {
+    --mx: 50%;
+    --my: 50%;
+    --blur-r: 0px;
+    position: relative;
+    transition: --blur-r 0.35s var(--ease-out);
+  }
+
+  .brand.is-blurring {
+    --blur-r: 42px;
+  }
+
+  .brand__text {
+    -webkit-mask-image: radial-gradient(circle var(--blur-r) at var(--mx) var(--my), transparent 35%, #000 100%);
+    mask-image: radial-gradient(circle var(--blur-r) at var(--mx) var(--my), transparent 35%, #000 100%);
+  }
+
+  .brand__blur {
+    display: block;
+    position: absolute;
+    inset: 0;
+    padding: inherit;
+    filter: blur(2px);
+    pointer-events: none;
+    -webkit-mask-image: radial-gradient(circle var(--blur-r) at var(--mx) var(--my), #000 35%, transparent 100%);
+    mask-image: radial-gradient(circle var(--blur-r) at var(--mx) var(--my), #000 35%, transparent 100%);
+  }
+}
+
 /* ---------- Call to action: Login / Wanna create an account? ----------
    Bare text, no box. At rest the letters cycle orange -> white one after
    another in an endless wave. On hover the resting text leaves letter by

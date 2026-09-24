@@ -32,6 +32,20 @@
   });
 })();
 
+// Section 1 — Header: logotype blur follows the mouse (desktop only).
+(function brandBlur() {
+  const brand = document.querySelector(".brand");
+  if (!brand || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
+  brand.addEventListener("pointermove", (event) => {
+    const box = brand.getBoundingClientRect();
+    brand.style.setProperty("--mx", `${event.clientX - box.left}px`);
+    brand.style.setProperty("--my", `${event.clientY - box.top}px`);
+    brand.classList.add("is-blurring");
+  });
+  brand.addEventListener("pointerleave", () => brand.classList.remove("is-blurring"));
+})();
+
 // Section 1 — Header: profile chip (signed-in users only).
 // Desktop expands it on hover (CSS). On touch screens the first tap expands
 // it, a second tap follows the link, and tapping elsewhere collapses it.

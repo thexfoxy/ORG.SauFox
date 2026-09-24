@@ -23,7 +23,8 @@ npx serve .
 Built one section at a time from the hand-drawn sketches.
 
 Home page:
-- [x] 1. Header: script logotype in the centre; the right side depends on the visitor:
+- [x] 1. Header: script logotype in the centre (on desktop, the part under the
+      mouse softly blurs); the right side depends on the visitor:
       - first visit or no account: "Wanna create an account?"
       - has an account but signed out: "Login"
       - signed in: no button; a profile chip on the left that expands on hover or tap
