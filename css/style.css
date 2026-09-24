@@ -431,6 +431,16 @@ a {
   }
 }
 
+main {
+  --hero-h: clamp(380px, 52vw, 720px);
+}
+
+@media (max-width: 700px) {
+  main {
+    --hero-h: clamp(320px, 100vw, 460px);
+  }
+}
+
 /* ==========================================================================
    Section 2 — Hero: collage of random artwork from the studio's releases
    Full width with no box around it. js/main.js builds --n panels; each is
@@ -445,7 +455,7 @@ a {
   --gap: 5px;
   --w: calc((100% + var(--slant)) / var(--n, 7));
   position: relative;
-  height: clamp(380px, 52vw, 720px);
+  height: var(--hero-h);
   margin-top: var(--gap);
   overflow: hidden;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 520' preserveAspectRatio='none'%3E%3Cpath d='M0 0H1440V520H1200C900 520 780 370 460 370H0Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
@@ -518,7 +528,78 @@ a {
   .hero {
     --slant: 12%;
     --gap: 3px;
-    height: clamp(320px, 100vw, 460px);
+  }
+}
+
+/* ==========================================================================
+   Section 3 — Studio slogan
+   On wide screens it tucks up into the dark space the hero's curve leaves
+   on the left (the curve's flat left part ends at ~71% of the hero height
+   and starts falling at ~32% of the width). Words rise in one by one once
+   the collage has landed.
+   ========================================================================== */
+
+.slogan {
+  position: relative;
+  max-width: 1440px;
+  margin: calc(var(--hero-h) * -0.27) auto 0;
+  padding: 0 var(--gutter);
+}
+
+.slogan__line {
+  max-width: 40%;
+  margin: 0;
+  font: 600 clamp(26px, 2.6vw, 40px)/1.15 var(--font-body);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.slogan__word {
+  display: inline-block;
+  animation: word-in 0.7s var(--ease-out) both;
+  animation-delay: calc(0.7s + var(--w, 0) * 70ms);
+}
+
+.slogan__word:nth-child(2) { --w: 1; }
+.slogan__word:nth-child(3) { --w: 2; }
+.slogan__word:nth-child(4) { --w: 3; }
+.slogan__word:nth-child(5) { --w: 4; }
+.slogan__word:nth-child(6) { --w: 5; }
+.slogan__word:nth-child(7) { --w: 6; }
+.slogan__word:nth-child(8) { --w: 7; }
+
+/* The four verbs, one per kind of release, in the logotype's script. */
+em.slogan__word {
+  font: 400 1.35em/0.9 var(--font-logo);
+  letter-spacing: 0;
+  color: var(--accent);
+  padding-right: 0.08em;
+}
+
+@keyframes word-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5em);
+    filter: blur(4px);
+  }
+}
+
+.slogan__sub {
+  max-width: 40%;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+  animation: word-in 0.7s var(--ease-out) 1.3s both;
+}
+
+@media (max-width: 900px) {
+  .slogan {
+    margin-top: 28px;
+  }
+
+  .slogan__line,
+  .slogan__sub {
+    max-width: 34rem;
   }
 }
 
@@ -531,7 +612,9 @@ a {
   }
 
   .cta__char,
-  .hero__panel {
+  .hero__panel,
+  .slogan__word,
+  .slogan__sub {
     animation: none;
   }
 }
