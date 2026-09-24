@@ -43,10 +43,12 @@ Home page:
       (placeholders in `assets/works/` for now).
 - [x] 3. Studio slogan: a short line, "And my success is not but through God."
       (Qur'an 11:88), in the space under the hero's curve
-- [x] 4. Work cards: four cards (two on tablets, a swipeable row on phones).
-      Each has an image slider with dots, a price strip cycling through
-      USD, EUR and Rials, and a release status box. Data: `CATALOG` in
-      `js/main.js` (placeholder titles and prices for now).
+- [x] 4. Work cards: a sliding row tucked right under the slogan; on the right
+      the cards fade out under the hero's curve. Drag, swipe or use the arrows
+      to move through them. Controls: currency (Auto cycles USD / EUR / Rials,
+      or pin one) and a max-price slider. Each card has an image slider, a
+      price strip and a status box. Data: `CATALOG` in `js/main.js`
+      (placeholder titles and prices for now).
 - [ ] 5. Subscriptions: Basic and Premium
 
 Login page:

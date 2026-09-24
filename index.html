@@ -63,11 +63,42 @@
       </blockquote>
     </section>
 
-    <!-- Section 4: Work cards. Each card: image slider, price that cycles
-         through currencies, and a separate status box. js/main.js renders
-         them from its CATALOG list. -->
+    <!-- Section 4: Work cards. A sliding row tucked under the slogan that
+         fades out under the hero's curve. Each card: image slider, price
+         that cycles through currencies, and a separate status box.
+         js/main.js renders the cards from its CATALOG list. -->
     <section class="works" aria-label="Works">
-      <div class="works__grid"></div>
+      <div class="works__track" tabindex="0" aria-label="Works, scroll sideways for more"></div>
+      <p class="works__empty" hidden>No works at this price. Raise the maximum price to see more.</p>
+
+      <div class="works__controls">
+        <div class="works__group">
+          <span class="works__label" id="currency-label">Currency</span>
+          <div class="segmented" role="group" aria-labelledby="currency-label">
+            <button type="button" data-currency="auto" aria-pressed="true">Auto</button>
+            <button type="button" data-currency="USD" aria-pressed="false">USD</button>
+            <button type="button" data-currency="EUR" aria-pressed="false">EUR</button>
+            <button type="button" data-currency="IRR" aria-pressed="false">Rials</button>
+          </div>
+        </div>
+
+        <div class="works__group">
+          <label class="works__label" for="max-price">Max price</label>
+          <input class="works__range" id="max-price" type="range">
+          <output class="works__max" for="max-price"></output>
+        </div>
+
+        <span class="works__count" aria-live="polite"></span>
+
+        <div class="works__arrows">
+          <button class="works__arrow" type="button" data-dir="-1" aria-label="Previous works">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <button class="works__arrow" type="button" data-dir="1" aria-label="Next works">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- Next sections: subscriptions -->

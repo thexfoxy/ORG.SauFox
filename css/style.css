@@ -451,6 +451,7 @@ main {
    ========================================================================== */
 
 .hero {
+  z-index: 2; /* the work cards slide in underneath */
   --slant: 9%;
   --gap: 5px;
   --w: calc((100% + var(--slant)) / var(--n, 7));
@@ -540,10 +541,9 @@ main {
 
 .slogan {
   max-width: 1440px;
+  position: relative;
+  z-index: 3;
   margin: calc(var(--hero-h) * -0.2885 + 22px) auto 0;
-  /* Fill the rest of the hero's height so the next section clears the
-     hero's lower right side. */
-  min-height: calc(var(--hero-h) * 0.2885 - 22px);
   padding: 0 var(--gutter);
 }
 
@@ -577,7 +577,6 @@ main {
 @media (max-width: 900px) {
   .slogan {
     margin-top: 28px;
-    min-height: 0;
   }
 
   .slogan__quote {
@@ -587,28 +586,165 @@ main {
 
 /* ==========================================================================
    Section 4 — Work cards
-   Image slider on top, price strip under it (cycles through currencies),
-   and a separate status box below.
+   A sliding row of cards tucked right under the slogan. Where the hero comes
+   further down (on the right), the cards slide underneath it: js/main.js
+   masks the row with the hero's curve so the cards fade out as they reach
+   it. Below the row: currency and max-price controls, and prev/next arrows.
+   Each card: image slider, price strip, separate status box.
    ========================================================================== */
 
 .works {
+  position: relative;
+  z-index: 1;
   max-width: 1440px;
-  margin: clamp(56px, 7vw, 96px) auto 0;
+  margin: 28px auto 0;
   padding: 0 var(--gutter) 96px;
 }
 
-.works__grid {
+.works__track {
+  --per-view: 4;
+  --gap: clamp(16px, 2vw, 28px);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(16px, 2vw, 28px);
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - (var(--per-view) - 1) * var(--gap)) / var(--per-view));
+  gap: var(--gap);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  cursor: grab;
+  -webkit-mask: var(--curve-mask, none) 0 0 / 100% 100% no-repeat;
+  mask: var(--curve-mask, none) 0 0 / 100% 100% no-repeat;
 }
 
-.card {
-  display: grid;
+.works__track::-webkit-scrollbar {
+  display: none;
+}
+
+.works__track.is-dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  scroll-behavior: auto;
+  user-select: none;
+}
+
+.works__empty {
+  padding: 48px 0;
+  color: var(--muted);
+}
+
+/* ---------- Controls row ---------- */
+
+.works__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  margin-top: 20px;
+}
+
+.works__group {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-/* ---------- Image slider ---------- */
+.works__label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.segmented button {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: calc(var(--radius) - 3px);
+  background: transparent;
+  color: var(--muted);
+  font: 500 13px/1 var(--font-body);
+  cursor: pointer;
+  transition: background-color 0.25s, color 0.25s;
+}
+
+.segmented button:hover {
+  color: var(--text);
+}
+
+.segmented button[aria-pressed="true"] {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.works__range {
+  width: clamp(120px, 14vw, 180px);
+  accent-color: var(--accent);
+}
+
+.works__max {
+  min-width: 9ch;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.works__count {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.works__arrows {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.works__arrow {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.25s, color 0.25s, opacity 0.25s;
+}
+
+.works__arrow:hover {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.works__arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.works__arrow svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- Card ---------- */
+
+.card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  scroll-snap-align: start;
+}
+
+.card[hidden] {
+  display: none;
+}
 
 .card__media {
   position: relative;
@@ -628,6 +764,8 @@ main {
   opacity: 0;
   transform: scale(1.06);
   transition: opacity 0.9s ease, transform 1.4s var(--ease-out);
+  pointer-events: none;
+  -webkit-user-drag: none;
 }
 
 .card__slide.is-active {
@@ -678,7 +816,7 @@ main {
   transform: scale(1.25);
 }
 
-/* ---------- Price strip: one currency at a time, sliding up ---------- */
+/* Price strip: one currency at a time, sliding up. */
 
 .card__price {
   display: flex;
@@ -723,7 +861,7 @@ main {
   opacity: 0;
 }
 
-/* ---------- Status box ---------- */
+/* Status box */
 
 .card__status {
   --dot: var(--muted);
@@ -753,31 +891,22 @@ main {
 .card__status--production { --dot: var(--muted); }
 
 @media (max-width: 1000px) {
-  .works__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .works__track {
+    --per-view: 2;
   }
 }
 
-/* Phones: one row you swipe through, edge to edge. */
+/* Phones: cards run edge to edge, the next one peeking in. */
 @media (max-width: 520px) {
-  .works__grid {
-    grid-template-columns: none;
-    grid-auto-flow: column;
+  .works__track {
     grid-auto-columns: 78%;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
     margin: 0 calc(var(--gutter) * -1);
     padding: 0 var(--gutter);
     scroll-padding: 0 var(--gutter);
   }
 
-  .works__grid::-webkit-scrollbar {
+  .works__arrows {
     display: none;
-  }
-
-  .card {
-    scroll-snap-align: start;
   }
 }
 
