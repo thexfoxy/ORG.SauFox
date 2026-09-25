@@ -42,6 +42,13 @@ const FA = {
   "New password · SauFox Entertainment": "رمز جدید · ساوفاکس اینترتینمنت",
   "Not found · SauFox Entertainment": "پیدا نشد · ساوفاکس اینترتینمنت",
   "{title} · SauFox Entertainment": "{title} · ساوفاکس اینترتینمنت",
+  "{title} — {kind} by SauFox Entertainment.": "{title} — {kind} از ساوفاکس اینترتینمنت.",
+  "SauFox Entertainment — games, animation, short films, feature films and novels, in physical and digital editions.": "ساوفاکس اینترتینمنت — بازی، انیمیشن، فیلم کوتاه، فیلم بلند و رمان، در نسخه‌های فیزیکی و دیجیتال.",
+  "About SauFox Entertainment, a studio making games, animation, films and novels, and how to contact us.": "درباره‌ی ساوفاکس اینترتینمنت، استودیوی ساخت بازی، انیمیشن، فیلم و رمان، و راه‌های تماس با ما.",
+  "Answers about accounts, buying, payment, refunds and pre-orders at SauFox Entertainment.": "پاسخ پرسش‌های رایج درباره‌ی حساب کاربری، خرید، پرداخت، بازگشت وجه و پیش‌خرید در ساوفاکس اینترتینمنت.",
+  "The terms for using saufoxentertainment.ir.": "قوانین و شرایط استفاده از saufoxentertainment.ir.",
+  "What SauFox Entertainment collects, why, and what you can do about it.": "ساوفاکس اینترتینمنت چه اطلاعاتی جمع می‌کند، چرا، و شما چه اختیاری دارید.",
+  "A release from SauFox Entertainment.": "اثری از ساوفاکس اینترتینمنت.",
 
   // ---------- Home ----------
   "Artwork from SauFox releases": "تصاویری از آثار ساوفاکس",

@@ -130,10 +130,68 @@ document.querySelectorAll("[data-lang-switch]").forEach((button) => {
   button.textContent = LANG === "fa" ? "English" : "فارسی";
   button.lang = LANG === "fa" ? "en" : "fa";
   button.addEventListener("click", () => {
-    local.set("lang", LANG === "fa" ? "en" : "fa");
-    location.reload();
+    const next = LANG === "fa" ? "en" : "fa";
+    local.set("lang", next);
+    // An address that names the language (?lang=fa) gets the new one.
+    const url = new URL(location.href);
+    if (url.searchParams.has("lang")) {
+      url.searchParams.set("lang", next);
+      location.replace(url.href);
+    } else location.reload();
   });
 });
+
+// Search engines and link previews. Each page's <head> has its English
+// description, canonical address and ?lang=fa twin; in Persian the texts
+// are translated, and an address with ?lang=fa is its own canonical one.
+// Pages built from data (a work) call pageMeta with their own details.
+const SITE_URL = "https://saufoxentertainment.ir";
+const FA_URL = /[?&]lang=fa(&|$)/.test(location.search);
+const setMeta = (selector, attr, value) => {
+  let el = document.head.querySelector(selector);
+  if (!el) {
+    const [, tag, key, name] = selector.match(/^(\w+)\[(\w+)="([^"]+)"\]/);
+    el = document.createElement(tag);
+    el.setAttribute(key, name);
+    document.head.append(el);
+  }
+  el.setAttribute(attr, value);
+};
+const pageMeta = ({ path, title, description, image } = {}) => {
+  const head = document.head;
+  if (path) {
+    const url = SITE_URL + path;
+    const fa = url + (url.includes("?") ? "&" : "?") + "lang=fa";
+    setMeta('link[rel="canonical"]', "href", FA_URL ? fa : url);
+    setMeta('link[hreflang="en"]', "href", url);
+    setMeta('link[hreflang="fa"]', "href", fa);
+    setMeta('link[hreflang="x-default"]', "href", url);
+    head.querySelectorAll("link[hreflang]").forEach((link) => (link.rel = "alternate"));
+    setMeta('meta[property="og:url"]', "content", FA_URL ? fa : url);
+  } else if (FA_URL) {
+    const canonical = head.querySelector('link[rel="canonical"]');
+    const fa = head.querySelector('link[hreflang="fa"]');
+    if (canonical && fa) canonical.href = fa.href;
+    const og = head.querySelector('meta[property="og:url"]');
+    if (og && fa) og.content = fa.href;
+  }
+  if (title) setMeta('meta[property="og:title"]', "content", t(title));
+  if (description) {
+    setMeta('meta[name="description"]', "content", t(description));
+    setMeta('meta[property="og:description"]', "content", t(description));
+  }
+  if (image) setMeta('meta[property="og:image"]', "content", new URL(image, SITE_URL + "/").href);
+  if (LANG === "fa") {
+    ['meta[name="description"]', 'meta[property="og:description"]', 'meta[property="og:title"]'].forEach((selector) => {
+      const el = head.querySelector(selector);
+      if (el) el.content = t(el.content);
+    });
+    const locale = head.querySelector('meta[property="og:locale"]');
+    const other = head.querySelector('meta[property="og:locale:alternate"]');
+    if (locale && other) [locale.content, other.content] = ["fa_IR", "en_US"];
+  }
+};
+if (!document.querySelector(".title-page")) pageMeta();
 
 // A sign-in link from an email (older templates) lands on the site's home
 // page with the session in the address; the login page picks it up.
@@ -1946,6 +2004,7 @@ const signedInGoHome = async (user) => {
     page.querySelectorAll(":scope > section:not(.title-missing)").forEach((s) => (s.hidden = true));
     page.querySelector(".title-missing").hidden = false;
     document.title = "Not found · SauFox Entertainment";
+    setMeta('meta[name="robots"]', "content", "noindex");
     return;
   }
 
@@ -1958,6 +2017,12 @@ const signedInGoHome = async (user) => {
   };
 
   document.title = `${work.title} · SauFox Entertainment`;
+  pageMeta({
+    path: `/work.html?id=${encodeURIComponent(work.id)}`,
+    title: `${work.title} · SauFox Entertainment`,
+    description: work.synopsis || `${work.title} — ${work.kind} by SauFox Entertainment.`,
+    image: work.images[0],
+  });
 
   // Key art, kicker and name
   const art = page.querySelector(".title-hero__art");

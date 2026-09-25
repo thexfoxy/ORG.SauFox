@@ -208,6 +208,23 @@ sign-up, password login, Google sign-in, emailed code and password reset
 In that order: with CAPTCHA on in Supabase but no site key on the site,
 nobody can log in.
 
+## Search engines (SEO)
+
+- Each page is in English at its plain address and in Persian at
+  `?lang=fa` (the language the address names wins over the saved choice,
+  and is then saved). Every public page's `<head>` has its canonical
+  address, the `hreflang` pair, Open Graph and Twitter tags and the share
+  image `assets/og.jpg`; `pageMeta` in `js/main.js` translates them in
+  Persian and fills them in for work pages.
+- `sitemap.xml` lists both languages of each page. Add each new work
+  (`work.html?id=…`) there too. `robots.txt` keeps the admin, checkout,
+  profile and status pages out; login and profile also say `noindex`.
+- The home page carries the studio's details as schema.org data.
+- Icons: `assets/favicon.svg`, `assets/apple-touch-icon.png`.
+- Google Search Console: add the domain property `saufoxentertainment.ir`,
+  verify with the TXT record it gives (Cloudflare DNS), then submit
+  `https://saufoxentertainment.ir/sitemap.xml`.
+
 ## Trust seals (eNamad)
 
 Every footer has an empty `<div class="site-footer__seals">` (hidden while

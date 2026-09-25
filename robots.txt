@@ -1,0 +1,8 @@
+# Account, checkout and admin pages are for members; everything else is open.
+User-agent: *
+Disallow: /admin.html
+Disallow: /checkout.html
+Disallow: /profile.html
+Disallow: /status.html
+
+Sitemap: https://saufoxentertainment.ir/sitemap.xml

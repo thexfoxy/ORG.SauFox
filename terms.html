@@ -9,7 +9,11 @@
     (function () {
       var lang = "en";
       try {
-        lang = localStorage.getItem("saufox.lang") ||
+        // ?lang=fa or ?lang=en in the address wins (links, search engines).
+        var asked = /[?&]lang=(fa|en)(&|$)/.exec(location.search);
+        if (asked) lang = asked[1];
+        if (asked) localStorage.setItem("saufox.lang", lang);
+        else lang = localStorage.getItem("saufox.lang") ||
           ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
       } catch (e) {}
       if (lang !== "fa") return;
@@ -22,9 +26,27 @@
   </script>
   <title>Terms of use · SauFox Entertainment</title>
   <meta name="description" content="The terms for using saufoxentertainment.ir.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta name="theme-color" content="#0f0f11">
+  <link rel="canonical" href="https://saufoxentertainment.ir/terms.html">
+  <link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/terms.html">
+  <link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/terms.html?lang=fa">
+  <link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/terms.html">
+  <meta property="og:site_name" content="SauFox Entertainment">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Terms of use · SauFox Entertainment">
+  <meta property="og:description" content="The terms for using saufoxentertainment.ir.">
+  <meta property="og:url" content="https://saufoxentertainment.ir/terms.html">
+  <meta property="og:image" content="https://saufoxentertainment.ir/assets/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="fa_IR">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=41">
+  <link rel="stylesheet" href="css/style.css?v=42">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -220,7 +242,7 @@
     </div>
   </footer>
 
-  <script src="js/fa.js?v=41" defer></script>
-  <script src="js/main.js?v=41" defer></script>
+  <script src="js/fa.js?v=42" defer></script>
+  <script src="js/main.js?v=42" defer></script>
 </body>
 </html>

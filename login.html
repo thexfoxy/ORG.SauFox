@@ -9,7 +9,11 @@
     (function () {
       var lang = "en";
       try {
-        lang = localStorage.getItem("saufox.lang") ||
+        // ?lang=fa or ?lang=en in the address wins (links, search engines).
+        var asked = /[?&]lang=(fa|en)(&|$)/.exec(location.search);
+        if (asked) lang = asked[1];
+        if (asked) localStorage.setItem("saufox.lang", lang);
+        else lang = localStorage.getItem("saufox.lang") ||
           ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
       } catch (e) {}
       if (lang !== "fa") return;
@@ -22,9 +26,13 @@
   </script>
   <title>Login · SauFox Entertainment</title>
   <meta name="description" content="Log in to SauFox Entertainment or create an account.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta name="theme-color" content="#0f0f11">
+  <meta name="robots" content="noindex">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=41">
+  <link rel="stylesheet" href="css/style.css?v=42">
 </head>
 <body class="login-page">
   <!-- Background: slanted strips of artwork from the studio's releases,
@@ -190,8 +198,8 @@
     </p>
   </main>
 
-  <script src="js/vendor/supabase.js?v=41" defer></script>
-  <script src="js/fa.js?v=41" defer></script>
-  <script src="js/main.js?v=41" defer></script>
+  <script src="js/vendor/supabase.js?v=42" defer></script>
+  <script src="js/fa.js?v=42" defer></script>
+  <script src="js/main.js?v=42" defer></script>
 </body>
 </html>

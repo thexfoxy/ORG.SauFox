@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Every page twice: English, and Persian with ?lang=fa. Add each new work
+     (work.html?id=...) here the same way. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://saufoxentertainment.ir/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/"/>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/?lang=fa</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/"/>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/work.html?id=the-candlewood</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/work.html?id=the-candlewood"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/work.html?id=the-candlewood&amp;lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/work.html?id=the-candlewood"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/work.html?id=the-candlewood&amp;lang=fa</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/work.html?id=the-candlewood"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/work.html?id=the-candlewood&amp;lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/work.html?id=the-candlewood"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/about.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/about.html"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/about.html?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/about.html"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/about.html?lang=fa</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/about.html"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/about.html?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/about.html"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/faq.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/faq.html"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/faq.html?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/faq.html"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/faq.html?lang=fa</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/faq.html"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/faq.html?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/faq.html"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/terms.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/terms.html"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/terms.html?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/terms.html"/>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/terms.html?lang=fa</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/terms.html"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/terms.html?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/terms.html"/>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/privacy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/privacy.html?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/privacy.html"/>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/privacy.html?lang=fa</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/privacy.html?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/privacy.html"/>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>
