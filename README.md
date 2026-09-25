@@ -20,6 +20,13 @@ npx serve .
 - `assets/`: default avatar, placeholder icons standing in for artwork (`works/`), and self-hosted fonts (Great Vibes,
   Barlow Condensed, Inter; all SIL Open Font License)
 
+## Hosting
+
+The site is published with GitHub Pages at https://saufoxentertainment.ir
+(`CNAME` holds the domain; `.nojekyll` makes Pages serve the files as they
+are). The account back end will live in the Supabase project
+`saufox-entertainment` (eu-central-1).
+
 ## Content protection
 
 Text can't be selected or copied, and images can't be dragged out or saved
