@@ -1,6 +1,16 @@
 <!-- SauFox Entertainment — Sign-up code email for Supabase Auth.
      Paste into Supabase: Authentication → Emails → Templates → Confirm sign up.
      Subject: {{ .Token }} کد تأیید حساب ساوفاکس | Your SauFox sign-up code -->
+<style>
+  /* Persian text in Vazirmatn, the site's font, from the site itself. Mail
+     apps that don't load web fonts (Gmail) fall back to Tahoma. */
+  @font-face {
+    font-family: "Vazirmatn";
+    src: url("https://saufoxentertainment.ir/assets/fonts/vazirmatn-nl.woff2") format("woff2");
+    font-weight: 100 900;
+    font-style: normal;
+  }
+</style>
 <div style="margin:0;padding:32px 16px;background:#0f0f11;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#18181b;border-radius:16px;">
     <tr>
@@ -9,15 +19,15 @@
       </td>
     </tr>
     <tr>
-      <td dir="rtl" style="padding:24px 32px 0;text-align:right;font:15px/1.9 Tahoma,Arial,sans-serif;color:#d9d6d0;">
-        <p style="margin:0 0 8px;color:#f5f3ef;font-size:17px;">{{ if .Data.name }}سلام {{ .Data.name }}،{{ else }}سلام،{{ end }}</p>
+      <td dir="rtl" style="padding:24px 32px 0;text-align:right;font:16px/2 Vazirmatn,Tahoma,Arial,sans-serif;color:#d9d6d0;">
+        <p style="margin:0 0 8px;color:#f5f3ef;font-size:18px;font-weight:700;">{{ if .Data.name }}سلام {{ .Data.name }}،{{ else }}سلام،{{ end }}</p>
         <p style="margin:0;">به ساوفاکس اینترتینمنت خوش آمدید. برای تأیید ایمیل و ساختن حسابتان، این کد را در سایت وارد کنید:</p>
       </td>
     </tr>
     <tr>
       <td style="padding:24px 32px;text-align:center;">
         <div dir="ltr" style="display:inline-block;padding:16px 28px;border-radius:12px;background:#0f0f11;font:700 34px/1 'Courier New',monospace;letter-spacing:10px;color:#ff7a1a;">{{ .Token }}</div>
-        <p dir="rtl" style="margin:14px 0 0;font:13px/1.8 Tahoma,Arial,sans-serif;color:#8e8c95;">این کد تا ۱۰ دقیقه معتبر است. آن را به هیچ‌کس ندهید؛ ساوفاکس هیچ‌وقت کد شما را نمی‌پرسد.</p>
+        <p dir="rtl" style="margin:14px 0 0;font:13px/2 Vazirmatn,Tahoma,Arial,sans-serif;color:#8e8c95;">این کد تا ۱۰ دقیقه معتبر است. آن را به هیچ‌کس ندهید؛ ساوفاکس هیچ‌وقت کد شما را نمی‌پرسد.</p>
       </td>
     </tr>
     <tr>
@@ -29,7 +39,7 @@
     </tr>
     <tr>
       <td style="padding:20px 32px 28px;font:12px/1.8 Arial,Helvetica,sans-serif;color:#8e8c95;">
-        <p dir="rtl" style="margin:0;text-align:right;font-family:Tahoma,Arial,sans-serif;">اگر شما در ساوفاکس ثبت‌نام نکرده‌اید، این ایمیل را نادیده بگیرید.</p>
+        <p dir="rtl" style="margin:0;text-align:right;font-family:Vazirmatn,Tahoma,Arial,sans-serif;">اگر شما در ساوفاکس ثبت‌نام نکرده‌اید، این ایمیل را نادیده بگیرید.</p>
         <p style="margin:6px 0 0;">If you didn&rsquo;t sign up for SauFox, you can ignore this email.</p>
         <p style="margin:14px 0 0;"><a href="https://saufoxentertainment.ir" style="color:#ff7a1a;text-decoration:none;">saufoxentertainment.ir</a></p>
       </td>
