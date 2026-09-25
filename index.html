@@ -7,7 +7,7 @@
   <meta name="description" content="SauFox Entertainment — games, animation, short films, feature films and novels, in physical and digital editions.">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=7">
+  <link rel="stylesheet" href="css/style.css?v=8">
   <script>
     // Set the auth state before first paint so the header never flickers.
     // member    = signed in              -> profile chip, no CTA
@@ -82,6 +82,10 @@
       </div>
     </section>
 
+    <!-- Category rows (Coming soon, Games, Films, Animation, Novels). They
+         appear once the catalogue spans two or more kinds of work. -->
+    <section class="shelves" aria-label="Browse by category" hidden></section>
+
     <!-- Section 5: Subscriptions. Two plans side by side, Basic and
          Premium. Prices follow the currency chosen above the work cards. -->
     <section class="plans" id="plans" aria-labelledby="plans-title">
@@ -121,7 +125,7 @@
     </section>
   </main>
 
-  <script src="js/content.js?v=7" defer></script>
-  <script src="js/main.js?v=7" defer></script>
+  <script src="js/content.js?v=8" defer></script>
+  <script src="js/main.js?v=8" defer></script>
 </body>
 </html>

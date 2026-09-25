@@ -2377,3 +2377,159 @@ a.hero__panel {
     animation: none;
   }
 }
+
+/* ==========================================================================
+   Category rows (home) and poster cards (rows, My List)
+   ========================================================================== */
+
+.shelves {
+  display: grid;
+  gap: 44px;
+  max-width: 1440px;
+  margin: 72px auto 0;
+  padding: 0 var(--gutter);
+}
+
+.shelf__heading {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.shelf__track {
+  --per-view: 6;
+  --gap: 14px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - (var(--per-view) - 1) * var(--gap)) / var(--per-view));
+  gap: var(--gap);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  cursor: grab;
+}
+
+.shelf__track::-webkit-scrollbar {
+  display: none;
+}
+
+.shelf__track.is-dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  user-select: none;
+}
+
+.shelf__track > * {
+  scroll-snap-align: start;
+}
+
+@media (max-width: 1000px) {
+  .shelf__track {
+    --per-view: 4;
+  }
+}
+
+@media (max-width: 600px) {
+  .shelf__track {
+    grid-auto-columns: 40%;
+    margin: 0 calc(var(--gutter) * -1);
+    padding: 0 var(--gutter);
+    scroll-padding: 0 var(--gutter);
+  }
+}
+
+.poster-card {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.poster-card__frame {
+  display: block;
+  aspect-ratio: 3 / 4;
+  max-width: 100%;
+  margin-bottom: 6px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.poster-card__frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.8s var(--ease-out);
+}
+
+@media (hover: hover) {
+  .poster-card:hover .poster-card__frame img {
+    transform: scale(1.04);
+  }
+}
+
+.poster-card:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+  border-radius: var(--radius);
+}
+
+.poster-card__title {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.poster-card__kind {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* My List on the profile page. */
+.poster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+  gap: 22px 16px;
+}
+
+@media (max-width: 460px) {
+  .poster-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* My List button on the title page. */
+.title-button--list {
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.title-button--list:hover {
+  background: #2a2a2f;
+}
+
+.title-button--list:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+.title-button--list .icon-check,
+.title-button--list.is-on .icon-add {
+  display: none;
+}
+
+.title-button--list.is-on .icon-check {
+  display: block;
+  color: var(--accent);
+}
+
+.title-button--list:disabled {
+  cursor: progress;
+}

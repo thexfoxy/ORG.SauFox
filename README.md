@@ -30,7 +30,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=7`); raise it in all three pages
+JS with a version number (`style.css?v=8`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -39,6 +39,8 @@ Sign-up, login and profiles use the Supabase project `saufox-entertainment`
 (eu-central-1). The browser uses the project's publishable key (in
 `js/main.js`); row-level security limits each member to their own data.
 
+- `public.my_list`: the works each member saved with "My List"
+  (work id from `js/content.js`), readable and changeable by that member only.
 - `public.profiles`: one row per member (name, currency, avatar_url),
   created by the `on_auth_user_created` trigger from the sign-up name.
 - Storage bucket `avatars` (public, 1 MB, JPEG / PNG / WebP): each member
@@ -106,6 +108,14 @@ Title page (`work.html?id=<id>`):
       a live countdown to the trailer, synopsis, a gallery of stills that
       open full size (arrow keys and Esc work), and credits. Sections with
       no data stay hidden. Home-page cards and hero panels link here.
+
+Home page, later additions:
+- [x] Category rows (Coming soon, Games, Films, Animation, Novels) under
+      the main row, built from `CATALOG`. They stay hidden until the
+      catalogue spans at least two kinds of work.
+- [x] "My List": a button on each work's page saves it to the member's
+      account (signed-out visitors go to login); the profile's My List tab
+      shows the saved works.
 
 Login page (`login.html`):
 - [x] Slanted artwork strips behind everything; a card with the studio logo,

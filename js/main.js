@@ -271,6 +271,66 @@ const heroEdgeY = (() => {
 })();
 
 
+// Sliding rows (work cards, category rows): drag like a touch screen on
+// every device. Phones use native touch scrolling. With a mouse the row
+// follows the pointer, then glides on with the release speed and settles on
+// a card.
+const dragScroll = (track) => {
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let drag = null;
+  let glide = 0;
+
+  track.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "mouse" || event.button !== 0) return;
+    cancelAnimationFrame(glide);
+    drag = { x: event.clientX, left: track.scrollLeft, moved: false, v: 0, lastX: event.clientX, lastT: performance.now() };
+  });
+
+  window.addEventListener("pointermove", (event) => {
+    if (!drag) return;
+    const dx = event.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) > 5) {
+      drag.moved = true;
+      track.classList.add("is-dragging");
+    }
+    if (!drag.moved) return;
+    track.scrollLeft = drag.left - dx;
+    const now = performance.now();
+    const dt = Math.max(now - drag.lastT, 1);
+    drag.v = 0.8 * ((event.clientX - drag.lastX) / dt) + 0.2 * drag.v; // px per ms
+    drag.lastX = event.clientX;
+    drag.lastT = now;
+  });
+
+  window.addEventListener("pointerup", () => {
+    if (!drag) return;
+    const { moved } = drag;
+    let v = drag.v * 16; // px per frame
+    drag = null;
+    if (!moved) return;
+
+    // Swallow the click that ends a drag so it doesn't open a card.
+    track.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      },
+      { capture: true, once: true }
+    );
+
+    const settle = () => track.classList.remove("is-dragging"); // snapping resumes
+    if (calm.matches || Math.abs(v) < 0.5) return settle();
+    const tick = () => {
+      track.scrollLeft -= v;
+      v *= 0.94;
+      if (Math.abs(v) > 0.5) glide = requestAnimationFrame(tick);
+      else settle();
+    };
+    glide = requestAnimationFrame(tick);
+  });
+};
+
 // Section 4 — Work cards, rendered from CATALOG in js/content.js.
 
 (function workCards() {
@@ -419,61 +479,7 @@ const heroEdgeY = (() => {
     if (button && saved !== "auto") setTimeout(() => button.click());
   } catch (e) {}
 
-  // ---------- Sliding: drag, like a touch screen, on every device ----------
-  // Phones use native touch scrolling. With a mouse the row follows the
-  // pointer, then glides on with the release speed and settles on a card.
-  let drag = null;
-  let glide = 0;
-
-  track.addEventListener("pointerdown", (event) => {
-    if (event.pointerType !== "mouse" || event.button !== 0) return;
-    cancelAnimationFrame(glide);
-    drag = { x: event.clientX, left: track.scrollLeft, moved: false, v: 0, lastX: event.clientX, lastT: performance.now() };
-  });
-
-  window.addEventListener("pointermove", (event) => {
-    if (!drag) return;
-    const dx = event.clientX - drag.x;
-    if (!drag.moved && Math.abs(dx) > 5) {
-      drag.moved = true;
-      track.classList.add("is-dragging");
-    }
-    if (!drag.moved) return;
-    track.scrollLeft = drag.left - dx;
-    const now = performance.now();
-    const dt = Math.max(now - drag.lastT, 1);
-    drag.v = 0.8 * ((event.clientX - drag.lastX) / dt) + 0.2 * drag.v; // px per ms
-    drag.lastX = event.clientX;
-    drag.lastT = now;
-  });
-
-  window.addEventListener("pointerup", () => {
-    if (!drag) return;
-    const { moved } = drag;
-    let v = drag.v * 16; // px per frame
-    drag = null;
-    if (!moved) return;
-
-    // Swallow the click that ends a drag so it doesn't open a card.
-    track.addEventListener(
-      "click",
-      (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-      },
-      { capture: true, once: true }
-    );
-
-    const settle = () => track.classList.remove("is-dragging"); // snapping resumes
-    if (calm.matches || Math.abs(v) < 0.5) return settle();
-    const tick = () => {
-      track.scrollLeft -= v;
-      v *= 0.94;
-      if (Math.abs(v) > 0.5) glide = requestAnimationFrame(tick);
-      else settle();
-    };
-    glide = requestAnimationFrame(tick);
-  });
+  dragScroll(track);
 
   // ---------- Fade under the hero ----------
   // The row gets a mask that is transparent above the hero's bottom edge
@@ -509,6 +515,66 @@ const heroEdgeY = (() => {
   new ResizeObserver(updateMask).observe(track);
   window.addEventListener("resize", updateMask);
   if (document.fonts) document.fonts.ready.then(updateMask);
+})();
+
+// A small poster card linking to a work's page (category rows, My List).
+const posterCard = (work) => {
+  const link = document.createElement("a");
+  link.className = "poster-card";
+  link.href = `work.html?id=${encodeURIComponent(work.id)}`;
+  const frame = document.createElement("span");
+  frame.className = "poster-card__frame";
+  const img = document.createElement("img");
+  img.src = work.images[0];
+  img.alt = "";
+  img.loading = "lazy";
+  img.draggable = false;
+  frame.append(img);
+  const title = document.createElement("span");
+  title.className = "poster-card__title";
+  title.textContent = work.title;
+  const kind = document.createElement("span");
+  kind.className = "poster-card__kind";
+  kind.textContent = work.kind;
+  link.append(frame, title, kind);
+  return link;
+};
+
+// Home page — category rows under the main row, like a streaming service.
+// They only appear once the catalogue spans at least two kinds of work;
+// until then the main row already shows everything.
+(function shelves() {
+  const section = document.querySelector(".shelves");
+  if (!section) return;
+
+  const KINDS = [
+    ["Games", (w) => /game/i.test(w.kind)],
+    ["Films", (w) => /film|movie/i.test(w.kind)],
+    ["Animation", (w) => /anim/i.test(w.kind)],
+    ["Novels", (w) => /novel|book/i.test(w.kind)],
+  ];
+  const kindsInUse = KINDS.filter(([, test]) => CATALOG.some(test)).length;
+  if (kindsInUse < 2) return;
+
+  const rows = [["Coming soon", (w) => ["coming", "preorder", "production"].includes(w.status)], ...KINDS];
+  rows.forEach(([name, test]) => {
+    const works = CATALOG.filter(test);
+    if (!works.length) return;
+    const shelf = document.createElement("section");
+    shelf.className = "shelf";
+    const heading = document.createElement("h2");
+    heading.className = "shelf__heading";
+    heading.textContent = name;
+    const track = document.createElement("div");
+    track.className = "shelf__track";
+    track.tabIndex = 0;
+    track.setAttribute("aria-label", `${name}, drag or swipe sideways for more`);
+    track.append(...works.map(posterCard));
+    shelf.append(heading, track);
+    section.append(shelf);
+    dragScroll(track);
+  });
+  section.hidden = false;
 })();
 
 // Section 5 — Subscriptions: plan prices use the same currency ticker as the
@@ -795,6 +861,22 @@ const heroEdgeY = (() => {
   const fromHash = tabs.findIndex((tab) => `#${tab.id.replace("tab-", "")}` === location.hash);
   select(Math.max(fromHash, 0));
 
+  // ---------- My List ----------
+  const showMyList = async (userId) => {
+    const { data, error } = await account
+      .from("my_list")
+      .select("work_id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) return;
+    const works = data.map((row) => CATALOG.find((w) => w.id === row.work_id)).filter(Boolean);
+    if (!works.length) return;
+    const grid = document.createElement("div");
+    grid.className = "poster-grid";
+    grid.append(...works.map(posterCard));
+    document.getElementById("panel-wishlist").replaceChildren(grid);
+  };
+
   // ---------- Settings controls ----------
   const form = page.querySelector(".settings");
   const message = form.querySelector(".auth__message");
@@ -841,6 +923,7 @@ const heroEdgeY = (() => {
     year: "numeric",
   });
 
+  showMyList(user.id);
   let profile = await fetchProfile(user);
   if (profile) {
     cacheProfile(profile);
@@ -1042,6 +1125,37 @@ const heroEdgeY = (() => {
     const timer = setInterval(tick, 1000);
     tick();
   }
+
+  // My List: saved to the member's account; signed-out visitors are sent
+  // to log in.
+  const listButton = page.querySelector('[data-action="my-list"]');
+  const setListed = (on) => {
+    listButton.classList.toggle("is-on", on);
+    listButton.setAttribute("aria-pressed", String(on));
+    listButton.querySelector("span").textContent = on ? "In My List" : "My List";
+  };
+  listButton.hidden = false;
+  (async () => {
+    const session = account && (await account.auth.getSession()).data.session;
+    if (!session) {
+      listButton.addEventListener("click", () => (location.href = "login.html"));
+      return;
+    }
+    const { data } = await account.from("my_list").select("work_id").eq("work_id", work.id).maybeSingle();
+    let listed = Boolean(data);
+    setListed(listed);
+    listButton.addEventListener("click", async () => {
+      listButton.disabled = true;
+      const next = !listed;
+      setListed(next);
+      const { error } = next
+        ? await account.from("my_list").insert({ work_id: work.id })
+        : await account.from("my_list").delete().eq("work_id", work.id).eq("user_id", session.user.id);
+      if (error && error.code !== "23505") setListed(listed); // 23505: already saved
+      else listed = next;
+      listButton.disabled = false;
+    });
+  })();
 
   // Synopsis
   if (work.synopsis) {

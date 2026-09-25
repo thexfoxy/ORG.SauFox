@@ -7,7 +7,7 @@
   <meta name="description" content="Your SauFox Entertainment profile: library, wishlist, orders and settings.">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=7">
+  <link rel="stylesheet" href="css/style.css?v=8">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -57,7 +57,7 @@
     <section class="profile-body">
       <div class="profile-tabs" role="tablist" aria-label="Profile sections">
         <button class="profile-tab" type="button" role="tab" id="tab-library" aria-controls="panel-library" aria-selected="true">Library</button>
-        <button class="profile-tab" type="button" role="tab" id="tab-wishlist" aria-controls="panel-wishlist" aria-selected="false">Wishlist</button>
+        <button class="profile-tab" type="button" role="tab" id="tab-wishlist" aria-controls="panel-wishlist" aria-selected="false">My List</button>
         <button class="profile-tab" type="button" role="tab" id="tab-orders" aria-controls="panel-orders" aria-selected="false">Orders</button>
         <button class="profile-tab" type="button" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false">Settings</button>
         <span class="profile-tabs__marker" aria-hidden="true"></span>
@@ -73,8 +73,8 @@
 
       <div class="profile-panel" id="panel-wishlist" role="tabpanel" aria-labelledby="tab-wishlist" hidden>
         <div class="empty">
-          <p class="empty__title">Nothing on your wishlist yet</p>
-          <p class="empty__text">Save the works you&rsquo;re waiting for and they&rsquo;ll be kept here.</p>
+          <p class="empty__title">Nothing in My List yet</p>
+          <p class="empty__text">Tap &ldquo;My List&rdquo; on any work to keep it here.</p>
           <a class="empty__button" href="index.html">Browse works</a>
         </div>
       </div>
@@ -131,8 +131,8 @@
     </section>
   </main>
 
-  <script src="js/vendor/supabase.js?v=7" defer></script>
-  <script src="js/content.js?v=7" defer></script>
-  <script src="js/main.js?v=7" defer></script>
+  <script src="js/vendor/supabase.js?v=8" defer></script>
+  <script src="js/content.js?v=8" defer></script>
+  <script src="js/main.js?v=8" defer></script>
 </body>
 </html>
