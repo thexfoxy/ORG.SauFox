@@ -18,6 +18,7 @@ npx serve .
 - `css/style.css`: styles; design tokens live in `:root`
 - `js/content.js`: the works catalogue (titles, images, prices, status). Edit this to add real works
 - `js/main.js`: scripts
+- `js/vendor/supabase.js`: supabase-js 2.117.1 (UMD build, MIT), served from this site so it doesn't depend on a CDN
 - `assets/`: default avatar, placeholder icons standing in for artwork (`works/`), and self-hosted fonts (Great Vibes,
   Barlow Condensed, Inter; all SIL Open Font License)
 
@@ -25,8 +26,29 @@ npx serve .
 
 The site is published with GitHub Pages at https://saufoxentertainment.ir
 (`CNAME` holds the domain; `.nojekyll` makes Pages serve the files as they
-are). The account back end will live in the Supabase project
-`saufox-entertainment` (eu-central-1).
+are).
+
+## Accounts
+
+Sign-up, login and profiles use the Supabase project `saufox-entertainment`
+(eu-central-1). The browser uses the project's publishable key (in
+`js/main.js`); row-level security limits each member to their own data.
+
+- `public.profiles`: one row per member (name, currency, avatar_url),
+  created by the `on_auth_user_created` trigger from the sign-up name.
+- Storage bucket `avatars` (public, 1 MB, JPEG / PNG / WebP): each member
+  writes only to `<user id>/avatar.jpg`.
+
+The session is kept in localStorage under `saufox.session`; the header and
+the profile page check that key before first paint. Name, photo and currency
+are also cached there so they show without waiting for the server.
+
+Supabase dashboard settings (Authentication):
+- Email confirmation: Supabase's built-in email only reaches the project
+  team's addresses. Either turn off "Confirm email" or add a custom SMTP
+  server.
+- URL configuration: Site URL `https://saufoxentertainment.ir`, with
+  `https://saufoxentertainment.ir/login.html` in the redirect URLs.
 
 ## Content protection
 
@@ -77,9 +99,9 @@ Login page (`login.html`):
       password (with show / hide), and Google / Apple buttons. The card's
       right half has an image with three curved artwork layers over it. `login.html#signup` opens
       the Sign Up tab.
-- [ ] Real accounts: there is no account server yet. A valid form only marks
-      this browser as signed in (localStorage) so the header shows the
-      profile button; Google and Apple buttons say they aren't connected yet.
+- [x] Real accounts through Supabase (see Accounts above): sign-up, login,
+      clear error messages, and a confirmation-email step when it is on.
+- [ ] Google and Apple sign-in: the buttons say they aren't connected yet.
 
 Profile page (`profile.html`):
 - [x] The avatar (the header chip's pinched shape, larger) with the name,
@@ -87,7 +109,6 @@ Profile page (`profile.html`):
       now) and Settings (profile photo, name, default currency, log out).
       Signed-out visitors are sent to the login page. The photo also shows in
       the header's profile button, and the currency choice carries over to
-      the home page. All of it lives in this browser until there's an
-      account server.
+      the home page. All of it is saved to the member's account.
 - [ ] Later: a cover image above the profile that subscribers can set
       themselves, once there are more works to choose from.

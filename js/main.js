@@ -1,5 +1,61 @@
 // SauFox Entertainment — site scripts
 
+// Small wrapper around localStorage: it can throw (private windows, blocked
+// storage), and the site has to keep working when it does.
+const local = {
+  get: (key) => {
+    try {
+      return localStorage.getItem(`saufox.${key}`);
+    } catch (e) {
+      return null;
+    }
+  },
+  set: (key, value) => {
+    try {
+      if (value == null) localStorage.removeItem(`saufox.${key}`);
+      else localStorage.setItem(`saufox.${key}`, value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+};
+
+// Accounts live in Supabase (project saufox-entertainment). This key is the
+// public one meant for browsers; the database's row-level security decides
+// what each member can read and change. The session is stored under
+// "saufox.session", which the inline script in each page's <head> checks
+// before first paint. Only pages that load js/vendor/supabase.js get a client.
+const account = (() => {
+  if (!window.supabase) return null;
+  // Sessions from the pre-Supabase demo were a bare email address.
+  const old = local.get("session");
+  if (old && !old.startsWith("{")) local.set("session", null);
+  return window.supabase.createClient(
+    "https://gwyqkzhhnspfadqefmix.supabase.co",
+    "sb_publishable_IB06YrDhrsKJbVghWP-zzg_xDgB1mXN",
+    { auth: { storageKey: "saufox.session" } }
+  );
+})();
+
+// Keeps the name, photo and currency in this browser too, so the header and
+// the price cards can show them straight away on the next visit.
+const cacheProfile = (profile) => {
+  if (!profile) return;
+  local.set("name", profile.name || null);
+  local.set("avatar", profile.avatar_url || null);
+  local.set("currency", profile.currency || null);
+};
+
+const fetchProfile = async (user) => {
+  const { data } = await account
+    .from("profiles")
+    .select("name, currency, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+  return data;
+};
+
 // Section 1 — Header: split each call-to-action into two lines of letters.
 // The resting line runs the orange -> white wave; the hover line (from
 // data-hover-text) replaces it letter by letter on hover. CSS staggers the
@@ -53,10 +109,8 @@
   const chip = document.querySelector(".profile-chip");
   if (!chip) return;
 
-  try {
-    const avatar = localStorage.getItem("saufox.avatar");
-    if (avatar) chip.querySelector("img").src = avatar;
-  } catch (e) {}
+  const avatar = local.get("avatar");
+  if (avatar) chip.querySelector("img").src = avatar;
 
   const canHover = window.matchMedia("(hover: hover)").matches;
 
@@ -510,8 +564,7 @@ const heroEdgeY = (() => {
 
 // Login page — background strips, curved art layers, Login / Sign Up tabs
 // with sliding forms, and password reveal.
-// There is no account server yet: a valid form only marks this browser as
-// signed in (localStorage) so the header shows the profile button.
+// Accounts go through Supabase (see `account` at the top of this file).
 (function loginPage() {
   const auth = document.querySelector(".auth");
   if (!auth) return;
@@ -555,7 +608,9 @@ const heroEdgeY = (() => {
       forms[key].inert = key !== mode;
     });
     fitHeight();
-    history.replaceState(null, "", mode === "signup" ? "#signup" : location.pathname + location.search);
+    // Leave the hash alone while it carries a sign-in from a confirmation link.
+    if (!location.hash || location.hash === "#signup")
+      history.replaceState(null, "", mode === "signup" ? "#signup" : location.pathname + location.search);
   };
 
   Object.keys(tabs).forEach((key) => tabs[key].addEventListener("click", () => setMode(key)));
@@ -594,24 +649,85 @@ const heroEdgeY = (() => {
     return "";
   };
 
+  const ERRORS = {
+    invalid_credentials: "That email and password don't match. Check them and try again.",
+    email_not_confirmed: "Confirm your email first: open the link we sent you, then log in.",
+    user_already_exists: "There's already an account with this email. Log in instead.",
+    weak_password: "Choose a stronger password, one that isn't easy to guess.",
+    over_request_rate_limit: "Too many tries. Wait a minute and try again.",
+    over_email_send_rate_limit: "Too many emails sent. Wait a while and try again.",
+  };
+  const explain = (error) =>
+    ERRORS[error.code] ||
+    (error.status ? error.message : "Couldn't reach the server. Check your connection and try again.");
+
+  const goHome = async (user, message, text) => {
+    local.set("hasAccount", "1");
+    say(message, text, true);
+    cacheProfile(await fetchProfile(user));
+    setTimeout(() => (location.href = "index.html"), 700);
+  };
+
   Object.entries(forms).forEach(([key, form]) =>
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const message = form.querySelector(".auth__message");
-      const error = problem(form);
-      if (error) return say(message, error);
+      const submit = form.querySelector(".auth__submit");
+      const invalid = problem(form);
+      if (invalid) return say(message, invalid);
+      if (!account) return say(message, "Accounts aren't available right now. Try again later.");
 
+      const email = form.querySelector('input[type="email"]').value.trim();
+      const password = form.querySelector('input[type="password"]').value;
+      const nameInput = form.querySelector('input[name="name"]');
+
+      submit.disabled = true;
+      say(message, key === "login" ? "Logging in…" : "Creating your account…", true);
+      let result;
       try {
-        localStorage.setItem("saufox.session", form.querySelector('input[type="email"]').value);
-        localStorage.setItem("saufox.hasAccount", "1");
-        const name = form.querySelector('input[name="name"]');
-        if (name) localStorage.setItem("saufox.name", name.value.trim());
-        if (!localStorage.getItem("saufox.since")) localStorage.setItem("saufox.since", new Date().toISOString());
-      } catch (e) {}
-      say(message, key === "login" ? "Welcome back. Taking you home…" : "Account created. Taking you home…", true);
-      setTimeout(() => (location.href = "index.html"), 1100);
+        result =
+          key === "login"
+            ? await account.auth.signInWithPassword({ email, password })
+            : await account.auth.signUp({
+                email,
+                password,
+                options: {
+                  data: { name: nameInput.value.trim() },
+                  emailRedirectTo: new URL("login.html", location.href).href,
+                },
+              });
+      } catch (e) {
+        result = { error: {} };
+      }
+      submit.disabled = false;
+
+      const { data, error } = result;
+      if (error) return say(message, explain(error));
+      // With email confirmation on, signing up again with a taken email
+      // returns a user with no identities instead of an error.
+      if (key === "signup" && data.user && data.user.identities && !data.user.identities.length)
+        return say(message, ERRORS.user_already_exists);
+      if (!data.session) {
+        local.set("hasAccount", "1");
+        setMode("login");
+        forms.login.querySelector('input[type="email"]').value = email;
+        return say(
+          forms.login.querySelector(".auth__message"),
+          `We sent a confirmation link to ${email}. Open it, then log in.`,
+          true
+        );
+      }
+      submit.disabled = true;
+      goHome(data.user, message, key === "login" ? "Welcome back. Taking you home…" : "Account created. Taking you home…");
     })
   );
+
+  // Arriving from the confirmation email (or already signed in): go home.
+  if (account)
+    account.auth.getSession().then(({ data }) => {
+      if (data.session)
+        goHome(data.session.user, forms.login.querySelector(".auth__message"), "You're signed in. Taking you home…");
+    });
 
   const socialMessage = auth.querySelector(".auth__message--social");
   auth.querySelectorAll(".social").forEach((button) =>
@@ -621,50 +737,18 @@ const heroEdgeY = (() => {
   );
 })();
 
-// Profile page — name, email and membership date from this browser's
-// sign-in, tabs, and settings (photo, name, default currency, log out).
-(function profilePage() {
+// Profile page — the member's name, email, join date and photo from their
+// account, tabs, and settings (photo, name, default currency, log out).
+(async function profilePage() {
   const page = document.querySelector(".profile-page");
   if (!page) return;
 
-  const store = {
-    get: (key) => {
-      try {
-        return localStorage.getItem(`saufox.${key}`);
-      } catch (e) {
-        return null;
-      }
-    },
-    set: (key, value) => {
-      try {
-        if (value == null) localStorage.removeItem(`saufox.${key}`);
-        else localStorage.setItem(`saufox.${key}`, value);
-        return true;
-      } catch (e) {
-        return false;
-      }
-    },
-  };
-
   const DEFAULT_AVATAR = document.querySelector(".profile-avatar__img").getAttribute("src");
-  const email = store.get("session") || "";
-  const fallbackName = email.split("@")[0] || "SauFox fan";
 
-  // ---------- Header info ----------
   const showName = (name) =>
     page.querySelectorAll('[data-profile="name"]').forEach((el) => (el.textContent = name));
   const showAvatar = (src) =>
     document.querySelectorAll(".profile-avatar__img, .profile-chip img").forEach((img) => (img.src = src));
-
-  if (!store.get("since")) store.set("since", new Date().toISOString());
-  const since = new Date(store.get("since"));
-  page.querySelector('[data-profile="email"]').textContent = email;
-  page.querySelector('[data-profile="since"]').textContent = since.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-  showName(store.get("name") || fallbackName);
-  showAvatar(store.get("avatar") || DEFAULT_AVATAR);
 
   // ---------- Tabs ----------
   const tabList = page.querySelector(".profile-tabs");
@@ -680,23 +764,23 @@ const heroEdgeY = (() => {
   const fromHash = tabs.findIndex((tab) => `#${tab.id.replace("tab-", "")}` === location.hash);
   select(Math.max(fromHash, 0));
 
-  // ---------- Settings ----------
+  // ---------- Settings controls ----------
   const form = page.querySelector(".settings");
   const message = form.querySelector(".auth__message");
   const nameInput = form.querySelector("#settings-name");
   const fileInput = form.querySelector("#avatar-input");
   const preview = form.querySelector(".profile-avatar__img");
+  const submit = form.querySelector('[type="submit"]');
   const currencyButtons = [...form.querySelectorAll("[data-currency]")];
 
-  let pendingAvatar = store.get("avatar");
-  let currency = store.get("currency") || "auto";
+  const say = (text, ok) => {
+    message.textContent = text;
+    message.classList.toggle("is-ok", Boolean(ok));
+  };
 
-  nameInput.value = store.get("name") || fallbackName;
-  preview.src = pendingAvatar || DEFAULT_AVATAR;
-
+  let currency = local.get("currency") || "auto";
   const pressCurrency = () =>
     currencyButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.currency === currency)));
-  pressCurrency();
   currencyButtons.forEach((b) =>
     b.addEventListener("click", () => {
       currency = b.dataset.currency;
@@ -704,12 +788,47 @@ const heroEdgeY = (() => {
     })
   );
 
-  const say = (text, ok) => {
-    message.textContent = text;
-    message.classList.toggle("is-ok", Boolean(ok));
-  };
+  // What this browser remembers, shown until the account answers.
+  showName(local.get("name") || "");
+  showAvatar(local.get("avatar") || DEFAULT_AVATAR);
+  nameInput.value = local.get("name") || "";
+  pressCurrency();
 
-  // Photos are shrunk to 320px on the long side so they fit in storage.
+  // ---------- Account ----------
+  const session = account && (await account.auth.getSession()).data.session;
+  if (!session) {
+    local.set("session", null);
+    location.replace("login.html");
+    return;
+  }
+  const user = session.user;
+  const fallbackName = (user.email || "").split("@")[0] || "SauFox fan";
+
+  page.querySelector('[data-profile="email"]').textContent = user.email;
+  page.querySelector('[data-profile="since"]').textContent = new Date(user.created_at).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  let profile = await fetchProfile(user);
+  if (profile) {
+    cacheProfile(profile);
+    currency = profile.currency;
+    pressCurrency();
+  } else {
+    profile = { name: local.get("name") || "", avatar_url: local.get("avatar") };
+  }
+  showName(profile.name || fallbackName);
+  showAvatar(profile.avatar_url || DEFAULT_AVATAR);
+  nameInput.value = profile.name || fallbackName;
+
+  // ---------- Photo ----------
+  // A new photo waits here until "Save changes". undefined = unchanged,
+  // null = remove, a Blob = upload. Photos are shrunk to 320px on the long
+  // side before upload.
+  let pendingAvatar;
+  const avatarPath = `${user.id}/avatar.jpg`;
+
   fileInput.addEventListener("change", () => {
     const file = fileInput.files[0];
     if (!file) return;
@@ -721,10 +840,16 @@ const heroEdgeY = (() => {
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-      pendingAvatar = canvas.toDataURL("image/jpeg", 0.85);
-      preview.src = pendingAvatar;
       URL.revokeObjectURL(img.src);
-      say("Photo ready. Save changes to keep it.", true);
+      canvas.toBlob(
+        (blob) => {
+          pendingAvatar = blob;
+          preview.src = URL.createObjectURL(blob);
+          say("Photo ready. Save changes to keep it.", true);
+        },
+        "image/jpeg",
+        0.85
+      );
     };
     img.onerror = () => say("That image couldn't be opened. Try another file.");
     img.src = URL.createObjectURL(file);
@@ -737,22 +862,55 @@ const heroEdgeY = (() => {
     say("Photo removed. Save changes to keep it that way.", true);
   });
 
-  form.addEventListener("submit", (event) => {
+  // ---------- Save ----------
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const name = nameInput.value.trim();
     if (!name) {
       nameInput.focus();
       return say("Enter your name.");
     }
-    const saved = store.set("name", name) && store.set("avatar", pendingAvatar) && store.set("currency", currency);
-    if (!saved) return say("Your browser didn't let us save. Try a smaller photo.");
-    showName(name);
-    showAvatar(pendingAvatar || DEFAULT_AVATAR);
-    say("Saved.", true);
+
+    submit.disabled = true;
+    say("Saving…", true);
+    try {
+      const photos = account.storage.from("avatars");
+      let avatarUrl = profile.avatar_url || null;
+      if (pendingAvatar === null) {
+        await photos.remove([avatarPath]);
+        avatarUrl = null;
+      } else if (pendingAvatar) {
+        const { error } = await photos.upload(avatarPath, pendingAvatar, {
+          upsert: true,
+          contentType: "image/jpeg",
+          cacheControl: "3600",
+        });
+        if (error) throw error;
+        // The version number makes browsers fetch the new photo.
+        avatarUrl = `${photos.getPublicUrl(avatarPath).data.publicUrl}?v=${Date.now()}`;
+      }
+
+      const changes = { name, currency, avatar_url: avatarUrl, updated_at: new Date().toISOString() };
+      const { error } = await account.from("profiles").update(changes).eq("id", user.id);
+      if (error) throw error;
+
+      profile = { ...profile, ...changes };
+      pendingAvatar = undefined;
+      cacheProfile(profile);
+      showName(name);
+      showAvatar(avatarUrl || DEFAULT_AVATAR);
+      say("Saved.", true);
+    } catch (e) {
+      say("Your changes weren't saved. Check your connection and try again.");
+    }
+    submit.disabled = false;
   });
 
-  form.querySelector('[data-action="logout"]').addEventListener("click", () => {
-    store.set("session", null);
+  form.querySelector('[data-action="logout"]').addEventListener("click", async () => {
+    try {
+      await account.auth.signOut();
+    } catch (e) {}
+    ["session", "name", "avatar"].forEach((key) => local.set(key, null));
     location.href = "index.html";
   });
 })();
