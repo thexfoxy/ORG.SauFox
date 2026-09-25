@@ -1,10 +1,11 @@
-// Order emails, sent from the studio's Gmail over SMTP (port 465), in the
-// same look as the sign-in emails in emails/. Persian first, then English.
+// Order emails, in the same look as the sign-in emails in emails/. Persian
+// first, then English.
 //
 // Sent through Resend when the secret RESEND_API_KEY is set, otherwise
-// through the studio's Gmail with SMTP_PASSWORD (the Gmail app password);
-// with neither, emails are skipped. SMTP_USER defaults to the studio
-// address, which also gets a copy of every order and receives replies.
+// through the studio's Gmail over SMTP (port 465) with SMTP_PASSWORD (the
+// Gmail app password); with both, Gmail is the fallback; with neither,
+// emails are skipped. SMTP_USER defaults to the studio address, which
+// also gets a copy of every order and receives replies.
 import nodemailer from "npm:nodemailer@6.9.16";
 
 const SITE = "https://saufoxentertainment.ir";
@@ -322,4 +323,22 @@ const viaGmail = async (mail: Mail) => {
   await transport.sendMail({ from: { name: "SauFox Entertainment", address: STUDIO }, text: plain(mail.html), ...mail });
 };
 
-export const send = (mail: Mail) => (Deno.env.get("RESEND_API_KEY") ? viaResend(mail) : viaGmail(mail));
+// Resend first when it's set up; if it refuses (say the domain isn't
+// verified yet) and the Gmail password is there too, Gmail sends instead.
+// Says which one sent it, and why Resend didn't.
+export const send = async (mail: Mail): Promise<{ via: "resend" | "gmail"; resendError?: string }> => {
+  if (!Deno.env.get("RESEND_API_KEY")) {
+    await viaGmail(mail);
+    return { via: "gmail" };
+  }
+  try {
+    await viaResend(mail);
+    return { via: "resend" };
+  } catch (e) {
+    if (!Deno.env.get("SMTP_PASSWORD")) throw e;
+    const resendError = (e as Error).message;
+    console.error(resendError, "- sending through Gmail instead");
+    await viaGmail(mail);
+    return { via: "gmail", resendError };
+  }
+};

@@ -141,8 +141,8 @@ Deno.serve(async (req) => {
       phone: "09000000000", ref_id: "000000000000", card_pan: "6037-99**-****-0000", paid_at: now, created_at: now, test: true,
     };
     try {
-      await send(paidEmail(sample, true));
-      return reply({ ok: true, to: STUDIO });
+      const { via, resendError } = await send(paidEmail(sample, true));
+      return reply({ ok: true, to: STUDIO, via, resend_error: resendError?.slice(0, 200) });
     } catch (e) {
       return reply({ error: "send_failed", detail: (e as Error).message.slice(0, 200) });
     }

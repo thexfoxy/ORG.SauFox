@@ -2765,11 +2765,15 @@ const signedInGoHome = async (user) => {
     const answer = await payment({ action: "email-test" }, await verifiedSession());
     mailButton.disabled = false;
     mailNote.textContent = answer.ok
-      ? `Sent to ${answer.to}. Check that inbox, and the spam folder.`
+      ? answer.via === "resend"
+        ? `Sent through Resend to ${answer.to}. Check that inbox, and the spam folder.`
+        : answer.resend_error
+          ? `Resend refused it (${answer.resend_error}), so Gmail sent it to ${answer.to} instead.`
+          : `Sent through Gmail to ${answer.to}. Check that inbox, and the spam folder.`
       : answer.error === "no_password"
-        ? "Not sent: the SMTP_PASSWORD secret isn't set in Supabase (Edge Functions → Secrets)."
+        ? "Not sent: neither RESEND_API_KEY nor SMTP_PASSWORD is set in Supabase (Edge Functions → Secrets)."
         : answer.error === "send_failed"
-          ? `Gmail refused it: ${answer.detail}`
+          ? `Sending failed: ${answer.detail}`
           : "Not sent: couldn't reach the payment function. Try again.";
   });
   payForm.addEventListener("submit", async (event) => {
