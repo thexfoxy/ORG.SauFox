@@ -3568,18 +3568,34 @@ a.hero__panel {
   cursor: default;
 }
 
-/* Google's own sign-in button (an iframe it draws), in the Google slot. */
-.social--google {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 48px;
-  padding: 0;
-  border: 0;
-  background: none;
-  overflow: hidden;
+/* Google's own sign-in button (an iframe it draws) lies over ours, nearly
+   transparent, so the page keeps its look and Google gets the click. */
+.social-wrap {
+  position: relative;
+  display: grid;
+  min-width: 0;
 }
 
-.social--google:hover {
-  background: none;
+.social-wrap .social {
+  width: 100%;
+}
+
+.social-wrap__google {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  overflow: hidden;
+  opacity: 0.001;
+  transform: scaleY(1.15); /* Google's button is 44px tall, ours 48px */
+}
+
+.social-wrap:hover .social {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.social-wrap:focus-within .social {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }

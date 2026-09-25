@@ -1268,9 +1268,15 @@ const signedInGoHome = async (user) => {
       },
     });
 
+    // Our own button stays in view; Google's, drawn the same size, sits on
+    // top of it almost invisibly and takes the click.
+    const wrap = document.createElement("div");
+    wrap.className = "social-wrap";
+    fallback.before(wrap);
+    wrap.append(fallback);
     const slot = document.createElement("div");
-    slot.className = "social social--google";
-    fallback.before(slot);
+    slot.className = "social-wrap__google";
+    wrap.append(slot);
     gsi.renderButton(slot, {
       type: "standard",
       theme: "filled_black",
@@ -1279,9 +1285,9 @@ const signedInGoHome = async (user) => {
       text: "continue_with",
       logo_alignment: "center",
       locale: LANG,
-      width: Math.max(200, Math.min(400, Math.round(slot.clientWidth || fallback.offsetWidth))),
+      width: Math.max(200, Math.min(400, Math.round(fallback.offsetWidth))),
     });
-    fallback.hidden = true;
+    fallback.tabIndex = -1; // Google's button takes the focus instead
   })();
 
   auth.querySelectorAll(".social[data-provider]").forEach((button) =>
