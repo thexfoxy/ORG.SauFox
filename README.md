@@ -16,6 +16,7 @@ npx serve .
 - `login.html`: login / sign-up page
 - `profile.html`: profile page (signed-in visitors only)
 - `css/style.css`: styles; design tokens live in `:root`
+- `js/content.js`: the works catalogue (titles, images, prices, status). Edit this to add real works
 - `js/main.js`: scripts
 - `assets/`: default avatar, placeholder icons standing in for artwork (`works/`), and self-hosted fonts (Great Vibes,
   Barlow Condensed, Inter; all SIL Open Font License)
@@ -55,7 +56,7 @@ Home page:
 - [x] 2. Hero: full-width collage of seven slanted panels (five on phones)
       whose bottom edge steps down from left to right in a smooth S-curve. Each load shows a random mix of works,
       and every few seconds one panel crossfades to another. Hovering a panel
-      zooms its art and dims the rest. Artwork list: `WORKS` in `js/main.js`
+      zooms its art and dims the rest. Artwork: every image in `js/content.js`
       (placeholders in `assets/works/` for now).
 - [x] 3. Studio slogan: a short line, "And my success is not but through God."
       (Qur'an 11:88), in the space under the hero's curve
@@ -64,7 +65,7 @@ Home page:
       touch screen: swipe on phones, drag with the mouse on desktop (it glides
       on and settles on a card). Currency buttons below (Auto cycles USD / EUR /
       Rials, or pin one). Each card has an image slider, a price strip and a
-      status box. Data: `CATALOG` in `js/main.js` (placeholders for now).
+      status box. Data: `CATALOG` in `js/content.js` (placeholders for now).
 - [x] 5. Subscriptions: Basic and Premium boxes, side by side at every
       screen size. Prices follow the currency chosen above the work cards.
       On hover each box gets a soft light that follows the
