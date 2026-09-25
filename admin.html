@@ -7,7 +7,7 @@
   <title>Manage works · SauFox Entertainment</title>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=18">
+  <link rel="stylesheet" href="css/style.css?v=19">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -50,6 +50,31 @@
       <p class="admin__hint">Published works show on the site in this order. Drafts are only visible here.</p>
       <ol class="admin-works"></ol>
       <p class="admin__empty" hidden>No works yet. Add the first one.</p>
+
+      <!-- Maintenance mode: visitors see the maintenance page; admins
+           still see the site. -->
+      <form class="admin-maintenance admin-group" novalidate>
+        <h2 class="admin-rates__title">Maintenance mode</h2>
+        <p class="admin-group__hint">While it&rsquo;s on, visitors see a &ldquo;We&rsquo;ll be right back&rdquo; page, and their pages come back by themselves when you turn it off. You still see the site on this device, with a reminder bar.</p>
+        <label class="admin-check">
+          <input id="maintenance-on" type="checkbox">
+          <span>Site is in maintenance</span>
+        </label>
+        <div class="admin-grid admin-maintenance__notes">
+          <label class="admin-field">
+            <span>Message <em>optional</em></span>
+            <input id="maintenance-note" type="text" maxlength="300" placeholder="e.g. Back by 8 pm Tehran time.">
+          </label>
+          <label class="admin-field">
+            <span>Message in Persian <em>optional</em></span>
+            <input id="maintenance-note-fa" type="text" maxlength="300" dir="rtl" placeholder="مثلاً تا ساعت ۲۰ برمی‌گردیم.">
+          </label>
+        </div>
+        <div class="admin-maintenance__save">
+          <p class="admin-message" role="status" aria-live="polite"></p>
+          <button class="admin-button admin-button--primary" type="submit">Save</button>
+        </div>
+      </form>
 
       <!-- Exchange rates: Rial-only prices also show in dollars and euros. -->
       <form class="admin-rates admin-group" novalidate>
@@ -252,7 +277,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=18" defer></script>
-  <script src="js/main.js?v=18" defer></script>
+  <script src="js/vendor/supabase.js?v=19" defer></script>
+  <script src="js/main.js?v=19" defer></script>
 </body>
 </html>

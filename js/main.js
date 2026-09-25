@@ -197,7 +197,10 @@ const toWork = (row, rates = {}) => ({
   credits: row.credits || [],
 });
 
-const loadCatalog = async () => {
+// Loads the published works and the site settings (exchange rates,
+// maintenance). { works, settings, offline }: offline when the server
+// can't be reached and there's no saved copy either.
+const loadSite = async () => {
   const get = async (path) => {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: { apikey: SUPABASE_KEY }, signal: timeout(15000) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -206,26 +209,51 @@ const loadCatalog = async () => {
   try {
     const [rows, settings] = await Promise.all([
       get("works?select=*&published=eq.true&order=sort.asc,created_at.asc"),
-      get("site_settings?select=usd_irr,eur_irr&id=eq.1").catch(() => []),
+      get("site_settings?select=usd_irr,eur_irr,maintenance,maintenance_note,maintenance_note_fa&id=eq.1").catch(() => []),
     ]);
     const rates = settings[0] || {};
     local.set("catalog", JSON.stringify({ rows, rates }));
-    return rows.map((row) => toWork(row, rates));
+    return { works: rows.map((row) => toWork(row, rates)), settings: rates, offline: false };
   } catch (e) {
     try {
-      const saved = JSON.parse(local.get("catalog") || "{}");
+      const saved = JSON.parse(local.get("catalog") || "null");
+      if (!saved) return { works: [], settings: {}, offline: true };
       const rows = Array.isArray(saved) ? saved : saved.rows || [];
-      return rows.map((row) => toWork(row, saved.rates || {}));
+      // A saved copy doesn't count as maintenance: that needs the server.
+      const rates = { ...(saved.rates || {}), maintenance: false };
+      return { works: rows.map((row) => toWork(row, rates)), settings: rates, offline: false };
     } catch (e2) {
-      return [];
+      return { works: [], settings: {}, offline: true };
     }
   }
 };
 
 // Started once, on the pages that show works.
-const catalog = document.querySelector(".hero, .works, .title-page, .login-bg, .profile-page")
-  ? loadCatalog()
-  : Promise.resolve([]);
+const site = document.querySelector(".hero, .works, .title-page, .login-bg, .profile-page")
+  ? loadSite()
+  : Promise.resolve({ works: [], settings: {}, offline: false });
+const catalog = site.then((data) => data.works);
+
+// Maintenance and outages, on the pages built from the catalogue: visitors
+// go to the status page (which comes back here when the site is up).
+// Admins see the site as usual, with a reminder bar.
+(async function siteStatus() {
+  if (!document.querySelector(".hero, .works, .title-page, .profile-page")) return;
+  const { settings, offline } = await site;
+  const from = encodeURIComponent(location.pathname + location.search + location.hash);
+  if (offline) return location.replace(`status.html?reason=offline&from=${from}`);
+  if (!settings.maintenance) return;
+  if (local.get("admin") !== "1") return location.replace(`status.html?reason=maintenance&from=${from}`);
+  const bar = document.createElement("div");
+  bar.className = "maintenance-bar";
+  const text = document.createElement("span");
+  text.textContent = "Maintenance mode is on. Visitors see the maintenance page.";
+  const link = document.createElement("a");
+  link.href = "admin.html";
+  link.textContent = "Turn it off";
+  bar.append(text, link);
+  document.body.append(bar);
+})();
 
 // The current session, if it came through an emailed code or Google. The
 // database opens nothing to a session made from the password alone (a login
@@ -1540,7 +1568,7 @@ const signedInGoHome = async (user) => {
     try {
       await account.auth.signOut();
     } catch (e) {}
-    ["session", "name", "avatar"].forEach((key) => local.set(key, null));
+    ["session", "name", "avatar", "admin"].forEach((key) => local.set(key, null));
     location.href = "index.html";
   });
 })();
@@ -1794,10 +1822,13 @@ const signedInGoHome = async (user) => {
     return;
   }
   if (!adminRow) {
-    gate.textContent = "This page is for the studio's admins, and your account doesn't have access.";
+    local.set("admin", null);
+    location.replace("status.html?reason=forbidden");
     return;
   }
   gate.hidden = true;
+  // Lets this browser see the site while maintenance mode is on.
+  local.set("admin", "1");
 
   const STATUS = { released: "Released", preorder: "Pre-order", coming: "Coming soon", production: "In production" };
   const make = (tag, className, text) => {
@@ -2260,6 +2291,44 @@ const signedInGoHome = async (user) => {
     showList();
   });
 
+  // ---------- Maintenance mode ----------
+  const upkeep = page.querySelector(".admin-maintenance");
+  const upkeepMessage = upkeep.querySelector(".admin-message");
+  const upkeepOn = upkeep.querySelector("#maintenance-on");
+  const upkeepNote = upkeep.querySelector("#maintenance-note");
+  const upkeepNoteFa = upkeep.querySelector("#maintenance-note-fa");
+  account
+    .from("site_settings")
+    .select("maintenance, maintenance_note, maintenance_note_fa")
+    .eq("id", 1)
+    .maybeSingle()
+    .then(({ data }) => {
+      if (!data) return;
+      upkeepOn.checked = data.maintenance;
+      upkeepNote.value = data.maintenance_note || "";
+      upkeepNoteFa.value = data.maintenance_note_fa || "";
+    });
+  upkeep.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    upkeepMessage.classList.add("is-ok");
+    upkeepMessage.textContent = "Saving…";
+    const { error } = await account
+      .from("site_settings")
+      .update({
+        maintenance: upkeepOn.checked,
+        maintenance_note: upkeepNote.value.trim() || null,
+        maintenance_note_fa: upkeepNoteFa.value.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", 1);
+    upkeepMessage.classList.toggle("is-ok", !error);
+    upkeepMessage.textContent = error
+      ? "Not saved. Check your connection and try again."
+      : upkeepOn.checked
+        ? "Maintenance mode is on. Visitors now see the maintenance page; you still see the site."
+        : "Maintenance mode is off. The site is open to everyone.";
+  });
+
   // ---------- Exchange rates ----------
   const ratesForm = page.querySelector(".admin-rates");
   const ratesMessage = ratesForm.querySelector(".admin-message");
@@ -2295,4 +2364,100 @@ const signedInGoHome = async (user) => {
   });
 
   showList();
+})();
+
+// Status page (404.html, status.html?reason=…) — page not found, no access,
+// maintenance, can't reach the server, or a general error. Maintenance and
+// outages check again by themselves and go back when the site is up.
+(function statusPage() {
+  const page = document.querySelector(".status");
+  if (!page) return;
+
+  const params = new URLSearchParams(location.search);
+  const reason = page.dataset.reason === "404" ? "404" : params.get("reason") || "error";
+  // Only an address on this site to go back to.
+  const back = (() => {
+    const from = params.get("from") || "";
+    return from.startsWith("/") && !from.startsWith("//") ? from : "/index.html";
+  })();
+
+  const STATES = {
+    404: {
+      mark: "404",
+      title: "This page isn't here",
+      text: "The link may be broken, or the page may have moved.",
+      actions: [["Back to home", "/index.html", true]],
+    },
+    forbidden: {
+      mark: "403",
+      title: "You don't have access to this page",
+      text: "It's only open to certain accounts. If yours is one of them, log in with it.",
+      actions: [["Log in", "/login.html", true], ["Back to home", "/index.html"]],
+    },
+    maintenance: {
+      mark: "SauFox",
+      title: "We'll be right back",
+      text: "We're making some improvements to the site. It'll be back shortly.",
+      hint: "This page checks every minute and takes you back when the site is open.",
+      actions: [],
+    },
+    offline: {
+      mark: "SauFox",
+      title: "Can't reach our servers",
+      text: "Check your internet connection. If it's working, our servers may be busy; we'll keep trying.",
+      hint: "Trying again every 20 seconds…",
+      actions: [["Try again", back, true]],
+    },
+    error: {
+      mark: "500",
+      title: "Something went wrong",
+      text: "It's on our side. Try again in a moment.",
+      actions: [["Try again", back, true], ["Back to home", "/index.html"]],
+    },
+  };
+  const state = STATES[reason] || STATES.error;
+  page.dataset.reason = STATES[reason] ? reason : "error";
+
+  page.querySelector(".status__mark").textContent = state.mark;
+  page.querySelector(".status__title").textContent = state.title;
+  page.querySelector(".status__text").textContent = state.text;
+  page.querySelector(".status__hint").textContent = state.hint || "";
+  document.title = `${state.title} · SauFox Entertainment`;
+  const actions = page.querySelector(".status__actions");
+  state.actions.forEach(([label, href, primary]) => {
+    const link = document.createElement("a");
+    link.className = primary ? "status__button status__button--primary" : "status__button";
+    link.href = href;
+    link.textContent = label;
+    actions.append(link);
+  });
+  actions.hidden = !state.actions.length;
+
+  const settings = async () => {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/site_settings?select=maintenance,maintenance_note,maintenance_note_fa&id=eq.1`, {
+      headers: { apikey: SUPABASE_KEY },
+      signal: timeout(10000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json())[0] || {};
+  };
+
+  if (reason === "maintenance") {
+    const note = page.querySelector(".status__note");
+    const check = () =>
+      settings()
+        .then((s) => {
+          if (!s.maintenance) return location.replace(back);
+          const text = (LANG === "fa" && s.maintenance_note_fa) || s.maintenance_note || "";
+          note.textContent = text;
+          note.hidden = !text;
+        })
+        .catch(() => {});
+    check();
+    setInterval(check, 60000);
+  }
+
+  if (reason === "offline") {
+    setInterval(() => settings().then(() => location.replace(back)).catch(() => {}), 20000);
+  }
 })();

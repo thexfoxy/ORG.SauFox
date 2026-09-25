@@ -141,6 +141,26 @@ const FA = {
   "Back to all works": "بازگشت به همه‌ی آثار",
   "Browse works": "دیدن آثار",
 
+  // ---------- Status pages ----------
+  "Page not found · SauFox Entertainment": "صفحه پیدا نشد · ساوفاکس اینترتینمنت",
+  "This page isn't here": "این صفحه وجود ندارد",
+  "The link may be broken, or the page may have moved.": "ممکن است لینک اشتباه باشد یا صفحه جابه‌جا شده باشد.",
+  "Back to home": "بازگشت به صفحه‌ی اصلی",
+  "You don't have access to this page": "به این صفحه دسترسی ندارید",
+  "It's only open to certain accounts. If yours is one of them, log in with it.": "این صفحه فقط برای حساب‌های خاصی باز است. اگر حساب شما یکی از آن‌هاست، با آن وارد شوید.",
+  "Log in": "ورود",
+  "We'll be right back": "به‌زودی برمی‌گردیم",
+  "We're making some improvements to the site. It'll be back shortly.": "در حال بهتر کردن سایت هستیم. به‌زودی دوباره در دسترس است.",
+  "This page checks every minute and takes you back when the site is open.": "این صفحه هر دقیقه بررسی می‌کند و وقتی سایت باز شد، شما را برمی‌گرداند.",
+  "Can't reach our servers": "ارتباط با سرور برقرار نیست",
+  "Check your internet connection. If it's working, our servers may be busy; we'll keep trying.": "اتصال اینترنت را بررسی کنید. اگر وصل است، ممکن است سرورهای ما شلوغ باشند؛ خودمان دوباره تلاش می‌کنیم.",
+  "Trying again every 20 seconds…": "هر ۲۰ ثانیه دوباره تلاش می‌کنیم…",
+  "Try again": "تلاش دوباره",
+  "Something went wrong": "مشکلی پیش آمد",
+  "It's on our side. Try again in a moment.": "مشکل از سمت ماست. کمی بعد دوباره امتحان کنید.",
+  "Maintenance mode is on. Visitors see the maintenance page.": "حالت تعمیر روشن است. بازدیدکننده‌ها صفحه‌ی تعمیر را می‌بینند.",
+  "Turn it off": "خاموش کردن",
+
   // ---------- Login, sign up, reset ----------
   "Log in or sign up": "ورود یا ثبت‌نام",
   "Sign Up": "ثبت‌نام",

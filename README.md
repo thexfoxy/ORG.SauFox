@@ -16,6 +16,7 @@ npx serve .
 - `login.html`: login / sign-up page
 - `profile.html`: profile page (signed-in visitors only)
 - `emails/`: the sign-up, login and password-reset emails (paste into Supabase)
+- `404.html`, `status.html`: page not found (GitHub Pages shows 404.html for any missing address), and `status.html?reason=maintenance|offline|forbidden|error`
 - `about.html`, `terms.html`, `privacy.html`: about and contact, terms of use, privacy policy
 - `work.html`: one page per work (`work.html?id=the-candlewood`), filled from the catalogue
 - `admin.html`: admin panel for the catalogue (admins only)
@@ -52,7 +53,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=18`); raise it in all three pages
+JS with a version number (`style.css?v=19`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -73,7 +74,8 @@ Sign-up, login and profiles use the Supabase project `saufox-entertainment`
   `js/main.js`) and keep the last copy in localStorage in case a request
   fails.
 - `public.site_settings`: one row; the dollar and euro exchange rates (in
-  Rials) set in the admin panel. Everyone reads it; only admins change it.
+  Rials) and maintenance mode (with an optional note in each language), set
+  in the admin panel. Everyone reads it; only admins change it.
 - `public.admins`: accounts allowed into the admin panel. The check lives
   in `private.is_admin()`, outside the API.
 - Storage bucket `works` (public, 5 MB, JPEG / PNG / WebP): artwork uploaded
@@ -205,6 +207,20 @@ Admin panel (`admin.html`):
       currency buttons offer only currencies some work can show (none when
       there's just one), and a member who chose a currency in Settings sees
       prices in it without the buttons.
+
+Status pages (`404.html`, `status.html`):
+- [x] One page for every state, in the site's style and both languages: page
+      not found (404), no access (403, e.g. admin.html for a non-admin),
+      maintenance, can't reach the server, and a general error. GitHub
+      Pages only lets a site customise its 404; other HTTP errors come from
+      GitHub itself.
+- [x] Maintenance mode (admin panel): visitors of the home, work and profile
+      pages go to the maintenance page, which shows the admin's note and
+      checks every minute, returning them once it's off. Browsers that
+      opened the admin panel keep seeing the site, with a reminder bar.
+- [x] If the server can't be reached and the browser has no saved copy of
+      the catalogue, those pages go to "Can't reach our servers", which
+      retries every 20 seconds and returns to where the visitor was.
 
 Login page (`login.html`):
 - [x] Slanted artwork strips behind everything; a card with the studio logo,
