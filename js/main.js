@@ -106,9 +106,9 @@ const t = (text) => {
   };
 
   translateTree(document.documentElement);
-  // The Persian about page has its own contact heading.
-  if (location.hash === "#contact" && document.getElementById("contact-fa"))
-    addEventListener("load", () => document.getElementById("contact-fa").scrollIntoView());
+  // The Persian text pages have their own headings (#contact -> #contact-fa).
+  const twin = /^#[\w-]+$/.test(location.hash) && document.getElementById(`${location.hash.slice(1)}-fa`);
+  if (twin) addEventListener("load", () => twin.scrollIntoView());
   new MutationObserver((records) => {
     for (const r of records) {
       if (r.type === "childList") r.addedNodes.forEach(translateTree);
@@ -234,7 +234,7 @@ const loadSite = async () => {
 };
 
 // Started once, on the pages that show works.
-const site = document.querySelector(".hero, .works, .title-page, .login-bg, .profile-page")
+const site = document.querySelector(".hero, .works, .title-page, .login-bg, .profile-page, .checkout")
   ? loadSite()
   : Promise.resolve({ works: [], settings: {}, offline: false });
 const catalog = site.then((data) => data.works);
@@ -243,7 +243,7 @@ const catalog = site.then((data) => data.works);
 // go to the status page (which comes back here when the site is up).
 // Admins see the site as usual, with a reminder bar.
 (async function siteStatus() {
-  if (!document.querySelector(".hero, .works, .title-page, .profile-page")) return;
+  if (!document.querySelector(".hero, .works, .title-page, .profile-page, .checkout")) return;
   const { settings, offline } = await site;
   const from = encodeURIComponent(location.pathname + location.search + location.hash);
   if (offline) return location.replace(`status.html?reason=offline&from=${from}`);
@@ -282,6 +282,19 @@ const verifiedSession = async () => {
   }
   return session;
 };
+
+// Sends a signed-out visitor to log in, then back to this page.
+const goLogin = () => {
+  local.set("next", location.pathname.split("/").pop() + location.search + location.hash);
+  location.href = "login.html";
+};
+
+// Mobile numbers typed with Persian or Arabic digits, spaces or dashes.
+const cleanPhone = (text) =>
+  text
+    .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+    .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    .replace(/[\s().-]/g, "");
 
 // Keeps the name, photo and currency in this browser too, so the header and
 // the price cards can show them straight away on the next visit.
@@ -982,11 +995,15 @@ const formProblem = (form) => {
   return "";
 };
 
-// Remembers the member here and goes to the home page.
+// Remembers the member here and goes to the home page, or back to the page
+// that sent them to log in (see goLogin).
 const signedInGoHome = async (user) => {
   local.set("hasAccount", "1");
   cacheProfile(await fetchProfile(user));
-  setTimeout(() => (location.href = "index.html"), 700);
+  const next = local.get("next");
+  local.set("next", null);
+  const target = next && /^[a-z0-9-]+\.html([?#][^\s]*)?$/i.test(next) ? next : "index.html";
+  setTimeout(() => (location.href = target), 700);
 };
 
 // Login page — Login / Sign Up tabs with sliding forms, a 6-digit code sent
@@ -1425,6 +1442,85 @@ const signedInGoHome = async (user) => {
     document.getElementById("panel-wishlist").replaceChildren(grid);
   };
 
+  // ---------- Orders ----------
+  const ORDER_STATUS = { awaiting_payment: "Awaiting payment", paid: "Paid", cancelled: "Cancelled" };
+  const orderRow = (order, works) => {
+    const make = (tag, className, text) => {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text != null) node.textContent = text;
+      return node;
+    };
+    const work = works.find((w) => w.id === order.work_id);
+    const row = make("li", "order");
+    const thumb = make(work ? "a" : "span", "order__thumb");
+    if (work) {
+      thumb.href = `work.html?id=${encodeURIComponent(work.id)}`;
+      thumb.setAttribute("aria-label", order.title);
+      if (work.images[0]) {
+        const img = make("img");
+        img.src = work.images[0];
+        img.alt = "";
+        img.loading = "lazy";
+        thumb.append(img);
+      }
+    }
+    const text = make("div", "order__text");
+    const title = make("strong", "", order.title);
+    title.translate = false;
+    text.append(title, make("span", "", `Order ${order.number} · ${dateText(order.created_at)}`));
+    const side = make("div", "order__side");
+    const status = make("span", "order-status", ORDER_STATUS[order.status] || order.status);
+    status.dataset.status = order.status;
+    side.append(make("span", "order__amount", money.IRR(order.amount_irr)), status);
+    if (order.status === "awaiting_payment") {
+      // Press twice: the first press asks.
+      const cancel = make("button", "order__cancel", "Cancel order");
+      cancel.type = "button";
+      cancel.addEventListener("click", async () => {
+        if (!cancel.classList.contains("is-asking")) {
+          cancel.classList.add("is-asking");
+          cancel.textContent = "Tap again to cancel";
+          setTimeout(() => {
+            cancel.classList.remove("is-asking");
+            if (!cancel.disabled) cancel.textContent = "Cancel order";
+          }, 4000);
+          return;
+        }
+        cancel.disabled = true;
+        const { data, error } = await account
+          .from("orders")
+          .update({ status: "cancelled" })
+          .eq("id", order.id)
+          .select("id, number, work_id, title, amount_irr, status, created_at")
+          .single();
+        if (error) {
+          cancel.disabled = false;
+          cancel.classList.remove("is-asking");
+          cancel.textContent = "Couldn't cancel. Try again";
+          return;
+        }
+        row.replaceWith(orderRow(data, works));
+      });
+      side.append(cancel);
+    }
+    row.append(thumb, text, side);
+    return row;
+  };
+  const showOrders = async (userId) => {
+    const { data, error } = await account
+      .from("orders")
+      .select("id, number, work_id, title, amount_irr, status, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    if (error || !data.length) return;
+    const works = await catalog;
+    const list = document.createElement("ol");
+    list.className = "order-list";
+    list.append(...data.map((order) => orderRow(order, works)));
+    document.getElementById("panel-orders").replaceChildren(list);
+  };
+
   // ---------- Settings controls ----------
   const form = page.querySelector(".settings");
   const message = form.querySelector(".auth__message");
@@ -1469,6 +1565,7 @@ const signedInGoHome = async (user) => {
   page.querySelector('[data-profile="since"]').textContent = dateText(user.created_at, { month: "long", year: "numeric" });
 
   showMyList(user.id);
+  showOrders(user.id);
   // Admins get a way into the admin panel.
   account
     .from("admins")
@@ -1655,7 +1752,30 @@ const signedInGoHome = async (user) => {
     trailerSoon.textContent = `Trailer on ${dateText(work.trailerDate)}`;
     trailerSoon.hidden = false;
   }
-  page.querySelector('[data-slot="buy-soon"]').hidden = !prices.length;
+
+  // Buying: works with a Rial price go to checkout ("Pre-order" until
+  // they're out). A member with an open order is shown that instead.
+  const buy = page.querySelector('[data-action="buy"]');
+  const buyLabel = buy.querySelector("span");
+  if (work.prices && work.prices.IRR != null) {
+    buy.href = `checkout.html?id=${encodeURIComponent(work.id)}`;
+    buyLabel.textContent = work.status === "released" ? "Buy" : "Pre-order now";
+    buy.hidden = false;
+    verifiedSession().then(async (session) => {
+      if (!session) return;
+      const { data } = await account
+        .from("orders")
+        .select("status")
+        .eq("user_id", session.user.id)
+        .eq("work_id", work.id)
+        .in("status", ["awaiting_payment", "paid"])
+        .limit(1);
+      if (!data || !data.length) return;
+      buy.href = "profile.html#orders";
+      buy.classList.add("is-ordered");
+      buyLabel.textContent = data[0].status === "paid" ? "Purchased" : "Ordered · awaiting payment";
+    });
+  } else page.querySelector('[data-slot="buy-soon"]').hidden = !prices.length;
 
   // Countdown to the trailer
   const countdown = page.querySelector(".countdown");
@@ -1692,7 +1812,7 @@ const signedInGoHome = async (user) => {
   (async () => {
     const session = await verifiedSession();
     if (!session) {
-      listButton.addEventListener("click", () => (location.href = "login.html"));
+      listButton.addEventListener("click", goLogin);
       return;
     }
     const { data } = await account.from("my_list").select("work_id").eq("work_id", work.id).maybeSingle();
@@ -2377,7 +2497,172 @@ const signedInGoHome = async (user) => {
     ratesMessage.textContent = error ? "The rates weren't saved. Check your connection and try again." : "Saved. Prices on the site use the new rates.";
   });
 
+  // ---------- Orders ----------
+  // Newest first. The status is the only thing that can change here; the
+  // buyer sees it in their profile.
+  const ORDER_STATUS = { awaiting_payment: "Awaiting payment", paid: "Paid", cancelled: "Cancelled" };
+  const orderList = page.querySelector(".admin-orders__list");
+  const noOrders = page.querySelector(".admin-orders__empty");
+  const orderRow = (order) => {
+    const row = make("li", "admin-order");
+    const main = make("div", "admin-order__main");
+    main.append(
+      make("strong", "", `#${order.number} · ${order.title}`),
+      make("span", "", `${money.IRR(order.amount_irr)} · ${whenText(order.created_at)}`)
+    );
+    const buyer = make("div", "admin-order__buyer selectable");
+    const mail = make("a", "", order.email);
+    mail.href = `mailto:${order.email}`;
+    const tel = make("a", "", order.phone);
+    tel.href = `tel:${order.phone}`;
+    tel.dir = "ltr";
+    buyer.append(make("span", "", order.name), mail, tel);
+    const pick = make("select", "admin-order__status");
+    pick.setAttribute("aria-label", `Status of order ${order.number}`);
+    Object.entries(ORDER_STATUS).forEach(([value, label]) => {
+      const option = make("option", "", label);
+      option.value = value;
+      pick.append(option);
+    });
+    pick.value = order.status;
+    pick.dataset.status = order.status;
+    pick.addEventListener("change", async () => {
+      pick.disabled = true;
+      const { error } = await account.from("orders").update({ status: pick.value }).eq("id", order.id);
+      if (error) pick.value = order.status;
+      else order.status = pick.value;
+      pick.dataset.status = order.status;
+      pick.disabled = false;
+    });
+    row.append(main, buyer, pick);
+    return row;
+  };
+  account
+    .from("orders")
+    .select("id, number, title, amount_irr, name, email, phone, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(200)
+    .then(({ data, error }) => {
+      if (error) {
+        noOrders.textContent = "Orders couldn't be loaded. Reload the page to try again.";
+        noOrders.hidden = false;
+        return;
+      }
+      orderList.replaceChildren(...data.map(orderRow));
+      noOrders.hidden = data.length > 0;
+    });
+
   showList();
+})();
+
+// Checkout (checkout.html?id=<id>) — one work, for members. The order is
+// saved as "awaiting payment"; the database fills in the title, price and
+// email itself, so nothing here can change what's charged.
+(async function checkoutPage() {
+  const page = document.querySelector(".checkout");
+  if (!page) return;
+  const gate = page.querySelector(".checkout__gate");
+  const form = page.querySelector(".checkout__form");
+  const missing = page.querySelector(".checkout__missing");
+  const done = page.querySelector(".checkout__done");
+  const message = form.querySelector(".auth__message");
+  const submit = form.querySelector('[type="submit"]');
+  const show = (section) => {
+    gate.hidden = true;
+    [missing, form, done].forEach((el) => (el.hidden = el !== section));
+  };
+  const say = (text, ok) => {
+    message.textContent = text;
+    message.classList.toggle("is-ok", Boolean(ok));
+  };
+
+  const session = await verifiedSession();
+  if (!session) return goLogin();
+  const user = session.user;
+  const id = new URLSearchParams(location.search).get("id");
+  const work = (await catalog).find((w) => w.id === id);
+  if (!work || !work.prices || work.prices.IRR == null) return show(missing);
+
+  // Already ordered: that order is in the profile.
+  const { data: open } = await account
+    .from("orders")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("work_id", work.id)
+    .in("status", ["awaiting_payment", "paid"])
+    .limit(1);
+  if (open && open.length) return location.replace("profile.html#orders");
+
+  document.title = `Checkout · ${work.title} · SauFox Entertainment`;
+  form.querySelectorAll(".checkout-card__step").forEach((step) => (step.textContent = digits(step.textContent)));
+  const back = form.querySelector('[data-slot="back"]');
+  back.href = `work.html?id=${encodeURIComponent(work.id)}`;
+
+  // Summary
+  const poster = form.querySelector(".checkout-summary__poster");
+  if (work.images[0]) poster.src = work.images[0];
+  else poster.hidden = true;
+  form.querySelector(".checkout-summary__kind").textContent = work.kind;
+  form.querySelector(".checkout-summary__name").textContent = work.title;
+  form.querySelector(".checkout-summary__edition").textContent =
+    work.status === "released" ? "Digital edition" : "Pre-order · in your Library on release day";
+  const rials = work.prices.IRR;
+  form.querySelector('[data-slot="price"]').textContent = money.IRR(rials);
+  const total = form.querySelector('[data-slot="total"]');
+  total.textContent = money.IRR(rials);
+  const tomans = document.createElement("small");
+  tomans.textContent = LANG === "fa" ? `${num(Math.round(rials / 10))} تومان` : `${num(Math.round(rials / 10))} Tomans`;
+  total.append(tomans);
+  const others = ["USD", "EUR"].filter((code) => work.prices[code] != null).map((code) => `≈ ${money[code](work.prices[code])}`);
+  if (others.length) {
+    const approx = form.querySelector('[data-slot="approx"]');
+    approx.textContent = `About ${others.join(" / ")}. You pay in Rials.`;
+    approx.hidden = false;
+  }
+
+  // Buyer
+  const nameInput = form.querySelector("#checkout-name");
+  const phoneInput = form.querySelector("#checkout-phone");
+  const agree = form.querySelector('[name="agree"]');
+  form.querySelector('[data-slot="email"]').textContent = user.email;
+  nameInput.value = local.get("name") || (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) || "";
+  phoneInput.value = local.get("phone") || "";
+  show(form);
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const name = nameInput.value.trim();
+    const phone = cleanPhone(phoneInput.value);
+    if (!name) {
+      nameInput.focus();
+      return say("Enter your full name.");
+    }
+    if (!/^\+?[0-9]{8,15}$/.test(phone)) {
+      phoneInput.focus();
+      return say("Enter a mobile number we can reach you on, such as 0912 345 6789.");
+    }
+    if (!agree.checked) {
+      agree.focus();
+      return say("Accept the terms of purchase to place the order.");
+    }
+    submit.disabled = true;
+    say("Placing your order…", true);
+    const { data, error } = await account
+      .from("orders")
+      .insert({ work_id: work.id, name, phone })
+      .select("number")
+      .single();
+    if (error) {
+      submit.disabled = false;
+      if (error.code === "23505") return location.replace("profile.html#orders");
+      if (error.code === "P0001") return say("This work isn't on sale right now. Reload the page to see its latest details.");
+      return say("Your order wasn't placed. Check your connection and try again.");
+    }
+    local.set("phone", phone);
+    done.querySelector('[data-slot="done-number"]').textContent = `Order number ${data.number}`;
+    show(done);
+    scrollTo(0, 0);
+  });
 })();
 
 // Status page (404.html, status.html?reason=…) — page not found, no access,

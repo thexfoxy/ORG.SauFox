@@ -7,7 +7,7 @@
   <title>Manage works · SauFox Entertainment</title>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=21">
+  <link rel="stylesheet" href="css/style.css?v=22">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -50,6 +50,14 @@
       <p class="admin__hint">Published works show on the site in this order. Drafts are only visible here.</p>
       <ol class="admin-works"></ol>
       <p class="admin__empty" hidden>No works yet. Add the first one.</p>
+
+      <!-- Orders from checkout.html. -->
+      <section class="admin-orders admin-group">
+        <h2 class="admin-rates__title">Orders</h2>
+        <p class="admin-group__hint">Newest first. Set an order to Paid once its payment is in, or Cancelled; the buyer sees the change in their profile. Buyers can cancel unpaid orders themselves.</p>
+        <ol class="admin-orders__list"></ol>
+        <p class="admin-orders__empty" hidden>No orders yet.</p>
+      </section>
 
       <!-- Maintenance mode: visitors see the maintenance page; admins
            still see the site. -->
@@ -277,7 +285,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=21" defer></script>
-  <script src="js/main.js?v=21" defer></script>
+  <script src="js/vendor/supabase.js?v=22" defer></script>
+  <script src="js/main.js?v=22" defer></script>
 </body>
 </html>

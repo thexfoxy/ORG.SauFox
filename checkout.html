@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en" data-auth="new">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Language: the visitor's choice, else Persian if their browser prefers
+    // it. A Persian page stays hidden until js/main.js has put its text in.
+    (function () {
+      var lang = "en";
+      try {
+        lang = localStorage.getItem("saufox.lang") ||
+          ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
+      } catch (e) {}
+      if (lang !== "fa") return;
+      var root = document.documentElement;
+      root.lang = "fa";
+      root.dir = "rtl";
+      root.classList.add("i18n-pending");
+      setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
+    })();
+  </script>
+  <title>Checkout · SauFox Entertainment</title>
+  <meta name="description" content="Place your order with SauFox Entertainment.">
+  <meta name="robots" content="noindex">
+  <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css?v=22">
+  <script>
+    // Same header states as the home page (see index.html).
+    (function () {
+      var state = "new";
+      try {
+        if (localStorage.getItem("saufox.session")) state = "member";
+        else if (localStorage.getItem("saufox.hasAccount")) state = "returning";
+      } catch (e) {}
+      document.documentElement.dataset.auth = state;
+    })();
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="profile-chip" href="profile.html" aria-label="Profile">
+        <span class="profile-chip__avatar">
+          <img src="assets/avatar-default.svg" alt="">
+        </span>
+        <span class="profile-chip__label">Profile</span>
+      </a>
+
+      <a class="brand" href="index.html" aria-label="SauFox Entertainment">
+        <span class="brand__text">SauFox<span class="brand__sub"> Entertainment</span></span>
+        <span class="brand__blur" aria-hidden="true">SauFox<span class="brand__sub"> Entertainment</span></span>
+      </a>
+
+      <a class="cta cta--login" href="login.html" data-animate-letters data-hover-text="Welcome Back">Login</a>
+      <a class="cta cta--signup" href="login.html#signup" data-animate-letters data-hover-text="Sign Up Now">Wanna create an account?</a>
+    </div>
+  </header>
+
+  <!-- Checkout for one work: checkout.html?id=<id>. Members only; the
+       database copies the title and price from the catalogue, so only the
+       work, name and phone number come from here. js/main.js
+       (checkoutPage) runs it. -->
+  <main class="checkout">
+    <p class="checkout__gate" role="status">Getting your order ready…</p>
+
+    <section class="checkout__missing" hidden>
+      <div class="empty">
+        <p class="empty__title">This work can&rsquo;t be ordered</p>
+        <p class="empty__text">It isn&rsquo;t on sale right now, or the link is wrong.</p>
+        <a class="empty__button" href="index.html">Back to all works</a>
+      </div>
+    </section>
+
+    <form class="checkout__form" novalidate hidden>
+      <div class="checkout__head">
+        <a class="admin-back" data-slot="back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Back to the work</span>
+        </a>
+        <h1 class="checkout__title">Checkout</h1>
+      </div>
+
+      <div class="checkout__grid">
+        <div class="checkout__main">
+          <section class="checkout-card">
+            <h2 class="checkout-card__title"><span class="checkout-card__step">1</span>Your details</h2>
+            <label class="field" for="checkout-name">
+              <span class="field__label">Full name</span>
+              <span class="field__box"><input id="checkout-name" name="name" type="text" autocomplete="name" maxlength="80" required></span>
+            </label>
+            <label class="field" for="checkout-phone">
+              <span class="field__label">Mobile number</span>
+              <span class="field__box"><input id="checkout-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" dir="ltr" maxlength="20" placeholder="09xx xxx xxxx" required></span>
+            </label>
+            <div class="field">
+              <span class="field__label">Email</span>
+              <span class="field__box field__box--static" data-slot="email" translate="no"></span>
+              <small class="checkout-card__note">We&rsquo;ll send the order and payment details here.</small>
+            </div>
+          </section>
+
+          <section class="checkout-card">
+            <h2 class="checkout-card__title"><span class="checkout-card__step">2</span>Payment</h2>
+            <div class="checkout-pay">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M2.5 9.5h19M6.5 15h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              <div>
+                <strong>Iranian bank card, through Shaparak</strong>
+                <p>You&rsquo;ll pay in Rials on the bank&rsquo;s secure page; your card details never reach this site.</p>
+              </div>
+            </div>
+            <p class="checkout-card__notice">Online payment opens soon. Place your order now and nothing is charged: we&rsquo;ll email you when you can pay for it.</p>
+          </section>
+        </div>
+
+        <aside class="checkout-summary">
+          <div class="checkout-summary__work">
+            <img class="checkout-summary__poster" alt="">
+            <div>
+              <p class="checkout-summary__kind"></p>
+              <p class="checkout-summary__name" translate="no"></p>
+              <p class="checkout-summary__edition"></p>
+            </div>
+          </div>
+          <dl class="checkout-summary__lines">
+            <div><dt>Price</dt><dd data-slot="price"></dd></div>
+            <div class="checkout-summary__total"><dt>Total</dt><dd data-slot="total"></dd></div>
+          </dl>
+          <p class="checkout-summary__approx" data-slot="approx" hidden></p>
+          <label class="checkout-agree">
+            <input name="agree" type="checkbox" required>
+            <span data-only="en" translate="no">I accept the <a href="terms.html#purchases" target="_blank" rel="noopener">terms of purchase and refunds</a>.</span>
+            <span data-only="fa"><a href="terms.html#purchases" target="_blank" rel="noopener">قوانین خرید و بازگشت وجه</a> را خوانده‌ام و می‌پذیرم.</span>
+          </label>
+          <p class="auth__message" role="status" aria-live="polite"></p>
+          <button class="auth__submit" type="submit">Place order</button>
+        </aside>
+      </div>
+    </form>
+
+    <section class="checkout__done" hidden>
+      <div class="empty">
+        <span class="checkout__tick" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <p class="empty__title">Your order is in</p>
+        <p class="empty__text" data-slot="done-number"></p>
+        <p class="empty__text">It&rsquo;s waiting for payment. Online payment opens soon, and we&rsquo;ll email you when you can pay. You can follow or cancel it in your profile.</p>
+        <div class="checkout__done-actions">
+          <a class="empty__button empty__button--accent" href="profile.html#orders">See my orders</a>
+          <a class="empty__button" href="index.html">Back to all works</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <div class="site-footer__brand">
+        <a class="site-footer__logo" href="index.html">SauFox <span>Entertainment</span></a>
+        <p>Games, animation, films and novels, in physical and digital editions.</p>
+      </div>
+
+      <nav class="site-footer__col" aria-label="Studio">
+        <h2>Studio</h2>
+        <a href="about.html">About us</a>
+        <a href="about.html#contact">Contact</a>
+        <a href="index.html#plans">Subscriptions</a>
+      </nav>
+
+      <nav class="site-footer__col" aria-label="Legal">
+        <h2>Legal</h2>
+        <a href="terms.html">Terms of use</a>
+        <a href="privacy.html">Privacy policy</a>
+      </nav>
+
+      <div class="site-footer__col">
+        <h2>Contact</h2>
+        <a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a>
+        <a class="selectable" href="tel:+989301053524" dir="ltr">+98 930 105 3524</a>
+        <div class="social-links">
+          <a href="https://www.instagram.com/saufox.entertainment" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.3" cy="6.7" r="1.2" fill="currentColor"/></svg>
+          </a>
+          <a href="https://t.me/saufoxentertainment" target="_blank" rel="noopener" aria-label="Telegram">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.4 3.6 2.9 10.8c-1 .4-1 1.7.1 2l4.6 1.4 1.8 5.5c.3.8 1.2 1 1.8.5l2.6-2.4 4.9 3.6c.7.5 1.6.1 1.8-.7l3.1-15c.2-1-.8-1.7-1.7-1.3zM9.7 14.2l-.4 3.7-1.3-4.2 9.3-6.5-7.6 7z"/></svg>
+          </a>
+          <a href="https://x.com/saufoxent" target="_blank" rel="noopener" aria-label="X">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.7 3h3.1l-6.8 7.8L22 21h-6.3l-4.9-6.4L5.2 21H2.1l7.3-8.3L1.8 3h6.4l4.4 5.9L17.7 3zm-1.1 16.2h1.7L7.2 4.7H5.4l11.2 14.5z"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="site-footer__bottom">
+      <p>&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+      <button class="lang-switch" type="button" data-lang-switch translate="no">فارسی</button>
+    </div>
+  </footer>
+
+  <script src="js/vendor/supabase.js?v=22" defer></script>
+  <script src="js/fa.js?v=22" defer></script>
+  <script src="js/main.js?v=22" defer></script>
+</body>
+</html>

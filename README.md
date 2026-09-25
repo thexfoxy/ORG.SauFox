@@ -19,7 +19,8 @@ npx serve .
 - `404.html`, `status.html`: page not found (GitHub Pages shows 404.html for any missing address), and `status.html?reason=maintenance|offline|forbidden|error`
 - `about.html`, `terms.html`, `privacy.html`: about and contact, terms of use, privacy policy
 - `work.html`: one page per work (`work.html?id=the-candlewood`), filled from the catalogue
-- `admin.html`: admin panel for the catalogue (admins only)
+- `checkout.html`: checkout for one work (`checkout.html?id=the-candlewood`), members only
+- `admin.html`: admin panel for the catalogue and orders (admins only)
 - `css/style.css`: styles; design tokens live in `:root`
 - `js/main.js`: scripts
 - `js/fa.js`: Persian text for everything the pages and scripts show
@@ -120,6 +121,26 @@ Supabase dashboard settings (Authentication):
   page asks Supabase whether Google is on and says "isn't connected yet"
   until it is. New Google accounts get their name and photo in their
   profile.
+
+## Orders
+
+Works with a Rial price get a "Buy" button on their page ("Pre-order now"
+until they're released). It opens `checkout.html`, where a signed-in member
+gives a name and mobile number and accepts the terms of purchase; the order
+is saved in the `orders` table as "awaiting payment" with a number from 1001
+up. Signed-out visitors log in first and come back to the checkout.
+
+- The database fills in the title, price (always the work's Rial price),
+  email and status itself (trigger `private.order_defaults`), so nothing
+  sent from the browser can change what's charged. One open order per
+  member and work.
+- Members see their orders under Profile → Orders and can cancel an unpaid
+  one. Admins see every order in the admin panel and set it to Paid or
+  Cancelled.
+- Online payment isn't connected yet: the checkout says so and nothing is
+  charged. Once the eNamad badge is in, a Shaparak payment gateway takes
+  the step after "Place order".
+- Terms of purchase and refunds: `terms.html#purchases`.
 
 ## Content protection
 
