@@ -186,8 +186,15 @@ const heroEdgeY = (() => {
   const build = () => {
     const count = narrow.matches ? 5 : 7;
     hero.style.setProperty("--n", count);
+    // With fewer works than panels, images repeat, never side by side.
+    const pool = [];
+    while (pool.length < count) {
+      const round = shuffle(WORKS);
+      if (WORKS.length > 1 && round[0] === pool[pool.length - 1]) round.push(round.shift());
+      pool.push(...round);
+    }
     hero.replaceChildren(
-      ...shuffle(WORKS)
+      ...pool
         .slice(0, count)
         .map((src, i) => {
           const panel = document.createElement("div");
@@ -204,11 +211,15 @@ const heroEdgeY = (() => {
     if (document.hidden || calm.matches) return;
     const panels = [...hero.children];
     const shown = new Set(panels.map((p) => p.lastElementChild.dataset.src));
-    const unused = WORKS.filter((src) => !shown.has(src));
-    if (!unused.length) return;
-
-    const panel = panels[Math.floor(Math.random() * panels.length)];
-    const next = art(unused[Math.floor(Math.random() * unused.length)]);
+    const index = Math.floor(Math.random() * panels.length);
+    const panel = panels[index];
+    // Prefer a work not on screen; otherwise one that differs from this
+    // panel and its neighbours.
+    const near = new Set([index - 1, index, index + 1].filter((i) => panels[i]).map((i) => panels[i].lastElementChild.dataset.src));
+    let options = WORKS.filter((src) => !shown.has(src));
+    if (!options.length) options = WORKS.filter((src) => !near.has(src));
+    if (!options.length) return;
+    const next = art(options[Math.floor(Math.random() * options.length)]);
     next.classList.add("is-entering");
     panel.append(next);
     requestAnimationFrame(() => requestAnimationFrame(() => next.classList.remove("is-entering")));
@@ -336,14 +347,16 @@ const heroEdgeY = (() => {
 
     const price = el("div", "card__price");
     const priceTrack = el("div", "card__price-track");
-    // Works without a price yet show their note (say, a trailer date) instead.
-    const amounts = work.prices
-      ? CURRENCIES.map((code, i) => el("span", "card__amount" + (i === 0 ? " is-active" : ""), money[code](work.prices[code])))
+    // Only the currencies the work is sold in. Works without a price yet
+    // show their note (say, a trailer date) instead.
+    const codes = CURRENCIES.filter((code) => work.prices && work.prices[code] != null);
+    const amounts = codes.length
+      ? codes.map((code, i) => el("span", "card__amount" + (i === 0 ? " is-active" : ""), money[code](work.prices[code])))
       : [el("span", "card__amount is-active", work.note.text)];
     priceTrack.append(...amounts);
-    price.append(el("span", "card__price-label", work.prices ? "Price" : work.note.label), priceTrack);
+    price.append(el("span", "card__price-label", codes.length ? "Price" : work.note.label), priceTrack);
 
-    const status = el("span", `card__status card__status--${work.status}`, STATUS[work.status]);
+    const status = el("span", `card__status card__status--${work.status}`, work.statusText || STATUS[work.status]);
 
     card.append(media, price, status);
     track.append(card);
@@ -379,7 +392,10 @@ const heroEdgeY = (() => {
       }, 2600);
     }, (index % 4) * 350);
 
-    return { work, card, showCurrency };
+    // Pins a currency; works not sold in it keep what they show.
+    const pinCurrency = (code) => codes.includes(code) && showCurrency(codes.indexOf(code));
+
+    return { work, card, pinCurrency };
   });
 
   // ---------- Currency buttons ----------
@@ -387,7 +403,7 @@ const heroEdgeY = (() => {
     button.addEventListener("click", () => {
       mode = button.dataset.currency;
       currencyButtons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
-      if (mode !== "auto") cards.forEach((c) => c.showCurrency(CURRENCIES.indexOf(mode)));
+      if (mode !== "auto") cards.forEach((c) => c.pinCurrency(mode));
       document.dispatchEvent(new CustomEvent("currencymode", { detail: mode }));
       try {
         localStorage.setItem("saufox.currency", mode);
@@ -580,7 +596,9 @@ const heroEdgeY = (() => {
   const bg = document.querySelector(".login-bg");
   const count = window.matchMedia("(max-width: 760px)").matches ? 4 : 6;
   bg.style.setProperty("--n", count);
-  shuffled.slice(0, count).forEach((src, i) => {
+  // Images repeat when there are fewer works than slots.
+  const pick = (i) => shuffled[i % shuffled.length];
+  Array.from({ length: count }, (_, i) => pick(i)).forEach((src, i) => {
     const strip = document.createElement("div");
     strip.className = "login-bg__strip";
     strip.style.setProperty("--i", i);
@@ -593,9 +611,9 @@ const heroEdgeY = (() => {
 
   // Curved art layers, plus one more image in the corner behind them
   auth.querySelectorAll(".auth__band").forEach((band, i) => {
-    band.style.backgroundImage = `url("${shuffled[count + i]}")`;
+    band.style.backgroundImage = `url("${pick(count + i)}")`;
   });
-  auth.querySelector(".auth__art").style.backgroundImage = `url("${shuffled[count + 3]}")`;
+  auth.querySelector(".auth__art").style.backgroundImage = `url("${pick(count + 3)}")`;
 
   // Tabs and sliding forms
   const tabs = { login: auth.querySelector("#tab-login"), signup: auth.querySelector("#tab-signup") };
