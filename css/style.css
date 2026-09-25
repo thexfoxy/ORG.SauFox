@@ -2544,6 +2544,10 @@ a.hero__panel {
   cursor: progress;
 }
 
+.doc__contact .doc__contact-wide {
+  grid-column: 1 / -1;
+}
+
 /* Contact details can be selected and copied (js/main.js allows it). */
 .selectable {
   -webkit-user-select: text;
@@ -2756,6 +2760,7 @@ a.hero__panel {
 
 .doc__contact div {
   display: grid;
+  align-content: start;
   gap: 4px;
   padding: 16px 18px;
   border-radius: var(--radius);
