@@ -29,7 +29,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=5`); raise it in all three pages
+JS with a version number (`style.css?v=6`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -79,11 +79,12 @@ Home page:
       letters leave one by one, "Sign Up Now" / "Welcome Back" rises in their
       place, and the text glows softly. Add `?demo=new|returning|member` to
       the URL to preview each state.
-- [x] 2. Hero: full-width collage of seven slanted panels (five on phones)
-      whose bottom edge steps down from left to right in a smooth S-curve. Each load shows a random mix of works,
-      and every few seconds one panel crossfades to another. Hovering a panel
-      zooms its art and dims the rest. Artwork: every image in `js/content.js`
-      .
+- [x] 2. Hero: 16:9 key art, one slanted panel per work (up to five) whose
+      bottom edge steps down from left to right in a smooth S-curve; with
+      more than five works the panels swap between them at random every few
+      seconds. While there is only one work, its image fills the hero with no
+      slant. Hovering a panel zooms its art and dims the rest. Data: `hero`
+      (and optional `heroFocus`) in `js/content.js`.
 - [x] 3. Studio slogan: a short line, "And my success is not but through God."
       (Qur'an 11:88), in the space under the hero's curve
 - [x] 4. Work cards: a sliding row tucked right under the slogan; on the right

@@ -559,6 +559,11 @@ main {
   }
 }
 
+/* A single work fills the hero: no slant, and no dimming on hover. */
+.hero[data-count="1"] {
+  --slant: 0%;
+}
+
 /* ==========================================================================
    Section 3 — Studio slogan
    A short, quiet line. On wide screens it sits in the left corner right

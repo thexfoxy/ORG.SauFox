@@ -155,16 +155,22 @@ const heroEdgeY = (() => {
   };
 })();
 
-// Section 2 — Hero: collage of random artwork from the studio's releases.
+// Section 2 — Hero: key art from the studio's releases, one slanted panel per
+// work (up to five), or a single full-width image while there is one work.
 // WORKS and CATALOG come from js/content.js.
 
 (function heroCollage() {
   const hero = document.querySelector(".hero");
   if (!hero) return;
 
-  const narrow = window.matchMedia("(max-width: 700px)");
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
   const SWAP_EVERY = 4500;
+  const MAX_PANELS = 5;
+
+  // One panel per work with a hero image, up to MAX_PANELS.
+  const heroes = CATALOG.filter((work) => work.hero);
+  const count = Math.min(heroes.length, MAX_PANELS);
+  if (!count) return;
 
   const shuffle = (list) => {
     const a = list.slice();
@@ -175,50 +181,39 @@ const heroEdgeY = (() => {
     return a;
   };
 
-  const art = (src) => {
+  const art = (work) => {
     const el = document.createElement("span");
     el.className = "hero__art";
-    el.style.backgroundImage = `url("${src}")`;
-    el.dataset.src = src;
+    el.style.backgroundImage = `url("${work.hero}")`;
+    if (work.heroFocus) el.style.backgroundPosition = work.heroFocus;
+    el.dataset.src = work.hero;
     return el;
   };
 
-  const build = () => {
-    const count = narrow.matches ? 5 : 7;
-    hero.style.setProperty("--n", count);
-    // With fewer works than panels, images repeat, never side by side.
-    const pool = [];
-    while (pool.length < count) {
-      const round = shuffle(WORKS);
-      if (WORKS.length > 1 && round[0] === pool[pool.length - 1]) round.push(round.shift());
-      pool.push(...round);
-    }
-    hero.replaceChildren(
-      ...pool
-        .slice(0, count)
-        .map((src, i) => {
-          const panel = document.createElement("div");
-          panel.className = "hero__panel";
-          panel.style.setProperty("--i", i);
-          panel.append(art(src));
-          return panel;
-        })
-    );
-  };
+  hero.style.setProperty("--n", count);
+  hero.dataset.count = count;
+  hero.replaceChildren(
+    ...shuffle(heroes)
+      .slice(0, count)
+      .map((work, i) => {
+        const panel = document.createElement("div");
+        panel.className = "hero__panel";
+        panel.style.setProperty("--i", i);
+        panel.append(art(work));
+        return panel;
+      })
+  );
 
-  // Every few seconds one random panel crossfades to a work not on screen.
+  // With more works than panels, every few seconds one random panel
+  // crossfades to a work not on screen.
   const swap = () => {
     if (document.hidden || calm.matches) return;
     const panels = [...hero.children];
     const shown = new Set(panels.map((p) => p.lastElementChild.dataset.src));
-    const index = Math.floor(Math.random() * panels.length);
-    const panel = panels[index];
-    // Prefer a work not on screen; otherwise one that differs from this
-    // panel and its neighbours.
-    const near = new Set([index - 1, index, index + 1].filter((i) => panels[i]).map((i) => panels[i].lastElementChild.dataset.src));
-    let options = WORKS.filter((src) => !shown.has(src));
-    if (!options.length) options = WORKS.filter((src) => !near.has(src));
+    const options = heroes.filter((work) => !shown.has(work.hero));
     if (!options.length) return;
+
+    const panel = panels[Math.floor(Math.random() * panels.length)];
     const next = art(options[Math.floor(Math.random() * options.length)]);
     next.classList.add("is-entering");
     panel.append(next);
@@ -268,14 +263,9 @@ const heroEdgeY = (() => {
     });
   };
 
-  build();
   clipPanels();
-  narrow.addEventListener("change", () => {
-    build();
-    clipPanels();
-  });
   new ResizeObserver(clipPanels).observe(hero);
-  setInterval(swap, SWAP_EVERY);
+  if (heroes.length > count) setInterval(swap, SWAP_EVERY);
 })();
 
 
@@ -343,7 +333,8 @@ const heroEdgeY = (() => {
     });
     const caption = el("div", "card__caption");
     caption.append(el("h2", "card__title", work.title), el("span", "card__kind", work.kind));
-    media.append(...slides, caption, dots);
+    media.append(...slides, caption);
+    if (slides.length > 1) media.append(dots);
 
     const price = el("div", "card__price");
     const priceTrack = el("div", "card__price-track");
