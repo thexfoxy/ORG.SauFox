@@ -15,6 +15,7 @@ npx serve .
 - `index.html`: home page
 - `login.html`: login / sign-up page
 - `profile.html`: profile page (signed-in visitors only)
+- `work.html`: one page per work (`work.html?id=the-candlewood`), filled from `js/content.js`
 - `css/style.css`: styles; design tokens live in `:root`
 - `js/content.js`: the works catalogue (titles, images, prices, status). Edit this to add real works
 - `js/main.js`: scripts
@@ -29,7 +30,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=6`); raise it in all three pages
+JS with a version number (`style.css?v=7`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -97,6 +98,14 @@ Home page:
       screen size. Prices follow the currency chosen above the work cards.
       On hover each box gets a soft light that follows the
       pointer (white on Basic, orange on Premium). Plan features and prices are placeholders.
+
+Title page (`work.html?id=<id>`):
+- [x] The work's key art in the hero's curved frame, its kind, status and
+      name in the corner under the curve, the poster, price, a "Watch
+      trailer" button (Aparat, which plays in Iran) or the trailer date,
+      a live countdown to the trailer, synopsis, a gallery of stills that
+      open full size (arrow keys and Esc work), and credits. Sections with
+      no data stay hidden. Home-page cards and hero panels link here.
 
 Login page (`login.html`):
 - [x] Slanted artwork strips behind everything; a card with the studio logo,

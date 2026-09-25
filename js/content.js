@@ -4,6 +4,7 @@
 //   1. Put its images in assets/works/ (.jpg or .webp; cards crop to portrait).
 //   2. Add an entry to CATALOG below, in the order the cards should appear.
 //
+// id:      short name for the work's page address: work.html?id=<id>
 // title:   name of the work
 // kind:    Game, Animated series, Short film, Feature film, Novel, …
 // images:  the card's images, 3:4 (a poster works best); the first is the cover
@@ -16,6 +17,11 @@
 // note:    instead of prices, while a work has none yet: a label and a short
 //          text for the price strip, e.g. { label: "Trailer", text: "24 Nov 2026" }
 // status:  released | preorder | coming | production
+// trailerDate: optional date and time the trailer comes out (ISO, with the
+//          Tehran offset); the work's page counts down to it
+// trailer: optional Aparat video ID (from aparat.com/v/<ID>) once it's out
+// synopsis, genres, platforms, rating: optional text for the work's page
+// credits: optional list of [role, name] pairs for the work's page
 // statusText: optional wording for the status box instead of the default
 //          ("Coming soon" and so on), e.g. "Trailer 24 Nov"
 //
@@ -25,6 +31,7 @@
 
 const CATALOG = [
   {
+    id: "the-candlewood",
     title: "The CandleWood",
     kind: "Game",
     images: ["assets/works/candlewood-poster.webp"],
@@ -41,6 +48,7 @@ const CATALOG = [
     prices: { IRR: 3130000 },
     status: "coming",
     statusText: "Trailer 24 Nov",
+    trailerDate: "2026-11-24T00:00:00+03:30",
   },
 ];
 

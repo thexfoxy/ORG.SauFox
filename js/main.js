@@ -196,8 +196,10 @@ const heroEdgeY = (() => {
     ...shuffle(heroes)
       .slice(0, count)
       .map((work, i) => {
-        const panel = document.createElement("div");
+        const panel = document.createElement("a");
         panel.className = "hero__panel";
+        panel.href = `work.html?id=${encodeURIComponent(work.id)}`;
+        panel.setAttribute("aria-label", work.title);
         panel.style.setProperty("--i", i);
         panel.append(art(work));
         return panel;
@@ -314,7 +316,10 @@ const heroEdgeY = (() => {
   const cards = CATALOG.map((work, index) => {
     const card = el("article", "card");
 
+    const link = el("a", "card__link");
+    link.href = `work.html?id=${encodeURIComponent(work.id)}`;
     const media = el("div", "card__media");
+    link.append(media);
     const slides = work.images.map((src, i) => {
       const img = el("img", "card__slide" + (i === 0 ? " is-active" : ""));
       img.src = src;
@@ -349,7 +354,7 @@ const heroEdgeY = (() => {
 
     const status = el("span", `card__status card__status--${work.status}`, work.statusText || STATUS[work.status]);
 
-    card.append(media, price, status);
+    card.append(link, price, status);
     track.append(card);
 
     // Image slider: every 4s, paused while the pointer is on the image.
@@ -360,7 +365,12 @@ const heroEdgeY = (() => {
       step(slides, i);
       step(dotButtons, i);
     };
-    dotButtons.forEach((dot, i) => dot.addEventListener("click", () => showSlide(i)));
+    dotButtons.forEach((dot, i) =>
+      dot.addEventListener("click", (event) => {
+        event.preventDefault(); // the dots sit inside the card's link
+        showSlide(i);
+      })
+    );
     media.addEventListener("pointerenter", () => (paused = true));
     media.addEventListener("pointerleave", () => (paused = false));
 
@@ -444,8 +454,15 @@ const heroEdgeY = (() => {
     drag = null;
     if (!moved) return;
 
-    // Swallow the click that ends a drag so it doesn't hit a card button.
-    track.addEventListener("click", (e) => e.stopPropagation(), { capture: true, once: true });
+    // Swallow the click that ends a drag so it doesn't open a card.
+    track.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      },
+      { capture: true, once: true }
+    );
 
     const settle = () => track.classList.remove("is-dragging"); // snapping resumes
     if (calm.matches || Math.abs(v) < 0.5) return settle();
@@ -927,4 +944,194 @@ const heroEdgeY = (() => {
     ["session", "name", "avatar"].forEach((key) => local.set(key, null));
     location.href = "index.html";
   });
+})();
+
+// Title page (work.html?id=<id>) — one page per work in CATALOG: key art,
+// name, poster, facts, trailer and buy actions, a countdown to the trailer,
+// synopsis, gallery and credits. Sections without data stay hidden.
+(function titlePage() {
+  const page = document.querySelector(".title-page");
+  if (!page) return;
+
+  const id = new URLSearchParams(location.search).get("id");
+  const work = CATALOG.find((w) => w.id === id);
+  if (!work) {
+    page.querySelectorAll(":scope > section:not(.title-missing)").forEach((s) => (s.hidden = true));
+    page.querySelector(".title-missing").hidden = false;
+    document.title = "Not found · SauFox Entertainment";
+    return;
+  }
+
+  const STATUS = { released: "Released", preorder: "Pre-order", coming: "Coming soon", production: "In production" };
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+
+  document.title = `${work.title} · SauFox Entertainment`;
+
+  // Key art, kicker and name
+  const art = page.querySelector(".title-hero__art");
+  art.style.backgroundImage = `url("${work.hero || work.images[0]}")`;
+  if (work.heroFocus) art.style.backgroundPosition = work.heroFocus;
+  const kicker = page.querySelector(".title-head__kicker");
+  kicker.append(work.kind, " \u00b7 ", make("b", "", STATUS[work.status] || ""));
+  page.querySelector(".title-head__name").textContent = work.title;
+
+  // Poster
+  const poster = page.querySelector(".title-poster img");
+  poster.src = work.images[0];
+  poster.alt = `${work.title} poster`;
+
+  // Facts
+  const money = {
+    USD: (n) => `$${n.toFixed(2)}`,
+    EUR: (n) => `\u20ac${n.toFixed(2)}`,
+    IRR: (n) => `${Math.round(n).toLocaleString("en-US")} Rials`,
+  };
+  const dateText = (iso) =>
+    new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Tehran" });
+  const prices = work.prices ? Object.keys(money).filter((code) => work.prices[code] != null) : [];
+  const facts = [
+    ["Price", prices.map((code) => money[code](work.prices[code])).join(" / ")],
+    ["Genre", (work.genres || []).join(", ")],
+    ["Platforms", (work.platforms || []).join(", ")],
+    ["Age rating", work.rating],
+  ];
+  const factList = page.querySelector(".title-facts");
+  facts.forEach(([label, value]) => {
+    if (!value) return;
+    const row = make("div");
+    row.append(make("dt", "", label), make("dd", "", value));
+    factList.append(row);
+  });
+  factList.hidden = !factList.children.length;
+
+  // Actions: the trailer once it's out, otherwise its date; buying isn't
+  // open yet.
+  const play = page.querySelector('[data-action="trailer"]');
+  const trailerSoon = page.querySelector('[data-slot="trailer-soon"]');
+  if (work.trailer) play.hidden = false;
+  else if (work.trailerDate) {
+    trailerSoon.textContent = `Trailer on ${dateText(work.trailerDate)}`;
+    trailerSoon.hidden = false;
+  }
+  page.querySelector('[data-slot="buy-soon"]').hidden = !prices.length;
+
+  // Countdown to the trailer
+  const countdown = page.querySelector(".countdown");
+  const target = work.trailerDate && !work.trailer ? new Date(work.trailerDate).getTime() : 0;
+  if (target > Date.now()) {
+    countdown.hidden = false;
+    countdown.querySelector(".countdown__label").textContent = "The trailer premieres in";
+    const units = Object.fromEntries([...countdown.querySelectorAll("[data-unit]")].map((b) => [b.dataset.unit, b]));
+    const tick = () => {
+      const left = Math.max(0, target - Date.now());
+      const s = Math.floor(left / 1000);
+      units.days.textContent = Math.floor(s / 86400);
+      units.hours.textContent = String(Math.floor(s / 3600) % 24).padStart(2, "0");
+      units.minutes.textContent = String(Math.floor(s / 60) % 60).padStart(2, "0");
+      units.seconds.textContent = String(s % 60).padStart(2, "0");
+      if (!left) {
+        clearInterval(timer);
+        countdown.querySelector(".countdown__label").textContent = "The trailer is out. Check back shortly.";
+      }
+    };
+    const timer = setInterval(tick, 1000);
+    tick();
+  }
+
+  // Synopsis
+  if (work.synopsis) {
+    const synopsis = page.querySelector(".title-synopsis");
+    synopsis.textContent = work.synopsis;
+    synopsis.hidden = false;
+  }
+
+  // Credits
+  if (work.credits && work.credits.length) {
+    const list = page.querySelector(".title-credits__list");
+    work.credits.forEach(([role, name]) => {
+      const row = make("div");
+      row.append(make("dt", "", role), make("dd", "", name));
+      list.append(row);
+    });
+    page.querySelector(".title-credits").hidden = false;
+  }
+
+  // Viewer: stills full size, or the trailer.
+  const viewer = document.querySelector(".viewer");
+  const stage = viewer.querySelector(".viewer__stage");
+  const stills = work.stills || [];
+  let current = 0;
+  let opener = null;
+
+  const open = (content, single) => {
+    opener = document.activeElement;
+    stage.replaceChildren(content);
+    viewer.classList.toggle("is-single", single);
+    viewer.hidden = false;
+    document.body.style.overflow = "hidden";
+    viewer.querySelector(".viewer__close").focus();
+  };
+  const close = () => {
+    viewer.hidden = true;
+    stage.replaceChildren(); // stops the trailer
+    document.body.style.overflow = "";
+    if (opener) opener.focus();
+  };
+  const showStill = (i) => {
+    current = (i + stills.length) % stills.length;
+    const img = make("img");
+    img.src = stills[current];
+    img.alt = `${work.title}, image ${current + 1} of ${stills.length}`;
+    img.draggable = false;
+    if (viewer.hidden) open(img, stills.length < 2);
+    else stage.replaceChildren(img);
+  };
+
+  viewer.querySelector(".viewer__close").addEventListener("click", close);
+  viewer.querySelector(".viewer__step--prev").addEventListener("click", () => showStill(current - 1));
+  viewer.querySelector(".viewer__step--next").addEventListener("click", () => showStill(current + 1));
+  viewer.addEventListener("click", (event) => {
+    if (event.target === viewer || event.target === stage) close();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (viewer.hidden) return;
+    if (event.key === "Escape") close();
+    const isStill = stage.firstElementChild && stage.firstElementChild.tagName === "IMG";
+    if (isStill && event.key === "ArrowLeft") showStill(current - 1);
+    if (isStill && event.key === "ArrowRight") showStill(current + 1);
+  });
+
+  // Aparat plays in Iran without a VPN; the ID comes from aparat.com/v/<ID>.
+  play.addEventListener("click", () => {
+    const frame = make("iframe");
+    frame.src = `https://www.aparat.com/video/video/embed/videohash/${encodeURIComponent(work.trailer)}/vt/frame`;
+    frame.title = `${work.title} trailer`;
+    frame.allow = "autoplay; fullscreen; picture-in-picture";
+    frame.allowFullscreen = true;
+    open(frame, true);
+  });
+
+  // Gallery
+  if (stills.length) {
+    const grid = page.querySelector(".title-gallery__grid");
+    stills.forEach((src, i) => {
+      const button = make("button", "title-gallery__item");
+      button.type = "button";
+      button.setAttribute("aria-label", `Open image ${i + 1} of ${stills.length}`);
+      const img = make("img");
+      img.src = src;
+      img.alt = "";
+      img.loading = "lazy";
+      img.draggable = false;
+      button.append(img);
+      button.addEventListener("click", () => showStill(i));
+      grid.append(button);
+    });
+    page.querySelector(".title-gallery").hidden = false;
+  }
 })();

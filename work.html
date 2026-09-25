@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en" data-auth="new">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SauFox Entertainment</title>
+  <meta name="description" content="A release from SauFox Entertainment.">
+  <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css?v=7">
+  <script>
+    // Same header states as the home page (see index.html).
+    (function () {
+      var state = "new";
+      try {
+        if (localStorage.getItem("saufox.session")) state = "member";
+        else if (localStorage.getItem("saufox.hasAccount")) state = "returning";
+      } catch (e) {}
+      document.documentElement.dataset.auth = state;
+    })();
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="profile-chip" href="profile.html" aria-label="Profile">
+        <span class="profile-chip__avatar">
+          <img src="assets/avatar-default.svg" alt="">
+        </span>
+        <span class="profile-chip__label">Profile</span>
+      </a>
+
+      <a class="brand" href="index.html" aria-label="SauFox Entertainment">
+        <span class="brand__text">SauFox<span class="brand__sub"> Entertainment</span></span>
+        <span class="brand__blur" aria-hidden="true">SauFox<span class="brand__sub"> Entertainment</span></span>
+      </a>
+
+      <a class="cta cta--login" href="login.html" data-animate-letters data-hover-text="Welcome Back">Login</a>
+      <a class="cta cta--signup" href="login.html#signup" data-animate-letters data-hover-text="Sign Up Now">Wanna create an account?</a>
+    </div>
+  </header>
+
+  <!-- One page for every work in js/content.js: work.html?id=<id>.
+       js/main.js (titlePage) fills it in; sections without data stay
+       hidden. -->
+  <main class="title-page">
+    <section class="title-hero" aria-hidden="true">
+      <span class="title-hero__art"></span>
+    </section>
+
+    <section class="title-head">
+      <p class="title-head__kicker"></p>
+      <h1 class="title-head__name"></h1>
+    </section>
+
+    <section class="title-main">
+      <div class="title-poster">
+        <img alt="">
+      </div>
+
+      <div class="title-body">
+        <dl class="title-facts"></dl>
+
+        <div class="title-actions">
+          <button class="title-button title-button--play" type="button" data-action="trailer" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 8 5.5z"/></svg>
+            <span>Watch trailer</span>
+          </button>
+          <span class="title-button title-button--soon" data-slot="trailer-soon" hidden></span>
+          <span class="title-button title-button--soon" data-slot="buy-soon" hidden>Purchases open soon</span>
+        </div>
+
+        <div class="countdown" hidden>
+          <p class="countdown__label"></p>
+          <div class="countdown__units">
+            <span class="countdown__unit"><b data-unit="days">0</b><small>Days</small></span>
+            <span class="countdown__unit"><b data-unit="hours">0</b><small>Hours</small></span>
+            <span class="countdown__unit"><b data-unit="minutes">0</b><small>Minutes</small></span>
+            <span class="countdown__unit"><b data-unit="seconds">0</b><small>Seconds</small></span>
+          </div>
+        </div>
+
+        <p class="title-synopsis" hidden></p>
+      </div>
+    </section>
+
+    <section class="title-section title-gallery" aria-labelledby="gallery-title" hidden>
+      <h2 class="title-section__heading" id="gallery-title">Gallery</h2>
+      <div class="title-gallery__grid"></div>
+    </section>
+
+    <section class="title-section title-credits" aria-labelledby="credits-title" hidden>
+      <h2 class="title-section__heading" id="credits-title">Credits</h2>
+      <dl class="title-credits__list"></dl>
+    </section>
+
+    <section class="title-missing" hidden>
+      <h1 class="title-head__name">We couldn&rsquo;t find that work</h1>
+      <p>It may have moved or been renamed.</p>
+      <a class="empty__button" href="index.html">Back to all works</a>
+    </section>
+  </main>
+
+  <!-- Full-size stills and the trailer player. -->
+  <div class="viewer" role="dialog" aria-modal="true" aria-label="Viewer" hidden>
+    <button class="viewer__close" type="button" aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <button class="viewer__step viewer__step--prev" type="button" aria-label="Previous image">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="viewer__stage"></div>
+    <button class="viewer__step viewer__step--next" type="button" aria-label="Next image">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <script src="js/content.js?v=7" defer></script>
+  <script src="js/main.js?v=7" defer></script>
+</body>
+</html>
