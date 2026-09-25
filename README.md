@@ -52,7 +52,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=16`); raise it in all three pages
+JS with a version number (`style.css?v=17`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -70,6 +70,8 @@ Sign-up, login and profiles use the Supabase project `saufox-entertainment`
   anything. Pages load it with one plain request (`loadCatalog` in
   `js/main.js`) and keep the last copy in localStorage in case a request
   fails.
+- `public.site_settings`: one row; the dollar and euro exchange rates (in
+  Rials) set in the admin panel. Everyone reads it; only admins change it.
 - `public.admins`: accounts allowed into the admin panel. The check lives
   in `private.is_admin()`, outside the API.
 - Storage bucket `works` (public, 5 MB, JPEG / PNG / WebP): artwork uploaded
@@ -194,6 +196,11 @@ Admin panel (`admin.html`):
       "Show on the site". Images are resized in the browser, saved as WebP
       and uploaded to the `works` bucket. Deleting asks for a second press
       and removes the work's uploaded images too.
+- [x] Exchange rates (1 dollar / 1 euro in Rials): works with only a Rial
+      price also show in dollars and euros, marked "≈". The home page's
+      currency buttons offer only currencies some work can show (none when
+      there's just one), and a member who chose a currency in Settings sees
+      prices in it without the buttons.
 
 Login page (`login.html`):
 - [x] Slanted artwork strips behind everything; a card with the studio logo,

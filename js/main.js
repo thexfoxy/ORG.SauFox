@@ -38,6 +38,8 @@ const money = {
   EUR: (n) => (LANG === "fa" ? `${num(n, 2)} یورو` : `€${num(n, 2)}`),
   IRR: (n) => (LANG === "fa" ? `${num(Math.round(n))} ریال` : `${num(Math.round(n))} Rials`),
 };
+const priceText = (work, code) => (work.approx && work.approx[code] ? "≈ " : "") + money[code](work.prices[code]);
+
 // Dates in Tehran time; Persian uses the Iranian calendar.
 const dateText = (iso, options = { day: "numeric", month: "long", year: "numeric" }) =>
   new Date(iso).toLocaleDateString(LANG === "fa" ? "fa-IR" : "en-GB", { ...options, timeZone: "Asia/Tehran" });
@@ -160,13 +162,28 @@ const account = (() => {
 // Pages read the published works with one plain request, so the home page
 // doesn't need the Supabase library. The last copy is kept in this browser
 // and used if the request fails.
-const toWork = (row) => ({
+// Prices in each currency: the work's own where the admin gave one,
+// otherwise worked out from its Rial price at the rates set in the admin
+// panel (shown with "≈").
+const pricesOf = (row, rates) => {
+  const prices = { USD: row.price_usd, EUR: row.price_eur, IRR: row.price_irr };
+  const approx = {};
+  [["USD", rates.usd_irr], ["EUR", rates.eur_irr]].forEach(([code, rate]) => {
+    if (prices[code] == null && row.price_irr != null && rate) {
+      prices[code] = Math.round((row.price_irr / rate) * 100) / 100;
+      approx[code] = true;
+    }
+  });
+  return { prices, approx };
+};
+
+const toWork = (row, rates = {}) => ({
+  ...pricesOf(row, rates),
   id: row.id,
   title: row.title,
   kind: row.kind,
   status: row.status,
   statusText: (LANG === "fa" && row.status_text_fa) || row.status_text || "",
-  prices: { USD: row.price_usd, EUR: row.price_eur, IRR: row.price_irr },
   images: [row.cover_url || row.hero_url].filter(Boolean),
   hero: row.hero_url || "",
   heroFocus: row.hero_focus || "",
@@ -181,18 +198,24 @@ const toWork = (row) => ({
 });
 
 const loadCatalog = async () => {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/works?select=*&published=eq.true&order=sort.asc,created_at.asc`, {
-      headers: { apikey: SUPABASE_KEY },
-      signal: timeout(15000),
-    });
+  const get = async (path) => {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: { apikey: SUPABASE_KEY }, signal: timeout(15000) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const rows = await res.json();
-    local.set("catalog", JSON.stringify(rows));
-    return rows.map(toWork);
+    return res.json();
+  };
+  try {
+    const [rows, settings] = await Promise.all([
+      get("works?select=*&published=eq.true&order=sort.asc,created_at.asc"),
+      get("site_settings?select=usd_irr,eur_irr&id=eq.1").catch(() => []),
+    ]);
+    const rates = settings[0] || {};
+    local.set("catalog", JSON.stringify({ rows, rates }));
+    return rows.map((row) => toWork(row, rates));
   } catch (e) {
     try {
-      return JSON.parse(local.get("catalog") || "[]").map(toWork);
+      const saved = JSON.parse(local.get("catalog") || "{}");
+      const rows = Array.isArray(saved) ? saved : saved.rows || [];
+      return rows.map((row) => toWork(row, saved.rates || {}));
     } catch (e2) {
       return [];
     }
@@ -589,7 +612,7 @@ const dragScroll = (track) => {
     // Only the currencies the work is sold in.
     const codes = CURRENCIES.filter((code) => work.prices && work.prices[code] != null);
     const amounts = codes.length
-      ? codes.map((code, i) => el("span", "card__amount" + (i === 0 ? " is-active" : ""), money[code](work.prices[code])))
+      ? codes.map((code, i) => el("span", "card__amount" + (i === 0 ? " is-active" : ""), priceText(work, code)))
       : [el("span", "card__amount is-active", "To be announced")];
     priceTrack.append(...amounts);
     price.append(el("span", "card__price-label", "Price"), priceTrack);
@@ -642,24 +665,34 @@ const dragScroll = (track) => {
   });
 
   // ---------- Currency buttons ----------
-  currencyButtons.forEach((button) =>
-    button.addEventListener("click", () => {
-      mode = button.dataset.currency;
-      currencyButtons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
-      if (mode !== "auto") cards.forEach((c) => c.pinCurrency(mode));
-      document.dispatchEvent(new CustomEvent("currencymode", { detail: mode }));
-      try {
-        localStorage.setItem("saufox.currency", mode);
-      } catch (e) {}
-    })
-  );
+  // Only currencies some work can show get a button; with one or none the
+  // row goes. A member who picked a currency in Settings sees prices in it
+  // and no buttons (they change it in Settings).
+  const available = CURRENCIES.filter((code) => CATALOG.some((w) => w.prices[code] != null));
+  const controls = section.querySelector(".works__controls");
+  const choose = (next, remember) => {
+    mode = next;
+    currencyButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.currency === mode)));
+    if (mode !== "auto") cards.forEach((c) => c.pinCurrency(mode));
+    document.dispatchEvent(new CustomEvent("currencymode", { detail: mode }));
+    if (remember) local.set("currencyPick", mode);
+  };
+  currencyButtons.forEach((button) => {
+    const code = button.dataset.currency;
+    button.hidden = code === "auto" ? available.length < 2 : !available.includes(code);
+    button.addEventListener("click", () => choose(code, true));
+  });
 
-  // Start in the currency the visitor chose last time (here or in Settings).
-  try {
-    const saved = localStorage.getItem("saufox.currency");
-    const button = saved && currencyButtons.find((b) => b.dataset.currency === saved);
-    if (button && saved !== "auto") setTimeout(() => button.click());
-  } catch (e) {}
+  const memberChoice = document.documentElement.dataset.auth === "member" ? local.get("currency") : null;
+  if (memberChoice && memberChoice !== "auto" && available.includes(memberChoice)) {
+    controls.hidden = true;
+    setTimeout(() => choose(memberChoice, false));
+  } else {
+    controls.hidden = available.length < 2;
+    const pick = local.get("currencyPick");
+    if (pick && pick !== "auto" && available.includes(pick)) setTimeout(() => choose(pick, false));
+    else if (available.length === 1) setTimeout(() => choose(available[0], false));
+  }
 
   dragScroll(track);
 
@@ -1557,7 +1590,7 @@ const signedInGoHome = async (user) => {
   // Facts
   const prices = work.prices ? Object.keys(money).filter((code) => work.prices[code] != null) : [];
   const facts = [
-    ["Price", prices.map((code) => money[code](work.prices[code])).join(" / ")],
+    ["Price", prices.map((code) => priceText(work, code)).join(" / ")],
     ["Genre", (work.genres || []).map(t).join(LANG === "fa" ? "، " : ", ")],
     ["Platforms", (work.platforms || []).join(LANG === "fa" ? "، " : ", ")],
     ["Age rating", work.rating],
@@ -2194,6 +2227,40 @@ const signedInGoHome = async (user) => {
     const { data: files } = await photos.list(editing.id, { limit: 1000 });
     if (files && files.length) await photos.remove(files.map((f) => `${editing.id}/${f.name}`));
     showList();
+  });
+
+  // ---------- Exchange rates ----------
+  const ratesForm = page.querySelector(".admin-rates");
+  const ratesMessage = ratesForm.querySelector(".admin-message");
+  const rateUsd = ratesForm.querySelector("#rate-usd");
+  const rateEur = ratesForm.querySelector("#rate-eur");
+  account
+    .from("site_settings")
+    .select("usd_irr, eur_irr")
+    .eq("id", 1)
+    .maybeSingle()
+    .then(({ data }) => {
+      if (!data) return;
+      rateUsd.value = data.usd_irr ?? "";
+      rateEur.value = data.eur_irr ?? "";
+    });
+  ratesForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const usd = number(rateUsd);
+    const eur = number(rateEur);
+    if ([usd, eur].some((n) => n !== null && !(n > 0))) {
+      ratesMessage.classList.remove("is-ok");
+      ratesMessage.textContent = "Rates must be numbers above 0, or empty.";
+      return;
+    }
+    ratesMessage.classList.add("is-ok");
+    ratesMessage.textContent = "Saving…";
+    const { error } = await account
+      .from("site_settings")
+      .update({ usd_irr: usd, eur_irr: eur, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    ratesMessage.classList.toggle("is-ok", !error);
+    ratesMessage.textContent = error ? "The rates weren't saved. Check your connection and try again." : "Saved. Prices on the site use the new rates.";
   });
 
   showList();

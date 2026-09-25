@@ -7,7 +7,7 @@
   <title>Manage works · SauFox Entertainment</title>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=16">
+  <link rel="stylesheet" href="css/style.css?v=17">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -50,6 +50,24 @@
       <p class="admin__hint">Published works show on the site in this order. Drafts are only visible here.</p>
       <ol class="admin-works"></ol>
       <p class="admin__empty" hidden>No works yet. Add the first one.</p>
+
+      <!-- Exchange rates: Rial-only prices also show in dollars and euros. -->
+      <form class="admin-rates admin-group" novalidate>
+        <h2 class="admin-rates__title">Exchange rates</h2>
+        <p class="admin-group__hint">Works priced only in Rials also show in dollars and euros at these rates, marked &ldquo;&asymp;&rdquo;. A work&rsquo;s own dollar or euro price always wins. Leave a rate empty to leave that currency out.</p>
+        <div class="admin-rates__row">
+          <label class="admin-field">
+            <span>1 US dollar, in Rials</span>
+            <input id="rate-usd" type="number" min="1" step="1" inputmode="numeric">
+          </label>
+          <label class="admin-field">
+            <span>1 euro, in Rials</span>
+            <input id="rate-eur" type="number" min="1" step="1" inputmode="numeric">
+          </label>
+          <button class="admin-button admin-button--primary" type="submit">Save rates</button>
+        </div>
+        <p class="admin-message" role="status" aria-live="polite"></p>
+      </form>
     </section>
 
     <!-- Editor -->
@@ -227,7 +245,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=16" defer></script>
-  <script src="js/main.js?v=16" defer></script>
+  <script src="js/vendor/supabase.js?v=17" defer></script>
+  <script src="js/main.js?v=17" defer></script>
 </body>
 </html>
