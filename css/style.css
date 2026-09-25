@@ -3630,3 +3630,31 @@ a.hero__panel {
   text-transform: uppercase;
   color: var(--muted);
 }
+
+/* Admin: publishing, now or at a set time. */
+.admin-publish {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 16px 28px;
+  padding-top: 4px;
+}
+
+.admin-publish .admin-check {
+  margin-top: 30px;
+}
+
+@media (max-width: 640px) {
+  .admin-publish {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-publish .admin-check {
+    margin-top: 0;
+  }
+}
+
+.admin-badge.is-scheduled {
+  color: var(--accent);
+  background: rgba(255, 122, 26, 0.14);
+}

@@ -52,7 +52,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=17`); raise it in all three pages
+JS with a version number (`style.css?v=18`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -65,9 +65,11 @@ Sign-up, login and profiles use the Supabase project `saufox-entertainment`
   (a work id from `public.works`), readable and changeable by that member only.
 - `public.works`: the catalogue, one row per work (title, type, status,
   prices, poster / key art / gallery URLs, trailer date and Aparat ID,
-  synopsis, genres, platforms, rating, credits, order, published).
-  Everyone reads published works; only admins read drafts or change
-  anything. Pages load it with one plain request (`loadCatalog` in
+  synopsis, genres, platforms, rating, credits, order, published, and
+  `publish_at`, an optional go-live time). Everyone reads published works
+  whose `publish_at` has passed (or is empty); only admins read drafts
+  and scheduled works, or change anything. A scheduled work appears on its
+  own at that time, with nothing to run. Pages load it with one plain request (`loadCatalog` in
   `js/main.js`) and keep the last copy in localStorage in case a request
   fails.
 - `public.site_settings`: one row; the dollar and euro exchange rates (in
@@ -196,6 +198,8 @@ Admin panel (`admin.html`):
       "Show on the site". Images are resized in the browser, saved as WebP
       and uploaded to the `works` bucket. Deleting asks for a second press
       and removes the work's uploaded images too.
+- [x] Scheduling: next to "Show on the site", an optional time (Tehran)
+      from which the work shows; the list marks it "Scheduled · <time>".
 - [x] Exchange rates (1 dollar / 1 euro in Rials): works with only a Rial
       price also show in dollars and euros, marked "≈". The home page's
       currency buttons offer only currencies some work can show (none when

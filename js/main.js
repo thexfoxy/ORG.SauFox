@@ -1819,6 +1819,19 @@ const signedInGoHome = async (user) => {
     message.classList.toggle("is-ok", Boolean(ok));
   };
 
+  // Published, waiting for its time, or a draft.
+  const liveState = (work) =>
+    !work.published ? "draft" : work.publish_at && new Date(work.publish_at) > new Date() ? "scheduled" : "live";
+  const whenText = (iso) =>
+    new Date(iso).toLocaleString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Tehran",
+    });
+
   // ---------- List ----------
   const listEl = page.querySelector(".admin-works");
 
@@ -1838,7 +1851,12 @@ const signedInGoHome = async (user) => {
           make("strong", "", work.title),
           make("span", "", `${work.kind} · ${work.status_text || STATUS[work.status]}`)
         );
-        const badge = make("span", `admin-badge${work.published ? " is-on" : ""}`, work.published ? "Published" : "Draft");
+        const state = liveState(work);
+        const badge = make(
+          "span",
+          `admin-badge${state === "live" ? " is-on" : state === "scheduled" ? " is-scheduled" : ""}`,
+          state === "live" ? "Published" : state === "scheduled" ? `Scheduled · ${whenText(work.publish_at)}` : "Draft"
+        );
         const tools = make("span", "admin-work__tools");
         const up = make("button", "admin-icon", "↑");
         up.type = "button";
@@ -1904,6 +1922,7 @@ const signedInGoHome = async (user) => {
     statusText: $("w-status-text"),
     statusTextFa: $("w-status-text-fa"),
     published: $("w-published"),
+    publishAt: $("w-publish-at"),
     irr: $("w-price-irr"),
     usd: $("w-price-usd"),
     eur: $("w-price-eur"),
@@ -2028,6 +2047,7 @@ const signedInGoHome = async (user) => {
     fields.statusText.value = w.status_text || "";
     fields.statusTextFa.value = w.status_text_fa || "";
     fields.published.checked = Boolean(w.published);
+    fields.publishAt.value = toLocalInput(w.publish_at);
     fields.irr.value = w.price_irr ?? "";
     fields.usd.value = w.price_usd ?? "";
     fields.eur.value = w.price_eur ?? "";
@@ -2049,7 +2069,7 @@ const signedInGoHome = async (user) => {
     renderStills();
     deleteButton.hidden = !row;
     resetDelete();
-    viewLink.hidden = !(row && row.published);
+    viewLink.hidden = !(row && liveState(row) === "live");
     if (row) viewLink.href = `work.html?id=${encodeURIComponent(row.id)}`;
     listView.hidden = true;
     form.hidden = false;
@@ -2157,6 +2177,7 @@ const signedInGoHome = async (user) => {
       status_text: fields.statusText.value.trim() || null,
       status_text_fa: fields.statusTextFa.value.trim() || null,
       published: fields.published.checked,
+      publish_at: fromLocalInput(fields.publishAt.value),
       price_irr: number(fields.irr),
       price_usd: number(fields.usd),
       price_eur: number(fields.eur),
@@ -2200,7 +2221,17 @@ const signedInGoHome = async (user) => {
       return say("The work wasn't saved. Check your connection and try again.");
     }
     showEditor(result.data);
-    say(row.published ? "Saved. It's live on the site." : "Saved as a draft.", true);
+    const state = liveState(result.data);
+    say(
+      state === "live"
+        ? "Saved. It's live on the site."
+        : state === "scheduled"
+          ? `Saved. It goes live on ${whenText(result.data.publish_at)} (Tehran time).`
+          : row.publish_at
+            ? "Saved as a draft. Tick “Show on the site” for the time to take effect."
+            : "Saved as a draft.",
+      true
+    );
   });
 
   // ---------- Delete (press twice) ----------

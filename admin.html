@@ -7,7 +7,7 @@
   <title>Manage works · SauFox Entertainment</title>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=17">
+  <link rel="stylesheet" href="css/style.css?v=18">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -126,10 +126,17 @@
             <input id="w-status-text-fa" name="status_text_fa" type="text" maxlength="40" dir="rtl" placeholder="مثلاً تریلر ۳ آذر">
             <small>Shown on the Persian site.</small>
           </label>
-          <label class="admin-check admin-field--wide">
-            <input id="w-published" name="published" type="checkbox">
-            <span>Show on the site</span>
-          </label>
+          <div class="admin-publish admin-field--wide">
+            <label class="admin-check">
+              <input id="w-published" name="published" type="checkbox">
+              <span>Show on the site</span>
+            </label>
+            <label class="admin-field">
+              <span>From <em>optional, Tehran time</em></span>
+              <input id="w-publish-at" name="publish_at" type="datetime-local">
+              <small>Empty: as soon as you save. With a time: the work appears on the site by itself at that moment.</small>
+            </label>
+          </div>
         </div>
       </fieldset>
 
@@ -245,7 +252,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=17" defer></script>
-  <script src="js/main.js?v=17" defer></script>
+  <script src="js/vendor/supabase.js?v=18" defer></script>
+  <script src="js/main.js?v=18" defer></script>
 </body>
 </html>
