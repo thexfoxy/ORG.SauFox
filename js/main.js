@@ -34,7 +34,12 @@ const account = (() => {
   return window.supabase.createClient(
     "https://gwyqkzhhnspfadqefmix.supabase.co",
     "sb_publishable_IB06YrDhrsKJbVghWP-zzg_xDgB1mXN",
-    { auth: { storageKey: "saufox.session" } }
+    {
+      auth: { storageKey: "saufox.session" },
+      // Give up after 20 seconds so a stalled connection shows an error
+      // instead of leaving the page waiting.
+      global: { fetch: (url, options = {}) => fetch(url, { ...options, signal: options.signal || (AbortSignal.timeout && AbortSignal.timeout(20000)) }) },
+    }
   );
 })();
 
