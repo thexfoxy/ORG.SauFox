@@ -2533,3 +2533,259 @@ a.hero__panel {
 .title-button--list:disabled {
   cursor: progress;
 }
+
+/* Contact details can be selected and copied (js/main.js allows it). */
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ==========================================================================
+   Footer (every page but login)
+   ========================================================================== */
+
+.site-footer {
+  margin-top: 96px;
+  border-top: 1px solid var(--line);
+  background: #0b0b0d;
+}
+
+.site-footer__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
+  gap: 36px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 56px var(--gutter) 40px;
+}
+
+@media (max-width: 900px) {
+  .site-footer__inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .site-footer__brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 460px) {
+  .site-footer__inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.site-footer__logo {
+  font: 400 34px/1 var(--font-logo);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.site-footer__logo span {
+  color: var(--muted);
+}
+
+.site-footer__brand p {
+  max-width: 34ch;
+  margin: 14px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.site-footer__col {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-width: 0;
+}
+
+.site-footer__col h2 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.site-footer__col a {
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.site-footer__col a:hover {
+  color: var(--accent);
+}
+
+.site-footer a:focus-visible,
+.doc a:focus-visible,
+.login__legal a:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.social-links {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.social-links a {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+
+.social-links svg {
+  width: 19px;
+  height: 19px;
+}
+
+.site-footer__bottom {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 18px var(--gutter) calc(env(safe-area-inset-bottom, 0px) + 22px);
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* The title page and the profile end with their own padding. */
+.title-page + .site-footer,
+.profile-page + .site-footer {
+  margin-top: 0;
+}
+
+/* ==========================================================================
+   Text pages (about, terms, privacy)
+   ========================================================================== */
+
+.doc {
+  max-width: 72ch;
+  margin: 0 auto;
+  padding: 64px var(--gutter) 0;
+  box-sizing: content-box;
+  font-size: 16px;
+  line-height: 1.7;
+  color: #d9d6d0;
+}
+
+.doc__kicker {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.doc__title {
+  margin: 0 0 20px;
+  font: 600 clamp(32px, 4vw, 48px)/1.1 var(--font-body);
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.doc__lead {
+  font-size: 19px;
+  color: var(--text);
+}
+
+.doc__updated {
+  margin: -8px 0 28px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.doc h2 {
+  margin: 44px 0 10px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  scroll-margin-top: calc(var(--header-h) + 16px);
+}
+
+.doc p {
+  margin: 0 0 14px;
+}
+
+.doc ul {
+  margin: 0 0 14px;
+  padding-left: 20px;
+}
+
+.doc li {
+  margin-bottom: 8px;
+}
+
+.doc strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.doc a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+.doc__contact {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+  margin: 20px 0 0;
+}
+
+.doc__contact div {
+  display: grid;
+  gap: 4px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.doc__contact dt {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.doc__contact dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.doc__contact a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.doc__contact a:hover {
+  color: var(--accent);
+}
+
+/* Login page: the legal line under the card. */
+.login__legal {
+  position: relative;
+  z-index: 1;
+  max-width: 46ch;
+  margin: 18px auto 0;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--muted);
+}
+
+.login__legal a {
+  color: var(--text);
+}

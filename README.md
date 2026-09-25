@@ -15,6 +15,7 @@ npx serve .
 - `index.html`: home page
 - `login.html`: login / sign-up page
 - `profile.html`: profile page (signed-in visitors only)
+- `about.html`, `terms.html`, `privacy.html`: about and contact, terms of use, privacy policy
 - `work.html`: one page per work (`work.html?id=the-candlewood`), filled from `js/content.js`
 - `css/style.css`: styles; design tokens live in `:root`
 - `js/content.js`: the works catalogue (titles, images, prices, status). Edit this to add real works
@@ -30,7 +31,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=8`); raise it in all three pages
+JS with a version number (`style.css?v=9`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -59,7 +60,7 @@ Supabase dashboard settings (Authentication):
 
 ## Content protection
 
-Text can't be selected or copied, and images can't be dragged out or saved
+Text can't be selected or copied (except contact details marked `.selectable`), and images can't be dragged out or saved
 from the right-click / long-press menu (`css/style.css` base rules plus
 `protectContent` in `js/main.js`). This stops casual copying; anything shown
 in a browser can still be captured by a determined visitor.
@@ -116,6 +117,15 @@ Home page, later additions:
 - [x] "My List": a button on each work's page saves it to the member's
       account (signed-out visitors go to login); the profile's My List tab
       shows the saved works.
+
+Footer and text pages:
+- [x] A footer on every page but login: studio links, legal links, email,
+      phone and social links (Instagram, Telegram, X). The email and phone
+      can be selected and copied despite the site-wide copy block
+      (`.selectable`).
+- [x] About (with contact details), Terms of use and Privacy policy. The
+      terms and policy describe what the site actually does today; update
+      them before purchases open. The sign-up page links to both.
 
 Login page (`login.html`):
 - [x] Slanted artwork strips behind everything; a card with the studio logo,

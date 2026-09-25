@@ -649,7 +649,8 @@ const posterCard = (work) => {
 // Site-wide: no copying text and no saving images (right-click menu,
 // dragging images out, copy / cut). Form fields keep working normally.
 (function protectContent() {
-  const isField = (el) => el instanceof Element && el.closest("input, textarea, [contenteditable]");
+  // Form fields and contact details (.selectable) can still be copied.
+  const isField = (el) => el instanceof Element && el.closest("input, textarea, [contenteditable], .selectable");
   document.addEventListener("contextmenu", (e) => { if (!isField(e.target)) e.preventDefault(); });
   document.addEventListener("dragstart", (e) => { if (e.target instanceof HTMLImageElement) e.preventDefault(); });
   ["copy", "cut"].forEach((type) =>
