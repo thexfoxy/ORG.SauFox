@@ -53,7 +53,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=20`); raise it in all three pages
+JS with a version number (`style.css?v=21`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -89,7 +89,7 @@ The session is kept in localStorage under `saufox.session`; the header and
 the profile page check that key before first paint. Name, photo and currency
 are also cached there so they show without waiting for the server.
 
-Every email sign-in goes through a 6-digit code sent by email: after
+Every email sign-in goes through a code sent by email (6 to 10 digits, per Supabase's "Email OTP Length"): after
 signing up, after the password at every login, and for a forgotten
 password (code plus the new password, all on the login page). The
 database enforces it: `private.verified()` is true only for sessions whose
@@ -230,7 +230,7 @@ Login page (`login.html`):
       the Sign Up tab.
 - [x] Real accounts through Supabase (see Accounts above): sign-up, login,
       clear error messages, and a confirmation-email step when it is on.
-- [x] Codes by email: sign-up and every login finish with a 6-digit code
+- [x] Codes by email: sign-up and every login finish with an emailed code
       (with "Send a new code" after 60 seconds); "Forgot password?" sends a
       code and takes the new password in the same form. `login.html#reset`
       opens the forgot-password form directly.

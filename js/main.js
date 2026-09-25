@@ -975,7 +975,7 @@ const formProblem = (form) => {
     input.focus();
     if (input.validity.valueMissing) return `Enter your ${name.toLowerCase()}.`;
     if (input.validity.typeMismatch) return "Enter an email address like name@example.com.";
-    if (input.name === "code") return "Enter the 6-digit code from the email.";
+    if (input.name === "code") return "Enter the code from the email.";
     if (input.validity.tooShort) return `Use at least ${input.minLength} characters for your password.`;
     return `Check your ${name.toLowerCase()}.`;
   }
@@ -1088,8 +1088,8 @@ const signedInGoHome = async (user) => {
     pending = { purpose, email };
     forms.code.querySelector('[data-slot="code-intro"]').textContent =
       purpose === "recovery"
-        ? `We emailed a 6-digit code to ${email}. Enter it with your new password.`
-        : `We emailed a 6-digit code to ${email}. Enter it to continue.`;
+        ? `We emailed a code to ${email}. Enter it with your new password.`
+        : `We emailed a code to ${email}. Enter it to continue.`;
     newPassword.hidden = purpose !== "recovery";
     forms.code.querySelector(".auth__submit").textContent = purpose === "recovery" ? "Save new password" : "Verify";
     codeInput.value = "";
@@ -1116,7 +1116,7 @@ const signedInGoHome = async (user) => {
       : explainAuthError(error);
 
   codeInput.addEventListener("input", () => {
-    codeInput.value = codeInput.value.replace(/[^0-9۰-۹]/g, "").replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).slice(0, 6);
+    codeInput.value = codeInput.value.replace(/[^0-9۰-۹]/g, "").replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).slice(0, 10);
   });
 
   resendButton.addEventListener("click", async () => {

@@ -3536,19 +3536,19 @@ a.hero__panel {
 
 .field__box--code input {
   font: 600 24px/1 var(--font-body);
-  letter-spacing: 0.5em;
+  letter-spacing: 0.3em;
   text-align: center;
   direction: ltr;
   font-variant-numeric: tabular-nums;
 }
 
 .field__box--code input::placeholder {
-  letter-spacing: 0.5em;
+  letter-spacing: 0.3em;
   color: #3d3c42;
 }
 
 :root[lang="fa"] .field__box--code input {
-  letter-spacing: 0.5em !important;
+  letter-spacing: 0.3em !important;
   text-align: center;
 }
 
