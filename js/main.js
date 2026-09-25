@@ -977,6 +977,10 @@ const AUTH_ERRORS = {
   over_email_send_rate_limit: "Too many emails sent. Wait a while and try again.",
 };
 const explainAuthError = (error) =>
+  // Passwords found in known data leaks (HaveIBeenPwned), when that check is on.
+  (error.code === "weak_password" && (error.reasons || []).includes("pwned")
+    ? "This password has shown up in a data leak elsewhere, so it isn't safe. Choose a different one."
+    : "") ||
   AUTH_ERRORS[error.code] ||
   (error.status ? error.message : "Couldn't reach the server. Check your connection and try again.");
 

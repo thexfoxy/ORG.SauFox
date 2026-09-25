@@ -301,4 +301,5 @@ const FA = {
   "Cancel order": "لغو سفارش",
   "Tap again to cancel": "برای لغو دوباره بزنید",
   "Couldn't cancel. Try again": "لغو نشد. دوباره امتحان کنید",
+  "This password has shown up in a data leak elsewhere, so it isn't safe. Choose a different one.": "این رمز عبور قبلاً در یک نشت اطلاعات در جای دیگری دیده شده و امن نیست. رمز دیگری انتخاب کنید.",
 };
