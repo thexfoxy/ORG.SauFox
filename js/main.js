@@ -135,6 +135,11 @@ document.querySelectorAll("[data-lang-switch]").forEach((button) => {
   });
 });
 
+// A sign-in link from an email (older templates) lands on the site's home
+// page with the session in the address; the login page picks it up.
+if (!document.querySelector(".auth") && /(^#|&)(access_token|error_code)=/.test(location.hash))
+  location.replace(`login.html${location.hash}`);
+
 // Accounts live in Supabase (project saufox-entertainment). This key is the
 // public one meant for browsers; the database's row-level security decides
 // what each member can read and change. The session is stored under
@@ -1235,6 +1240,15 @@ const signedInGoHome = async (user) => {
     if (data.user && data.user.identities && !data.user.identities.length)
       return say(messageOf(form), AUTH_ERRORS.user_already_exists);
     local.set("hasAccount", "1");
+    if (data.session) {
+      // Email confirmation is off in Supabase: the account opened at once
+      // and no email went out. Drop that session and send a login code.
+      await account.auth.signOut({ scope: "local" });
+      const sent = await sendCode("login", email);
+      if (sent.error) return say(messageOf(form), sendFailed(sent.error));
+      say(messageOf(form), "");
+      return askForCode("login", email);
+    }
     say(messageOf(form), "");
     askForCode("signup", email);
   });

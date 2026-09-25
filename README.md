@@ -53,7 +53,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=19`); raise it in all three pages
+JS with a version number (`style.css?v=20`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
