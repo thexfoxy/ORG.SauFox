@@ -682,8 +682,8 @@ const heroEdgeY = (() => {
       if (invalid) return say(message, invalid);
       if (!account) return say(message, "Accounts aren't available right now. Try again later.");
 
-      const email = form.querySelector('input[type="email"]').value.trim();
-      const password = form.querySelector('input[type="password"]').value;
+      const email = form.querySelector('input[name="email"]').value.trim();
+      const password = form.querySelector('input[name="password"]').value;
       const nameInput = form.querySelector('input[name="name"]');
 
       submit.disabled = true;
@@ -715,7 +715,7 @@ const heroEdgeY = (() => {
       if (!data.session) {
         local.set("hasAccount", "1");
         setMode("login");
-        forms.login.querySelector('input[type="email"]').value = email;
+        forms.login.querySelector('input[name="email"]').value = email;
         return say(
           forms.login.querySelector(".auth__message"),
           `We sent a confirmation link to ${email}. Open it, then log in.`,
