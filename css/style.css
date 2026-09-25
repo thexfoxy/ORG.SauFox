@@ -2622,6 +2622,32 @@ a.hero__panel {
   color: var(--muted);
 }
 
+/* Trust seals (eNamad and the like), drawn on a light card since their
+   images are made for white pages. */
+.site-footer__seals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.site-footer__seals:empty {
+  display: none;
+}
+
+.site-footer__seals a {
+  display: block;
+  padding: 6px;
+  border-radius: 12px;
+  background: #fff;
+  line-height: 0;
+}
+
+.site-footer__seals img {
+  width: auto;
+  height: 84px;
+}
+
 .site-footer__col {
   display: grid;
   gap: 10px;

@@ -208,6 +208,16 @@ sign-up, password login, Google sign-in, emailed code and password reset
 In that order: with CAPTCHA on in Supabase but no site key on the site,
 nobody can log in.
 
+## Trust seals (eNamad)
+
+Every footer has an empty `<div class="site-footer__seals">` (hidden while
+empty). Paste the snippet eNamad gives inside it on each page, unchanged,
+keeping `referrerpolicy='origin'`: eNamad checks where its image is loaded
+from, and its bot reads the page source, so the snippet goes in the HTML
+rather than being added by script. The image comes from eNamad's server,
+so it updates by itself when the seal's level changes. For eNamad's domain
+check, a file they ask for goes in the repository root.
+
 ## Content protection
 
 Text can't be selected or copied (except contact details marked `.selectable`), and images can't be dragged out or saved
