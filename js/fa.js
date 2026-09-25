@@ -176,7 +176,6 @@ const FA = {
   "Forgot password?": "رمز را فراموش کرده‌اید؟",
   "or": "یا",
   "Continue with Google": "ادامه با گوگل",
-  "Continue with Apple": "ادامه با اپل",
   "Enter the email you signed up with and we’ll send you a link to set a new password.": "ایمیلی را که با آن ثبت‌نام کرده‌اید وارد کنید تا لینک تعیین رمز جدید را برایتان بفرستیم.",
   "Send reset link": "ارسال لینک",
   "Back to login": "بازگشت به ورود",

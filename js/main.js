@@ -1419,6 +1419,13 @@ const signedInGoHome = async (user) => {
       width: Math.max(200, Math.min(400, Math.round(fallback.offsetWidth))),
     });
     fallback.tabIndex = -1; // Google's button takes the focus instead
+    // Stretch Google's button over ours when ours is wider than 400px.
+    const fit = () => {
+      const drawn = slot.firstElementChild && slot.firstElementChild.offsetWidth;
+      if (drawn) slot.style.setProperty("--sx", Math.max(1, fallback.offsetWidth / drawn).toFixed(3));
+    };
+    new ResizeObserver(fit).observe(wrap);
+    setTimeout(fit, 1000);
   })();
 
   auth.querySelectorAll(".social[data-provider]").forEach((button) =>

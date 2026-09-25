@@ -1149,7 +1149,7 @@ main {
    Login page (login.html)
    Background: slanted strips of artwork across the whole screen, dimmed.
    Centre: one card. Left half has the studio logo, Login / Sign Up tabs
-   whose forms slide past each other, and Google / Apple buttons. Right
+   whose forms slide past each other, and a Google button. Right
    half has three curved layers of artwork.
    ========================================================================== */
 
@@ -1488,7 +1488,7 @@ main {
 
 .auth__social {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 
@@ -3588,7 +3588,9 @@ a.hero__panel {
   justify-content: center;
   overflow: hidden;
   opacity: 0.001;
-  transform: scaleY(1.15); /* Google's button is 44px tall, ours 48px */
+  /* Google's button is 44px tall (ours 48px) and at most 400px wide;
+     --sx (js/main.js) stretches it across a wider button. */
+  transform: scale(var(--sx, 1), 1.15);
 }
 
 .social-wrap:hover .social {

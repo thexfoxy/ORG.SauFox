@@ -246,7 +246,7 @@ Status pages (`404.html`, `status.html`):
 Login page (`login.html`):
 - [x] Slanted artwork strips behind everything; a card with the studio logo,
       Login / Sign Up tabs whose forms slide past each other, email and
-      password (with show / hide), and Google / Apple buttons. The card's
+      password (with show / hide), and a Google button. The card's
       right half has an image with three curved artwork layers over it. `login.html#signup` opens
       the Sign Up tab.
 - [x] Real accounts through Supabase (see Accounts above): sign-up, login,
@@ -261,8 +261,9 @@ Login page (`login.html`):
       nonce. If Google's script doesn't load, the plain button signs in by
       redirect instead. The OAuth client needs
       `https://saufoxentertainment.ir` under Authorized JavaScript origins.
-- [ ] Apple sign-in: needs a paid Apple developer account; the button says
-      it isn't connected.
+- [ ] Apple sign-in: removed for now (needs a paid Apple Developer account,
+      which Apple doesn't offer in Iran). The login code already handles any
+      `.social[data-provider]` button, so adding it back is just the button.
 
 Profile page (`profile.html`):
 - [x] The avatar (the header chip's pinched shape, larger) with the name,
