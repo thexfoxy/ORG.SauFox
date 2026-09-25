@@ -19,7 +19,7 @@ npx serve .
 - `js/content.js`: the works catalogue (titles, images, prices, status). Edit this to add real works
 - `js/main.js`: scripts
 - `js/vendor/supabase.js`: supabase-js 2.117.1 (UMD build, MIT), served from this site so it doesn't depend on a CDN
-- `assets/`: default avatar, placeholder icons standing in for artwork (`works/`), and self-hosted fonts (Great Vibes,
+- `assets/`: default avatar, artwork (`works/`: The CandleWood stills, plus generated stand-in art `art-*.webp` for the placeholder works), and self-hosted fonts (Great Vibes,
   Barlow Condensed, Inter; all SIL Open Font License)
 
 ## Hosting
@@ -29,7 +29,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=3`); raise it in all three pages
+JS with a version number (`style.css?v=4`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -83,7 +83,7 @@ Home page:
       whose bottom edge steps down from left to right in a smooth S-curve. Each load shows a random mix of works,
       and every few seconds one panel crossfades to another. Hovering a panel
       zooms its art and dims the rest. Artwork: every image in `js/content.js`
-      (placeholders in `assets/works/` for now).
+      (The CandleWood plus generated stand-ins for now).
 - [x] 3. Studio slogan: a short line, "And my success is not but through God."
       (Qur'an 11:88), in the space under the hero's curve
 - [x] 4. Work cards: a sliding row tucked right under the slogan; on the right

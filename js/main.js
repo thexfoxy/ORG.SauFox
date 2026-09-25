@@ -336,12 +336,12 @@ const heroEdgeY = (() => {
 
     const price = el("div", "card__price");
     const priceTrack = el("div", "card__price-track");
-    const amounts = CURRENCIES.map((code, i) => {
-      const amount = el("span", "card__amount" + (i === 0 ? " is-active" : ""), money[code](work.prices[code]));
-      priceTrack.append(amount);
-      return amount;
-    });
-    price.append(el("span", "card__price-label", "Price"), priceTrack);
+    // Works without a price yet show their note (say, a trailer date) instead.
+    const amounts = work.prices
+      ? CURRENCIES.map((code, i) => el("span", "card__amount" + (i === 0 ? " is-active" : ""), money[code](work.prices[code])))
+      : [el("span", "card__amount is-active", work.note.text)];
+    priceTrack.append(...amounts);
+    price.append(el("span", "card__price-label", work.prices ? "Price" : work.note.label), priceTrack);
 
     const status = el("span", `card__status card__status--${work.status}`, STATUS[work.status]);
 
@@ -363,7 +363,7 @@ const heroEdgeY = (() => {
     // Price: cycles every 2.6s in "auto" mode; staggered per card.
     let currency = 0;
     const showCurrency = (i) => {
-      if (i === currency) return;
+      if (i === currency || amounts.length < 2) return;
       currency = i;
       step(amounts, i, "is-leaving");
     };
