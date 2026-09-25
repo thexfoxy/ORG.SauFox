@@ -23,6 +23,8 @@ const FA = {
   "Instagram": "اینستاگرام",
   "Telegram": "تلگرام",
   "X": "ایکس",
+  "Google": "گوگل",
+  "Apple": "اپل",
   "Games, animation, films and novels, in physical and digital editions.": "بازی، انیمیشن، فیلم و رمان، در نسخه‌های فیزیکی و دیجیتال.",
   "© 2026 SauFox Entertainment. All rights reserved.": "© ۲۰۲۶ ساوفاکس اینترتینمنت. همه‌ی حقوق محفوظ است.",
   "Close": "بستن",
