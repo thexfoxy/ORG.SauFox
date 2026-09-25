@@ -1521,7 +1521,12 @@ const signedInGoHome = async (user) => {
         say(socialMessage, "Signing in…", true);
         let result;
         try {
-          result = await account.auth.signInWithIdToken({ provider: "google", token: credential, nonce });
+          result = await account.auth.signInWithIdToken({
+            provider: "google",
+            token: credential,
+            nonce,
+            options: { captchaToken: await captcha() },
+          });
         } catch (e) {
           result = { error: {} };
         }
