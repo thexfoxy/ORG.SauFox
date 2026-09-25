@@ -1,14 +1,15 @@
 // Order emails, sent from the studio's Gmail over SMTP (port 465), in the
 // same look as the sign-in emails in emails/. Persian first, then English.
 //
-// Needs the secret SMTP_PASSWORD (the Gmail app password also used in
-// Supabase Auth → SMTP settings); without it, emails are skipped. SMTP_USER
-// defaults to the studio address, which also gets a copy of every order.
+// Sent through Resend when the secret RESEND_API_KEY is set, otherwise
+// through the studio's Gmail with SMTP_PASSWORD (the Gmail app password);
+// with neither, emails are skipped. SMTP_USER defaults to the studio
+// address, which also gets a copy of every order and receives replies.
 import nodemailer from "npm:nodemailer@6.9.16";
 
 const SITE = "https://saufoxentertainment.ir";
 export const STUDIO = Deno.env.get("SMTP_USER") || "saufoxentertainment@gmail.com";
-export const mailReady = () => Boolean(Deno.env.get("SMTP_PASSWORD"));
+export const mailReady = () => Boolean(Deno.env.get("RESEND_API_KEY") || Deno.env.get("SMTP_PASSWORD"));
 
 export type Order = {
   id: string;
@@ -260,8 +261,56 @@ export const studioEmail = (order: Order, event: "placed" | "paid") => {
   };
 };
 
+// A plain-text copy of each email, sent alongside the HTML: spam filters
+// trust HTML-only mail less.
+const plain = (html: string) =>
+  html
+    .replace(/<(style|head)[\s\S]*?<\/\1>/gi, "")
+    .replace(/<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) =>
+      href.startsWith("mailto:") ? label : `${label} (${href})`
+    )
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|tr|div|table)>/gi, "\n")
+    .replace(/<\/td>/gi, "  ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&middot;/g, "·")
+    .replace(/&rsquo;/g, "’")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+type Mail = { to: string; subject: string; html: string; replyTo?: string };
+
+// Resend (resend.com), once RESEND_API_KEY is set: mail comes from the
+// site's own domain (MAIL_FROM, default orders@saufoxentertainment.ir),
+// which inboxes trust more. Replies still go to the studio's Gmail.
+const viaResend = async (mail: Mail) => {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY")}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: `SauFox Entertainment <${Deno.env.get("MAIL_FROM") || "orders@saufoxentertainment.ir"}>`,
+      to: [mail.to],
+      reply_to: mail.replyTo || STUDIO,
+      subject: mail.subject,
+      html: mail.html,
+      text: plain(mail.html),
+    }),
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!res.ok) throw new Error(`Resend ${res.status}: ${(await res.text()).slice(0, 200)}`);
+};
+
+// Otherwise the studio's Gmail over SMTP.
 let transport: ReturnType<typeof nodemailer.createTransport> | null = null;
-export const send = async (mail: { to: string; subject: string; html: string; replyTo?: string }) => {
+const viaGmail = async (mail: Mail) => {
   transport ||= nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 465,
@@ -270,5 +319,7 @@ export const send = async (mail: { to: string; subject: string; html: string; re
     auth: { user: STUDIO, pass: (Deno.env.get("SMTP_PASSWORD") || "").replace(/\s+/g, "") },
     connectionTimeout: 15000,
   });
-  await transport.sendMail({ from: { name: "SauFox Entertainment", address: STUDIO }, ...mail });
+  await transport.sendMail({ from: { name: "SauFox Entertainment", address: STUDIO }, text: plain(mail.html), ...mail });
 };
+
+export const send = (mail: Mail) => (Deno.env.get("RESEND_API_KEY") ? viaResend(mail) : viaGmail(mail));

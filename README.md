@@ -158,7 +158,10 @@ up. Signed-out visitors log in first and come back to the checkout.
   changes (after a project restore or upgrade), update it in Zarinpal.
 - Terms of purchase and refunds: `terms.html#purchases`.
 - Order emails (`supabase/functions/payment/mail.ts`), Persian and
-  English, from the studio's Gmail over SMTP: "order received" while online
+  English, with a plain-text copy, through Resend from
+  `orders@saufoxentertainment.ir` once `RESEND_API_KEY` is set in Edge
+  Functions → Secrets (optional `MAIL_FROM` overrides the address), or
+  otherwise from the studio's Gmail over SMTP: "order received" while online
   payment is closed, and a payment receipt once paid; the studio address
   gets a copy of each. They need the secret `SMTP_PASSWORD` (the same Gmail
   app password as in Supabase Auth → SMTP settings) in Edge Functions →
