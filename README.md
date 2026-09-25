@@ -16,9 +16,9 @@ npx serve .
 - `login.html`: login / sign-up page
 - `profile.html`: profile page (signed-in visitors only)
 - `about.html`, `terms.html`, `privacy.html`: about and contact, terms of use, privacy policy
-- `work.html`: one page per work (`work.html?id=the-candlewood`), filled from `js/content.js`
+- `work.html`: one page per work (`work.html?id=the-candlewood`), filled from the catalogue
+- `admin.html`: admin panel for the catalogue (admins only)
 - `css/style.css`: styles; design tokens live in `:root`
-- `js/content.js`: the works catalogue (titles, images, prices, status). Edit this to add real works
 - `js/main.js`: scripts
 - `js/vendor/supabase.js`: supabase-js 2.117.1 (UMD build, MIT), served from this site so it doesn't depend on a CDN
 - `assets/`: default avatar, artwork (`works/`: stills from the released works), and self-hosted fonts (Great Vibes,
@@ -31,7 +31,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=9`); raise it in all three pages
+JS with a version number (`style.css?v=10`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -41,7 +41,18 @@ Sign-up, login and profiles use the Supabase project `saufox-entertainment`
 `js/main.js`); row-level security limits each member to their own data.
 
 - `public.my_list`: the works each member saved with "My List"
-  (work id from `js/content.js`), readable and changeable by that member only.
+  (a work id from `public.works`), readable and changeable by that member only.
+- `public.works`: the catalogue, one row per work (title, type, status,
+  prices, poster / key art / gallery URLs, trailer date and Aparat ID,
+  synopsis, genres, platforms, rating, credits, order, published).
+  Everyone reads published works; only admins read drafts or change
+  anything. Pages load it with one plain request (`loadCatalog` in
+  `js/main.js`) and keep the last copy in localStorage in case a request
+  fails.
+- `public.admins`: accounts allowed into the admin panel. The check lives
+  in `private.is_admin()`, outside the API.
+- Storage bucket `works` (public, 5 MB, JPEG / PNG / WebP): artwork uploaded
+  from the admin panel, in `<work id>/`. Only admins can write.
 - `public.profiles`: one row per member (name, currency, avatar_url),
   created by the `on_auth_user_created` trigger from the sign-up name.
 - Storage bucket `avatars` (public, 1 MB, JPEG / PNG / WebP): each member
@@ -87,8 +98,8 @@ Home page:
       bottom edge steps down from left to right in a smooth S-curve; with
       more than five works the panels swap between them at random every few
       seconds. While there is only one work, its image fills the hero with no
-      slant. Hovering a panel zooms its art and dims the rest. Data: `hero`
-      (and optional `heroFocus`) in `js/content.js`.
+      slant. Hovering a panel zooms its art and dims the rest. Data: each
+      work's key art and phone crop, set in the admin panel.
 - [x] 3. Studio slogan: a short line, "And my success is not but through God."
       (Qur'an 11:88), in the space under the hero's curve
 - [x] 4. Work cards: a sliding row tucked right under the slogan; on the right
@@ -96,7 +107,7 @@ Home page:
       touch screen: swipe on phones, drag with the mouse on desktop (it glides
       on and settles on a card). Currency buttons below (Auto cycles USD / EUR /
       Rials, or pin one). Each card has an image slider, a price strip and a
-      status box. Data: `CATALOG` in `js/content.js`.
+      status box. Data: the catalogue (`public.works`).
 - [x] 5. Subscriptions: Basic and Premium boxes, side by side at every
       screen size. Prices follow the currency chosen above the work cards.
       On hover each box gets a soft light that follows the
@@ -112,7 +123,7 @@ Title page (`work.html?id=<id>`):
 
 Home page, later additions:
 - [x] Category rows (Coming soon, Games, Films, Animation, Novels) under
-      the main row, built from `CATALOG`. They stay hidden until the
+      the main row, built from the catalogue. They stay hidden until the
       catalogue spans at least two kinds of work.
 - [x] "My List": a button on each work's page saves it to the member's
       account (signed-out visitors go to login); the profile's My List tab
@@ -126,6 +137,17 @@ Footer and text pages:
 - [x] About (with contact details), Terms of use and Privacy policy. The
       terms and policy describe what the site actually does today; update
       them before purchases open. The sign-up page links to both.
+
+Admin panel (`admin.html`):
+- [x] For accounts in `public.admins` (the profile shows them a "Manage
+      works" link). Lists every work, drafts too, in site order, with
+      up / down to reorder. The editor covers title, page address, type,
+      status and status text, prices, poster, key art (and which side to
+      keep on phones), gallery stills, trailer date (Tehran time) and
+      Aparat link, synopsis, genres, platforms, age rating, credits, and
+      "Show on the site". Images are resized in the browser, saved as WebP
+      and uploaded to the `works` bucket. Deleting asks for a second press
+      and removes the work's uploaded images too.
 
 Login page (`login.html`):
 - [x] Slanted artwork strips behind everything; a card with the studio logo,

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en" data-auth="member">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Manage works · SauFox Entertainment</title>
+  <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css?v=10">
+  <script>
+    // Signed-out visitors go to the login page instead.
+    try {
+      if (!localStorage.getItem("saufox.session")) location.replace("login.html");
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="profile-chip" href="profile.html" aria-label="Profile">
+        <span class="profile-chip__avatar">
+          <img src="assets/avatar-default.svg" alt="">
+        </span>
+        <span class="profile-chip__label">Profile</span>
+      </a>
+
+      <a class="brand" href="index.html" aria-label="SauFox Entertainment">
+        <span class="brand__text">SauFox<span class="brand__sub"> Entertainment</span></span>
+        <span class="brand__blur" aria-hidden="true">SauFox<span class="brand__sub"> Entertainment</span></span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Admin panel: add, edit, order, publish and delete works. Only
+       accounts in the admins table get in; the database enforces the same
+       rule for every change. js/main.js (adminPage) runs it. -->
+  <main class="admin">
+    <p class="admin__gate" role="status">Checking your access…</p>
+
+    <!-- List of works -->
+    <section class="admin__list" hidden>
+      <div class="admin__bar">
+        <div>
+          <p class="doc__kicker">Admin</p>
+          <h1 class="admin__title">Works</h1>
+        </div>
+        <button class="admin-button admin-button--primary" type="button" data-action="new">New work</button>
+      </div>
+      <p class="admin__hint">Published works show on the site in this order. Drafts are only visible here.</p>
+      <ol class="admin-works"></ol>
+      <p class="admin__empty" hidden>No works yet. Add the first one.</p>
+    </section>
+
+    <!-- Editor -->
+    <form class="admin__editor" novalidate hidden>
+      <div class="admin__bar">
+        <div>
+          <button class="admin-back" type="button" data-action="back">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            All works
+          </button>
+          <h1 class="admin__title" data-slot="editor-title">New work</h1>
+        </div>
+        <a class="admin-view" data-slot="view-link" target="_blank" rel="noopener" hidden>View page</a>
+      </div>
+
+      <fieldset class="admin-group">
+        <legend>Basics</legend>
+        <div class="admin-grid">
+          <label class="admin-field admin-field--wide">
+            <span>Title</span>
+            <input id="w-title" name="title" type="text" maxlength="120" required>
+          </label>
+          <label class="admin-field">
+            <span>Page address</span>
+            <input id="w-id" name="id" type="text" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*" required>
+            <small>Lowercase letters, numbers and dashes. Can&rsquo;t be changed later.</small>
+          </label>
+          <label class="admin-field">
+            <span>Type</span>
+            <input id="w-kind" name="kind" type="text" list="kinds" maxlength="60" required>
+            <datalist id="kinds">
+              <option value="Game"></option>
+              <option value="Animated series"></option>
+              <option value="Animated short"></option>
+              <option value="Short film"></option>
+              <option value="Feature film"></option>
+              <option value="Novel"></option>
+            </datalist>
+          </label>
+          <label class="admin-field">
+            <span>Status</span>
+            <select id="w-status" name="status">
+              <option value="coming">Coming soon</option>
+              <option value="preorder">Pre-order</option>
+              <option value="production">In production</option>
+              <option value="released">Released</option>
+            </select>
+          </label>
+          <label class="admin-field">
+            <span>Status text <em>optional</em></span>
+            <input id="w-status-text" name="status_text" type="text" maxlength="40" placeholder="e.g. Trailer 24 Nov">
+            <small>Replaces the status wording on the card.</small>
+          </label>
+          <label class="admin-check admin-field--wide">
+            <input id="w-published" name="published" type="checkbox">
+            <span>Show on the site</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-group">
+        <legend>Price</legend>
+        <p class="admin-group__hint">Leave a currency empty if you don&rsquo;t sell in it. All empty shows &ldquo;To be announced&rdquo;.</p>
+        <div class="admin-grid admin-grid--3">
+          <label class="admin-field">
+            <span>Rials</span>
+            <input id="w-price-irr" name="price_irr" type="number" min="0" step="1000" inputmode="numeric">
+          </label>
+          <label class="admin-field">
+            <span>US dollars</span>
+            <input id="w-price-usd" name="price_usd" type="number" min="0" step="0.01" inputmode="decimal">
+          </label>
+          <label class="admin-field">
+            <span>Euros</span>
+            <input id="w-price-eur" name="price_eur" type="number" min="0" step="0.01" inputmode="decimal">
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-group">
+        <legend>Images</legend>
+        <div class="admin-images">
+          <div class="admin-image" data-image="cover">
+            <span class="admin-image__label">Poster <em>3:4, for cards</em></span>
+            <div class="admin-image__frame admin-image__frame--poster"><img alt=""></div>
+            <div class="admin-image__actions">
+              <label class="admin-button"><input type="file" accept="image/jpeg,image/png,image/webp"><span>Upload</span></label>
+              <button class="admin-link" type="button" data-action="clear">Remove</button>
+            </div>
+          </div>
+          <div class="admin-image admin-image--wide" data-image="hero">
+            <span class="admin-image__label">Key art <em>16:9, for the top of the page</em></span>
+            <div class="admin-image__frame admin-image__frame--hero"><img alt=""></div>
+            <div class="admin-image__actions">
+              <label class="admin-button"><input type="file" accept="image/jpeg,image/png,image/webp"><span>Upload</span></label>
+              <button class="admin-link" type="button" data-action="clear">Remove</button>
+              <label class="admin-inline">
+                <span>On phones, keep</span>
+                <select id="w-hero-focus" name="hero_focus">
+                  <option value="5% center">the left side</option>
+                  <option value="">the middle</option>
+                  <option value="95% center">the right side</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-stills">
+          <span class="admin-image__label">Gallery <em>stills, shown on the work&rsquo;s page</em></span>
+          <ol class="admin-stills__list"></ol>
+          <label class="admin-button"><input id="w-stills-input" type="file" accept="image/jpeg,image/png,image/webp" multiple><span>Add images</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-group">
+        <legend>Trailer</legend>
+        <div class="admin-grid">
+          <label class="admin-field">
+            <span>Trailer date <em>Tehran time</em></span>
+            <input id="w-trailer-date" name="trailer_date" type="datetime-local">
+            <small>The work&rsquo;s page counts down to it.</small>
+          </label>
+          <label class="admin-field">
+            <span>Aparat link <em>once it&rsquo;s out</em></span>
+            <input id="w-trailer" name="trailer" type="text" placeholder="https://www.aparat.com/v/…">
+            <small>Adds a &ldquo;Watch trailer&rdquo; button.</small>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-group">
+        <legend>About the work</legend>
+        <div class="admin-grid">
+          <label class="admin-field admin-field--wide">
+            <span>Synopsis</span>
+            <textarea id="w-synopsis" name="synopsis" rows="5" maxlength="4000"></textarea>
+          </label>
+          <label class="admin-field">
+            <span>Genres <em>comma separated</em></span>
+            <input id="w-genres" name="genres" type="text" placeholder="Mystery, Crime">
+          </label>
+          <label class="admin-field">
+            <span>Platforms <em>comma separated</em></span>
+            <input id="w-platforms" name="platforms" type="text" placeholder="PC">
+          </label>
+          <label class="admin-field">
+            <span>Age rating</span>
+            <input id="w-rating" name="rating" type="text" maxlength="40" placeholder="16+">
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="admin-group">
+        <legend>Credits</legend>
+        <ol class="admin-credits"></ol>
+        <button class="admin-button" type="button" data-action="add-credit">Add a credit</button>
+      </fieldset>
+
+      <div class="admin-actions">
+        <p class="admin-message" role="status" aria-live="polite"></p>
+        <button class="admin-button admin-button--danger" type="button" data-action="delete" hidden>Delete work</button>
+        <button class="admin-button admin-button--primary" type="submit">Save</button>
+      </div>
+    </form>
+  </main>
+
+  <script src="js/vendor/supabase.js?v=10" defer></script>
+  <script src="js/main.js?v=10" defer></script>
+</body>
+</html>

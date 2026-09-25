@@ -26,22 +26,70 @@ const local = {
 // what each member can read and change. The session is stored under
 // "saufox.session", which the inline script in each page's <head> checks
 // before first paint. Only pages that load js/vendor/supabase.js get a client.
+const SUPABASE_URL = "https://gwyqkzhhnspfadqefmix.supabase.co";
+const SUPABASE_KEY = "sb_publishable_IB06YrDhrsKJbVghWP-zzg_xDgB1mXN";
+const timeout = (ms) => (AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
+
 const account = (() => {
   if (!window.supabase) return null;
   // Sessions from the pre-Supabase demo were a bare email address.
   const old = local.get("session");
   if (old && !old.startsWith("{")) local.set("session", null);
-  return window.supabase.createClient(
-    "https://gwyqkzhhnspfadqefmix.supabase.co",
-    "sb_publishable_IB06YrDhrsKJbVghWP-zzg_xDgB1mXN",
-    {
+  return window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { storageKey: "saufox.session" },
       // Give up after 20 seconds so a stalled connection shows an error
       // instead of leaving the page waiting.
-      global: { fetch: (url, options = {}) => fetch(url, { ...options, signal: options.signal || (AbortSignal.timeout && AbortSignal.timeout(20000)) }) },
-    }
-  );
+    global: { fetch: (url, options = {}) => fetch(url, { ...options, signal: options.signal || timeout(20000) }) },
+  });
 })();
+
+// The catalogue lives in Supabase (table works), managed on admin.html.
+// Pages read the published works with one plain request, so the home page
+// doesn't need the Supabase library. The last copy is kept in this browser
+// and used if the request fails.
+const toWork = (row) => ({
+  id: row.id,
+  title: row.title,
+  kind: row.kind,
+  status: row.status,
+  statusText: row.status_text || "",
+  prices: { USD: row.price_usd, EUR: row.price_eur, IRR: row.price_irr },
+  images: [row.cover_url || row.hero_url].filter(Boolean),
+  hero: row.hero_url || "",
+  heroFocus: row.hero_focus || "",
+  stills: row.stills || [],
+  trailerDate: row.trailer_date,
+  trailer: row.trailer || "",
+  synopsis: row.synopsis || "",
+  genres: row.genres || [],
+  platforms: row.platforms || [],
+  rating: row.rating || "",
+  credits: row.credits || [],
+});
+
+const loadCatalog = async () => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/works?select=*&published=eq.true&order=sort.asc,created_at.asc`, {
+      headers: { apikey: SUPABASE_KEY },
+      signal: timeout(15000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rows = await res.json();
+    local.set("catalog", JSON.stringify(rows));
+    return rows.map(toWork);
+  } catch (e) {
+    try {
+      return JSON.parse(local.get("catalog") || "[]").map(toWork);
+    } catch (e2) {
+      return [];
+    }
+  }
+};
+
+// Started once, on the pages that show works.
+const catalog = document.querySelector(".hero, .works, .title-page, .auth, .profile-page")
+  ? loadCatalog()
+  : Promise.resolve([]);
 
 // Keeps the name, photo and currency in this browser too, so the header and
 // the price cards can show them straight away on the next visit.
@@ -157,11 +205,12 @@ const heroEdgeY = (() => {
 
 // Section 2 — Hero: key art from the studio's releases, one slanted panel per
 // work (up to five), or a single full-width image while there is one work.
-// WORKS and CATALOG come from js/content.js.
+// Works come from the catalogue (see loadCatalog).
 
-(function heroCollage() {
+(async function heroCollage() {
   const hero = document.querySelector(".hero");
   if (!hero) return;
+  const CATALOG = await catalog;
 
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
   const SWAP_EVERY = 4500;
@@ -331,12 +380,13 @@ const dragScroll = (track) => {
   });
 };
 
-// Section 4 — Work cards, rendered from CATALOG in js/content.js.
+// Section 4 — Work cards, rendered from the catalogue.
 
-(function workCards() {
+(async function workCards() {
   const section = document.querySelector(".works");
   const track = section && section.querySelector(".works__track");
   if (!track) return;
+  const CATALOG = await catalog;
 
   const hero = document.querySelector(".hero");
   const currencyButtons = [...section.querySelectorAll("[data-currency]")];
@@ -403,14 +453,13 @@ const dragScroll = (track) => {
 
     const price = el("div", "card__price");
     const priceTrack = el("div", "card__price-track");
-    // Only the currencies the work is sold in. Works without a price yet
-    // show their note (say, a trailer date) instead.
+    // Only the currencies the work is sold in.
     const codes = CURRENCIES.filter((code) => work.prices && work.prices[code] != null);
     const amounts = codes.length
       ? codes.map((code, i) => el("span", "card__amount" + (i === 0 ? " is-active" : ""), money[code](work.prices[code])))
-      : [el("span", "card__amount is-active", work.note.text)];
+      : [el("span", "card__amount is-active", "To be announced")];
     priceTrack.append(...amounts);
-    price.append(el("span", "card__price-label", codes.length ? "Price" : work.note.label), priceTrack);
+    price.append(el("span", "card__price-label", "Price"), priceTrack);
 
     const status = el("span", `card__status card__status--${work.status}`, work.statusText || STATUS[work.status]);
 
@@ -524,12 +573,14 @@ const posterCard = (work) => {
   link.href = `work.html?id=${encodeURIComponent(work.id)}`;
   const frame = document.createElement("span");
   frame.className = "poster-card__frame";
-  const img = document.createElement("img");
-  img.src = work.images[0];
-  img.alt = "";
-  img.loading = "lazy";
-  img.draggable = false;
-  frame.append(img);
+  if (work.images[0]) {
+    const img = document.createElement("img");
+    img.src = work.images[0];
+    img.alt = "";
+    img.loading = "lazy";
+    img.draggable = false;
+    frame.append(img);
+  }
   const title = document.createElement("span");
   title.className = "poster-card__title";
   title.textContent = work.title;
@@ -543,9 +594,10 @@ const posterCard = (work) => {
 // Home page — category rows under the main row, like a streaming service.
 // They only appear once the catalogue spans at least two kinds of work;
 // until then the main row already shows everything.
-(function shelves() {
+(async function shelves() {
   const section = document.querySelector(".shelves");
   if (!section) return;
+  const CATALOG = await catalog;
 
   const KINDS = [
     ["Games", (w) => /game/i.test(w.kind)],
@@ -665,30 +717,35 @@ const posterCard = (work) => {
   const auth = document.querySelector(".auth");
   if (!auth) return;
 
-  const shuffled = WORKS.slice().sort(() => Math.random() - 0.5);
-
-  // Background strips
-  const bg = document.querySelector(".login-bg");
-  const count = window.matchMedia("(max-width: 760px)").matches ? 4 : 6;
-  bg.style.setProperty("--n", count);
-  // Images repeat when there are fewer works than slots.
-  const pick = (i) => shuffled[i % shuffled.length];
-  Array.from({ length: count }, (_, i) => pick(i)).forEach((src, i) => {
-    const strip = document.createElement("div");
-    strip.className = "login-bg__strip";
-    strip.style.setProperty("--i", i);
-    const art = document.createElement("span");
-    art.className = "login-bg__art";
-    art.style.backgroundImage = `url("${src}")`;
-    strip.append(art);
-    bg.append(strip);
+  // Background strips and art layers, from the catalogue's artwork.
+  catalog.then((works) => {
+    const images = [...new Set(works.flatMap((w) => [...w.stills, ...w.images, w.hero]).filter(Boolean))];
+    if (images.length) paintBackground(images.sort(() => Math.random() - 0.5));
   });
 
-  // Curved art layers, plus one more image in the corner behind them
-  auth.querySelectorAll(".auth__band").forEach((band, i) => {
-    band.style.backgroundImage = `url("${pick(count + i)}")`;
-  });
-  auth.querySelector(".auth__art").style.backgroundImage = `url("${pick(count + 3)}")`;
+  function paintBackground(shuffled) {
+    const bg = document.querySelector(".login-bg");
+    const count = window.matchMedia("(max-width: 760px)").matches ? 4 : 6;
+    bg.style.setProperty("--n", count);
+    // Images repeat when there are fewer works than slots.
+    const pick = (i) => shuffled[i % shuffled.length];
+    Array.from({ length: count }, (_, i) => pick(i)).forEach((src, i) => {
+      const strip = document.createElement("div");
+      strip.className = "login-bg__strip";
+      strip.style.setProperty("--i", i);
+      const art = document.createElement("span");
+      art.className = "login-bg__art";
+      art.style.backgroundImage = `url("${src}")`;
+      strip.append(art);
+      bg.append(strip);
+    });
+
+    // Curved art layers, plus one more image in the corner behind them
+    auth.querySelectorAll(".auth__band").forEach((band, i) => {
+      band.style.backgroundImage = `url("${pick(count + i)}")`;
+    });
+    auth.querySelector(".auth__art").style.backgroundImage = `url("${pick(count + 3)}")`;
+  }
 
   // Tabs and sliding forms
   const tabs = { login: auth.querySelector("#tab-login"), signup: auth.querySelector("#tab-signup") };
@@ -870,6 +927,7 @@ const posterCard = (work) => {
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) return;
+    const CATALOG = await catalog;
     const works = data.map((row) => CATALOG.find((w) => w.id === row.work_id)).filter(Boolean);
     if (!works.length) return;
     const grid = document.createElement("div");
@@ -925,6 +983,19 @@ const posterCard = (work) => {
   });
 
   showMyList(user.id);
+  // Admins get a way into the admin panel.
+  account
+    .from("admins")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .maybeSingle()
+    .then(({ data }) => {
+      if (!data) return;
+      const link = document.createElement("a");
+      link.href = "admin.html";
+      link.textContent = "Manage works";
+      page.querySelector(".profile-head__plan").append(link);
+    });
   let profile = await fetchProfile(user);
   if (profile) {
     cacheProfile(profile);
@@ -1030,12 +1101,13 @@ const posterCard = (work) => {
   });
 })();
 
-// Title page (work.html?id=<id>) — one page per work in CATALOG: key art,
+// Title page (work.html?id=<id>) — one page per work in the catalogue: key art,
 // name, poster, facts, trailer and buy actions, a countdown to the trailer,
 // synopsis, gallery and credits. Sections without data stay hidden.
-(function titlePage() {
+(async function titlePage() {
   const page = document.querySelector(".title-page");
   if (!page) return;
+  const CATALOG = await catalog;
 
   const id = new URLSearchParams(location.search).get("id");
   const work = CATALOG.find((w) => w.id === id);
@@ -1066,8 +1138,10 @@ const posterCard = (work) => {
 
   // Poster
   const poster = page.querySelector(".title-poster img");
-  poster.src = work.images[0];
-  poster.alt = `${work.title} poster`;
+  if (work.images[0]) {
+    poster.src = work.images[0];
+    poster.alt = `${work.title} poster`;
+  } else page.querySelector(".title-poster").hidden = true;
 
   // Facts
   const money = {
@@ -1168,7 +1242,7 @@ const posterCard = (work) => {
   // Credits
   if (work.credits && work.credits.length) {
     const list = page.querySelector(".title-credits__list");
-    work.credits.forEach(([role, name]) => {
+    work.credits.forEach(({ role, name }) => {
       const row = make("div");
       row.append(make("dt", "", role), make("dd", "", name));
       list.append(row);
@@ -1249,4 +1323,464 @@ const posterCard = (work) => {
     });
     page.querySelector(".title-gallery").hidden = false;
   }
+})();
+
+// Admin panel (admin.html) — add, edit, order, publish and delete works in
+// the Supabase catalogue. Only accounts in the admins table get in, and the
+// database refuses changes from anyone else anyway.
+(async function adminPage() {
+  const page = document.querySelector(".admin");
+  if (!page) return;
+
+  const gate = page.querySelector(".admin__gate");
+  const listView = page.querySelector(".admin__list");
+  const form = page.querySelector(".admin__editor");
+  const message = form.querySelector(".admin-message");
+
+  const session = account && (await account.auth.getSession()).data.session;
+  if (!session) {
+    local.set("session", null);
+    location.replace("login.html");
+    return;
+  }
+  const { data: adminRow, error: adminError } = await account
+    .from("admins")
+    .select("user_id")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+  if (adminError) {
+    gate.textContent = "Couldn't reach the server. Check your connection and reload the page.";
+    return;
+  }
+  if (!adminRow) {
+    gate.textContent = "This page is for the studio's admins, and your account doesn't have access.";
+    return;
+  }
+  gate.hidden = true;
+
+  const STATUS = { released: "Released", preorder: "Pre-order", coming: "Coming soon", production: "In production" };
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+  const photos = account.storage.from("works");
+
+  let works = []; // every work, drafts too, in site order
+  let editing = null; // the saved row being edited; null for a new work
+  let images = { cover: "", hero: "" };
+  let stills = [];
+  let idTouched = false;
+
+  const say = (text, ok) => {
+    message.textContent = text;
+    message.classList.toggle("is-ok", Boolean(ok));
+  };
+
+  // ---------- List ----------
+  const listEl = page.querySelector(".admin-works");
+
+  const renderList = () => {
+    listEl.replaceChildren(
+      ...works.map((work, i) => {
+        const item = make("li", "admin-work");
+        const thumb = make("span", "admin-work__thumb");
+        if (work.cover_url || work.hero_url) {
+          const img = make("img");
+          img.src = work.cover_url || work.hero_url;
+          img.alt = "";
+          thumb.append(img);
+        }
+        const text = make("span", "admin-work__text");
+        text.append(
+          make("strong", "", work.title),
+          make("span", "", `${work.kind} · ${work.status_text || STATUS[work.status]}`)
+        );
+        const badge = make("span", `admin-badge${work.published ? " is-on" : ""}`, work.published ? "Published" : "Draft");
+        const tools = make("span", "admin-work__tools");
+        const up = make("button", "admin-icon", "↑");
+        up.type = "button";
+        up.setAttribute("aria-label", `Move ${work.title} up`);
+        up.disabled = i === 0;
+        up.addEventListener("click", () => move(i, -1));
+        const down = make("button", "admin-icon", "↓");
+        down.type = "button";
+        down.setAttribute("aria-label", `Move ${work.title} down`);
+        down.disabled = i === works.length - 1;
+        down.addEventListener("click", () => move(i, 1));
+        const edit = make("button", "admin-button", "Edit");
+        edit.type = "button";
+        edit.addEventListener("click", () => showEditor(work));
+        tools.append(up, down, edit);
+        item.append(thumb, text, badge, tools);
+        return item;
+      })
+    );
+    page.querySelector(".admin__empty").hidden = works.length > 0;
+  };
+
+  const loadWorks = async () => {
+    const { data, error } = await account.from("works").select("*").order("sort").order("created_at");
+    if (error) {
+      listEl.replaceChildren(make("li", "admin__hint", "Couldn't load the works. Reload the page to try again."));
+      return;
+    }
+    works = data;
+    renderList();
+  };
+
+  // Order is the list's order: after a move, every row gets its position.
+  const move = async (i, step) => {
+    const next = works.slice();
+    [next[i], next[i + step]] = [next[i + step], next[i]];
+    const changed = next.map((work, sort) => ({ work, sort })).filter(({ work, sort }) => work.sort !== sort);
+    listEl.classList.add("is-busy");
+    const results = await Promise.all(
+      changed.map(({ work, sort }) => account.from("works").update({ sort }).eq("id", work.id))
+    );
+    listEl.classList.remove("is-busy");
+    if (results.some((r) => r.error)) return loadWorks();
+    changed.forEach(({ work, sort }) => (work.sort = sort));
+    works = next;
+    renderList();
+  };
+
+  const showList = () => {
+    form.hidden = true;
+    listView.hidden = false;
+    window.scrollTo(0, 0);
+    loadWorks();
+  };
+
+  // ---------- Editor ----------
+  const $ = (id) => form.querySelector(`#${id}`);
+  const fields = {
+    title: $("w-title"),
+    id: $("w-id"),
+    kind: $("w-kind"),
+    status: $("w-status"),
+    statusText: $("w-status-text"),
+    published: $("w-published"),
+    irr: $("w-price-irr"),
+    usd: $("w-price-usd"),
+    eur: $("w-price-eur"),
+    heroFocus: $("w-hero-focus"),
+    trailerDate: $("w-trailer-date"),
+    trailer: $("w-trailer"),
+    synopsis: $("w-synopsis"),
+    genres: $("w-genres"),
+    platforms: $("w-platforms"),
+    rating: $("w-rating"),
+  };
+  const deleteButton = form.querySelector('[data-action="delete"]');
+  const viewLink = form.querySelector('[data-slot="view-link"]');
+  const creditsEl = form.querySelector(".admin-credits");
+  const stillsEl = form.querySelector(".admin-stills__list");
+
+  const slug = (text) =>
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80)
+      .replace(/-+$/, "");
+  const validId = (id) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(id);
+
+  // Iran keeps +03:30 all year, so the date field is read as Tehran time.
+  const toLocalInput = (iso) =>
+    iso ? new Date(new Date(iso).getTime() + 3.5 * 3600e3).toISOString().slice(0, 16) : "";
+  const fromLocalInput = (value) => (value ? `${value}:00+03:30` : null);
+
+  // Accepts an Aparat link (aparat.com/v/ID or an embed link) or the bare ID.
+  const aparatId = (text) => {
+    const value = text.trim();
+    if (!value) return "";
+    const match = value.match(/aparat\.com\/(?:v|video\/video\/embed\/videohash)\/([A-Za-z0-9]+)/);
+    if (match) return match[1];
+    return /^[A-Za-z0-9]{3,40}$/.test(value) ? value : null;
+  };
+  const list = (text) =>
+    text
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  const number = (input) => (input.value.trim() === "" ? null : Number(input.value));
+
+  const renderImages = () => {
+    form.querySelectorAll("[data-image]").forEach((slot) => {
+      const src = images[slot.dataset.image];
+      const img = slot.querySelector("img");
+      img.hidden = !src;
+      if (src) img.src = src;
+      slot.querySelector('[data-action="clear"]').hidden = !src;
+    });
+  };
+
+  const renderStills = () => {
+    stillsEl.replaceChildren(
+      ...stills.map((src, i) => {
+        const item = make("li", "admin-still");
+        const img = make("img");
+        img.src = src;
+        img.alt = `Gallery image ${i + 1}`;
+        const tools = make("span", "admin-still__tools");
+        const earlier = make("button", "admin-icon", "←");
+        earlier.type = "button";
+        earlier.setAttribute("aria-label", `Move image ${i + 1} earlier`);
+        earlier.disabled = i === 0;
+        earlier.addEventListener("click", () => {
+          [stills[i - 1], stills[i]] = [stills[i], stills[i - 1]];
+          renderStills();
+        });
+        const remove = make("button", "admin-icon", "✕");
+        remove.type = "button";
+        remove.setAttribute("aria-label", `Remove image ${i + 1}`);
+        remove.addEventListener("click", () => {
+          stills.splice(i, 1);
+          renderStills();
+        });
+        tools.append(earlier, remove);
+        item.append(img, tools);
+        return item;
+      })
+    );
+  };
+
+  const addCredit = (role = "", name = "") => {
+    const item = make("li", "admin-credit");
+    const roleInput = make("input");
+    roleInput.type = "text";
+    roleInput.placeholder = "Role, e.g. Director";
+    roleInput.value = role;
+    roleInput.maxLength = 60;
+    roleInput.setAttribute("aria-label", "Role");
+    const nameInput = make("input");
+    nameInput.type = "text";
+    nameInput.placeholder = "Name";
+    nameInput.value = name;
+    nameInput.maxLength = 80;
+    nameInput.setAttribute("aria-label", "Name");
+    const remove = make("button", "admin-icon", "✕");
+    remove.type = "button";
+    remove.setAttribute("aria-label", "Remove this credit");
+    remove.addEventListener("click", () => item.remove());
+    item.append(roleInput, nameInput, remove);
+    creditsEl.append(item);
+    return roleInput;
+  };
+
+  const showEditor = (row) => {
+    editing = row || null;
+    const w = row || {};
+    form.reset();
+    say("");
+    idTouched = Boolean(row);
+    form.querySelector('[data-slot="editor-title"]').textContent = row ? row.title : "New work";
+    fields.title.value = w.title || "";
+    fields.id.value = w.id || "";
+    fields.id.readOnly = Boolean(row);
+    fields.kind.value = w.kind || "";
+    fields.status.value = w.status || "coming";
+    fields.statusText.value = w.status_text || "";
+    fields.published.checked = Boolean(w.published);
+    fields.irr.value = w.price_irr ?? "";
+    fields.usd.value = w.price_usd ?? "";
+    fields.eur.value = w.price_eur ?? "";
+    const focus = w.hero_focus || "";
+    if (![...fields.heroFocus.options].some((o) => o.value === focus)) fields.heroFocus.append(new Option(focus, focus));
+    fields.heroFocus.value = focus;
+    fields.trailerDate.value = toLocalInput(w.trailer_date);
+    fields.trailer.value = w.trailer ? `https://www.aparat.com/v/${w.trailer}` : "";
+    fields.synopsis.value = w.synopsis || "";
+    fields.genres.value = (w.genres || []).join(", ");
+    fields.platforms.value = (w.platforms || []).join(", ");
+    fields.rating.value = w.rating || "";
+    images = { cover: w.cover_url || "", hero: w.hero_url || "" };
+    stills = (w.stills || []).slice();
+    creditsEl.replaceChildren();
+    (w.credits || []).forEach((c) => addCredit(c.role, c.name));
+    renderImages();
+    renderStills();
+    deleteButton.hidden = !row;
+    resetDelete();
+    viewLink.hidden = !(row && row.published);
+    if (row) viewLink.href = `work.html?id=${encodeURIComponent(row.id)}`;
+    listView.hidden = true;
+    form.hidden = false;
+    window.scrollTo(0, 0);
+    if (!row) fields.title.focus();
+  };
+
+  fields.title.addEventListener("input", () => {
+    if (!editing && !idTouched) fields.id.value = slug(fields.title.value);
+  });
+  fields.id.addEventListener("input", () => {
+    idTouched = true;
+  });
+
+  // Images are shrunk in the browser and saved as WebP, then uploaded at
+  // once to works/<id>/…; the work itself changes on Save.
+  const MAX_WIDTH = { cover: 900, hero: 1920, still: 1600 };
+  const upload = async (file, kind) => {
+    const id = fields.id.value.trim();
+    if (!validId(id)) throw new Error("Give the work a title and page address before adding images.");
+    if (!file.type.startsWith("image/")) throw new Error("Choose an image file: JPG, PNG or WebP.");
+    const bitmap = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("That image couldn't be opened. Try another file."));
+      img.src = URL.createObjectURL(file);
+    });
+    const scale = Math.min(1, MAX_WIDTH[kind] / bitmap.width);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(bitmap.src);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.86));
+    const path = `${id}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.webp`;
+    const { error } = await photos.upload(path, blob, { contentType: "image/webp", cacheControl: "31536000" });
+    if (error) throw new Error("The image didn't upload. Check your connection and try again.");
+    return photos.getPublicUrl(path).data.publicUrl;
+  };
+
+  form.querySelectorAll("[data-image]").forEach((slot) => {
+    const kind = slot.dataset.image;
+    const input = slot.querySelector('input[type="file"]');
+    input.addEventListener("change", async () => {
+      const file = input.files[0];
+      input.value = "";
+      if (!file) return;
+      say("Uploading…", true);
+      try {
+        images[kind] = await upload(file, kind);
+        renderImages();
+        say("Image added. Save to keep it.", true);
+      } catch (e) {
+        say(e.message);
+      }
+    });
+    slot.querySelector('[data-action="clear"]').addEventListener("click", () => {
+      images[kind] = "";
+      renderImages();
+    });
+  });
+
+  const stillsInput = form.querySelector("#w-stills-input");
+  stillsInput.addEventListener("change", async () => {
+    const files = [...stillsInput.files];
+    stillsInput.value = "";
+    for (const [i, file] of files.entries()) {
+      say(`Uploading ${i + 1} of ${files.length}…`, true);
+      try {
+        stills.push(await upload(file, "still"));
+        renderStills();
+      } catch (e) {
+        return say(e.message);
+      }
+    }
+    say(files.length > 1 ? "Images added. Save to keep them." : "Image added. Save to keep it.", true);
+  });
+
+  form.querySelector('[data-action="add-credit"]').addEventListener("click", () => addCredit().focus());
+  form.querySelector('[data-action="back"]').addEventListener("click", showList);
+  page.querySelector('[data-action="new"]').addEventListener("click", () => showEditor(null));
+
+  // ---------- Save ----------
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const title = fields.title.value.trim();
+    const id = fields.id.value.trim();
+    const kind = fields.kind.value.trim();
+    const trailer = aparatId(fields.trailer.value);
+    const problem =
+      (!title && [fields.title, "Enter a title."]) ||
+      (!validId(id) && [fields.id, "Use lowercase letters, numbers and dashes for the page address, e.g. the-candlewood."]) ||
+      (!kind && [fields.kind, "Enter the type of work, e.g. Game."]) ||
+      (trailer === null && [fields.trailer, "Paste the Aparat link, like https://www.aparat.com/v/abc123."]) ||
+      ([fields.irr, fields.usd, fields.eur].find((f) => f.value && !(Number(f.value) >= 0)) && [fields.irr, "Prices must be numbers of 0 or more."]);
+    if (problem) {
+      problem[0].focus();
+      return say(problem[1]);
+    }
+
+    const row = {
+      title,
+      kind,
+      status: fields.status.value,
+      status_text: fields.statusText.value.trim() || null,
+      published: fields.published.checked,
+      price_irr: number(fields.irr),
+      price_usd: number(fields.usd),
+      price_eur: number(fields.eur),
+      cover_url: images.cover || null,
+      hero_url: images.hero || null,
+      hero_focus: fields.heroFocus.value || null,
+      stills,
+      trailer_date: fromLocalInput(fields.trailerDate.value),
+      trailer: trailer || null,
+      synopsis: fields.synopsis.value.trim() || null,
+      genres: list(fields.genres.value),
+      platforms: list(fields.platforms.value),
+      rating: fields.rating.value.trim() || null,
+      credits: [...creditsEl.children]
+        .map((item) => {
+          const [role, name] = item.querySelectorAll("input");
+          return { role: role.value.trim(), name: name.value.trim() };
+        })
+        .filter((c) => c.role && c.name),
+      updated_at: new Date().toISOString(),
+    };
+
+    const submit = form.querySelector('[type="submit"]');
+    submit.disabled = true;
+    say("Saving…", true);
+    const result = editing
+      ? await account.from("works").update(row).eq("id", editing.id).select().single()
+      : await account
+          .from("works")
+          .insert({ ...row, id, sort: works.reduce((max, w) => Math.max(max, w.sort + 1), 0) })
+          .select()
+          .single();
+    submit.disabled = false;
+
+    if (result.error) {
+      if (result.error.code === "23505") {
+        fields.id.focus();
+        return say("Another work already uses this page address. Choose a different one.");
+      }
+      return say("The work wasn't saved. Check your connection and try again.");
+    }
+    showEditor(result.data);
+    say(row.published ? "Saved. It's live on the site." : "Saved as a draft.", true);
+  });
+
+  // ---------- Delete (press twice) ----------
+  let armed = 0;
+  const resetDelete = () => {
+    clearTimeout(armed);
+    armed = 0;
+    deleteButton.textContent = "Delete work";
+  };
+  deleteButton.addEventListener("click", async () => {
+    if (!editing) return;
+    if (!armed) {
+      deleteButton.textContent = "Press again to delete";
+      armed = setTimeout(resetDelete, 4000);
+      return;
+    }
+    resetDelete();
+    deleteButton.disabled = true;
+    say("Deleting…", true);
+    const { error } = await account.from("works").delete().eq("id", editing.id);
+    deleteButton.disabled = false;
+    if (error) return say("The work wasn't deleted. Check your connection and try again.");
+    // Its uploaded images go too.
+    const { data: files } = await photos.list(editing.id, { limit: 1000 });
+    if (files && files.length) await photos.remove(files.map((f) => `${editing.id}/${f.name}`));
+    showList();
+  });
+
+  showList();
 })();
