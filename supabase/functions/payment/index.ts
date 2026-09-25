@@ -11,9 +11,17 @@
 //   processing: in progress, completed: done), once each
 // POST { action: "email-test" }                 admins
 //   -> { ok } or { error }  sends a sample receipt to the studio address
+// POST { action: "retry-emails", order_id? }     admins (one order), or the
+//   database every 15 minutes with the x-retry-key header (all orders)
+//   -> { sent, failed }  sends the emails that didn't go out before
 //
 // Emails (mail.ts): the buyer gets "order received" or a payment receipt,
-// and the studio a copy of each; every email goes out once per order.
+// and the studio a copy of each; every email goes out once per order. One
+// that fails is kept in email_pending and tried again for a day.
+//
+// site_settings.sales_open: while it's false only admins can place orders
+// (the database refuses the rest) or start a payment, so the studio can
+// catch up; coming back from the bank still works.
 //
 // The amount always comes from the order in the database. site_settings
 // .payments switches it: "off", "test" (Zarinpal's sandbox; only admins can
@@ -82,10 +90,13 @@ const later = (work: Promise<unknown>) => {
 };
 
 // Sends an order's email for one stage, once: the column marks it sent
-// before sending, and is cleared again if sending fails. The studio gets a
-// copy of new and paid orders. Returns whether an email went out.
+// before sending, and is cleared again if sending fails, when the stage
+// goes into email_pending to be tried again. The studio gets a copy of new
+// and paid orders. Returns whether an email went out.
 type Stage = "placed" | "paid" | "processing" | "completed";
-const ORDER_FIELDS = "id, number, title, amount_irr, name, email, phone, ref_id, card_pan, paid_at, created_at, test, work_id";
+const ORDER_FIELDS =
+  "id, number, title, amount_irr, name, email, phone, ref_id, card_pan, paid_at, created_at, test, work_id, email_pending, email_tries";
+type Row = Order & { work_id: string; email_pending: string[]; email_tries: number };
 const emailOnce = async (orderId: string, kind: Stage) => {
   if (!mailReady()) return false;
   const column = `${kind}_email_at`;
@@ -95,8 +106,9 @@ const emailOnce = async (orderId: string, kind: Stage) => {
     .eq("id", orderId)
     .is(column, null)
     .select(ORDER_FIELDS);
-  const order = data?.[0] as (Order & { work_id: string }) | undefined;
+  const order = data?.[0] as Row | undefined;
   if (!order) return false;
+  const pending = (order.email_pending || []).filter((k) => k !== kind);
   try {
     if (kind === "placed") await send(placedEmail(order, false));
     else if (kind === "paid") {
@@ -104,14 +116,52 @@ const emailOnce = async (orderId: string, kind: Stage) => {
       await send(paidEmail(order, work?.status === "released"));
     } else await send(stageEmail(order, kind));
   } catch (e) {
-    console.error(`${kind} email`, (e as Error).message);
-    await db.from("orders").update({ [column]: null }).eq("id", orderId);
+    const message = (e as Error).message;
+    console.error(`${kind} email`, message);
+    await db
+      .from("orders")
+      .update({ [column]: null, email_pending: [...pending, kind], email_error: message.slice(0, 300), email_tries: order.email_tries + 1 })
+      .eq("id", orderId);
     return false;
   }
+  if (pending.length !== (order.email_pending || []).length)
+    await db
+      .from("orders")
+      .update(pending.length ? { email_pending: pending } : { email_pending: [], email_error: null, email_tries: 0 })
+      .eq("id", orderId);
   if (kind === "placed" || kind === "paid")
     await send(studioEmail(order, kind)).catch((e) => console.error("studio email", (e as Error).message));
   return true;
 };
+
+// Tries an order's failed emails again. A stage the order has moved past
+// (say "in progress" once it's completed) is dropped instead.
+const retryOrder = async (order: { id: string; status: string; email_pending: string[] }) => {
+  const due = (order.email_pending || []).filter((kind) =>
+    kind === "placed"
+      ? order.status === "awaiting_payment"
+      : kind === "processing"
+        ? order.status === "processing"
+        : kind === "paid"
+          ? ["paid", "processing", "completed"].includes(order.status)
+          : order.status === kind
+  ) as Stage[];
+  if (due.length !== (order.email_pending || []).length)
+    await db
+      .from("orders")
+      .update(due.length ? { email_pending: due } : { email_pending: [], email_error: null, email_tries: 0 })
+      .eq("id", order.id);
+  let sent = 0;
+  for (const kind of due) if (await emailOnce(order.id, kind)) sent++;
+  return { sent, failed: due.length - sent };
+};
+
+const salesOpen = async () => {
+  const { data } = await db.from("site_settings").select("sales_open").eq("id", 1).maybeSingle();
+  return data?.sales_open !== false;
+};
+const isAdmin = async (userId: string) =>
+  Boolean((await db.from("admins").select("user_id").eq("user_id", userId).maybeSingle()).data);
 
 const mobileOf = (phone: string) => {
   const digits = phone.replace(/\D/g, "");
@@ -132,8 +182,7 @@ Deno.serve(async (req) => {
   if (body.action === "email-test") {
     const user = await caller(req);
     if (!user) return reply({ error: "signed_out" }, 401);
-    const { data: isAdmin } = await db.from("admins").select("user_id").eq("user_id", user.id).maybeSingle();
-    if (!isAdmin) return reply({ error: "forbidden" }, 403);
+    if (!(await isAdmin(user.id))) return reply({ error: "forbidden" }, 403);
     if (!mailReady()) return reply({ error: "no_password" });
     const now = new Date().toISOString();
     const sample: Order = {
@@ -148,6 +197,32 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ---------- Emails that didn't go out ----------
+  if (body.action === "retry-emails") {
+    const key = req.headers.get("x-retry-key") || "";
+    const fromCron = key ? Boolean((await db.rpc("email_retry_key_ok", { key })).data) : false;
+    if (!fromCron) {
+      const user = await caller(req);
+      if (!user) return reply({ error: "signed_out" }, 401);
+      if (!(await isAdmin(user.id))) return reply({ error: "forbidden" }, 403);
+      if (!/^[0-9a-f-]{36}$/i.test(String(body.order_id || ""))) return reply({ error: "bad_request" }, 400);
+    }
+    if (!mailReady()) return reply({ error: "no_password" });
+    // The admin's button tries one order however often it failed; the
+    // database's run tries every order for about a day (96 runs).
+    let query = db.from("orders").select("id, status, email_pending").neq("email_pending", "{}");
+    query = fromCron ? query.lt("email_tries", 96).order("updated_at").limit(25) : query.eq("id", String(body.order_id));
+    const { data: orders } = await query;
+    let sent = 0;
+    let failed = 0;
+    for (const order of orders || []) {
+      const result = await retryOrder(order);
+      sent += result.sent;
+      failed += result.failed;
+    }
+    return reply({ sent, failed });
+  }
+
   const orderId = String(body.order_id || "");
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) return reply({ error: "bad_request" }, 400);
 
@@ -158,12 +233,13 @@ Deno.serve(async (req) => {
   if (body.action === "status-email") {
     const user = await caller(req);
     if (!user) return reply({ error: "signed_out" }, 401);
-    const { data: isAdmin } = await db.from("admins").select("user_id").eq("user_id", user.id).maybeSingle();
-    if (!isAdmin) return reply({ error: "forbidden" }, 403);
+    if (!(await isAdmin(user.id))) return reply({ error: "forbidden" }, 403);
     const { data: order } = await db.from("orders").select("id, status").eq("id", orderId).maybeSingle();
     if (!order) return reply({ error: "not_found" }, 404);
     if (!["paid", "processing", "completed"].includes(order.status)) return reply({ sent: false });
-    return reply({ sent: await emailOnce(order.id, order.status as Stage) });
+    if (await emailOnce(order.id, order.status as Stage)) return reply({ sent: true });
+    const { data: after } = await db.from("orders").select("email_pending").eq("id", order.id).maybeSingle();
+    return reply({ sent: false, failed: (after?.email_pending || []).includes(order.status) });
   }
 
   // ---------- Placed (online payment closed) ----------
@@ -182,10 +258,8 @@ Deno.serve(async (req) => {
     if (!user) return reply({ error: "signed_out" }, 401);
     if (mode === "off") return reply({ error: "closed" }, 409);
     const test = mode === "test";
-    if (test) {
-      const { data: isAdmin } = await db.from("admins").select("user_id").eq("user_id", user.id).maybeSingle();
-      if (!isAdmin) return reply({ error: "closed" }, 409);
-    }
+    if ((test || !(await salesOpen())) && !(await isAdmin(user.id)))
+      return reply({ error: test ? "closed" : "paused" }, 409);
     const zp = gateway(test);
     if (!zp.merchant) return reply({ error: "not_configured" }, 503);
 

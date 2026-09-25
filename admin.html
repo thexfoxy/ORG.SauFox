@@ -7,7 +7,7 @@
   <title>Manage works · SauFox Entertainment</title>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=36">
+  <link rel="stylesheet" href="css/style.css?v=37">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -55,6 +55,7 @@
       <section class="admin-orders admin-group">
         <h2 class="admin-rates__title">Orders</h2>
         <p class="admin-group__hint">Newest first. Set an order to Paid once its payment is in, or Cancelled; the buyer sees the change in their profile. Buyers can cancel unpaid orders themselves.</p>
+        <p class="admin-orders__mail" data-slot="mail-problems" role="status" hidden></p>
         <ol class="admin-orders__list"></ol>
         <p class="admin-orders__empty" hidden>No orders yet.</p>
       </section>
@@ -64,7 +65,15 @@
       <form class="admin-payments admin-group" novalidate>
         <h2 class="admin-rates__title">Payments and subscriptions</h2>
         <p class="admin-group__hint">Test mode sends only admins to Zarinpal&rsquo;s sandbox, with no real money. Live needs your Zarinpal merchant ID saved as <code>ZARINPAL_MERCHANT_ID</code> in Supabase (Edge Functions &rarr; Secrets). While it&rsquo;s off, orders wait for payment and the checkout says online payment opens soon.</p>
-        <div class="admin-grid admin-grid--3">
+        <p class="admin-group__hint">Pause sales to catch up when orders pile up (or emails hit their daily limit): nobody but admins can place an order or start a payment until you reopen them. Orders already placed stay as they are, and buyers coming back from the bank are still confirmed.</p>
+        <div class="admin-grid">
+          <label class="admin-field">
+            <span>Sales</span>
+            <select id="sales-open">
+              <option value="open">Open</option>
+              <option value="paused">Paused</option>
+            </select>
+          </label>
           <label class="admin-field">
             <span>Online payment</span>
             <select id="payments-mode">
@@ -85,7 +94,7 @@
         <p class="admin-group__hint admin-payments__ip">Server IP to give Zarinpal: <code class="selectable" data-slot="server-ip">checking…</code></p>
         <div class="admin-payments__mail">
           <button class="admin-button" type="button" data-action="email-test">Send a test email</button>
-          <p class="admin-group__hint" data-slot="email-test">Order emails need the <code>SMTP_PASSWORD</code> secret. This sends a sample receipt to the studio inbox.</p>
+          <p class="admin-group__hint" data-slot="email-test">Order emails go through Resend (<code>RESEND_API_KEY</code>), or Gmail (<code>SMTP_PASSWORD</code>) if Resend refuses. This sends a sample receipt to the studio inbox.</p>
         </div>
         <div class="admin-maintenance__save">
           <p class="admin-message" role="status" aria-live="polite"></p>
@@ -319,7 +328,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=36" defer></script>
-  <script src="js/main.js?v=36" defer></script>
+  <script src="js/vendor/supabase.js?v=37" defer></script>
+  <script src="js/main.js?v=37" defer></script>
 </body>
 </html>

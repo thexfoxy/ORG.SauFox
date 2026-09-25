@@ -4548,12 +4548,40 @@ a.hero__panel {
   display: none;
 }
 
+/* Emails that didn't go out. */
+.admin-orders__mail,
+.admin-order__mail {
+  color: #f0b44c;
+  font-size: 13px;
+}
+
+.admin-orders__mail {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: rgba(240, 180, 76, 0.1);
+}
+
+.admin-order__mail {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  max-width: 240px;
+  text-align: end;
+}
+
+.admin-order.has-mail-problem {
+  box-shadow: inset 3px 0 0 #f0b44c;
+}
+
 @media (max-width: 700px) {
   .admin-order__side {
     justify-items: start;
   }
 
-  .admin-order__note {
+  .admin-order__note,
+  .admin-order__mail {
     text-align: start;
+    justify-items: start;
   }
 }

@@ -217,7 +217,7 @@ const loadSite = async () => {
   try {
     const [rows, settings] = await Promise.all([
       get("works?select=*&published=eq.true&order=sort.asc,created_at.asc"),
-      get("site_settings?select=usd_irr,eur_irr,maintenance,maintenance_note,maintenance_note_fa,plan_basic_irr,plan_premium_irr,payments&id=eq.1").catch(() => []),
+      get("site_settings?select=usd_irr,eur_irr,maintenance,maintenance_note,maintenance_note_fa,plan_basic_irr,plan_premium_irr,payments,sales_open&id=eq.1").catch(() => []),
     ]);
     const rates = settings[0] || {};
     local.set("catalog", JSON.stringify({ rows, rates }));
@@ -300,11 +300,17 @@ const goLogin = () => {
   location.href = "login.html";
 };
 
+// Sales can be paused from the admin panel (to catch up on orders): no new
+// orders or payments then, except for admins.
+const salesPaused = (settings) => settings.sales_open === false && local.get("admin") !== "1";
+const SALES_PAUSED = "Sales are paused for a little while. Please check back soon.";
 // Online payment (Supabase Edge Function "payment", Zarinpal). Open when
 // the admin panel sets it live, or in test mode for admins only.
 const paymentsOpen = (settings) =>
-  settings.payments === "live" || (settings.payments === "test" && local.get("admin") === "1");
+  !salesPaused(settings) &&
+  (settings.payments === "live" || (settings.payments === "test" && local.get("admin") === "1"));
 const PAYMENT_ERRORS = {
+  paused: "Sales are paused for a little while. Your order is saved; you can pay once they reopen.",
   closed: "Online payment isn't open yet. Your order is saved, and we'll email you when you can pay.",
   not_configured: "Online payment isn't open yet. Your order is saved, and we'll email you when you can pay.",
   gateway: "The bank gateway didn't answer. Try again in a moment.",
@@ -1993,10 +1999,18 @@ const signedInGoHome = async (user) => {
   // they're out). A member with an open order is shown that instead.
   const buy = page.querySelector('[data-action="buy"]');
   const buyLabel = buy.querySelector("span");
+  const buySoon = page.querySelector('[data-slot="buy-soon"]');
   if (work.prices && work.prices.IRR != null) {
     buy.href = `checkout.html?id=${encodeURIComponent(work.id)}`;
     buyLabel.textContent = work.status === "released" ? "Buy" : "Pre-order now";
-    buy.hidden = false;
+    // While sales are paused the button gives way to a note, unless the
+    // member already has an order for it (shown below).
+    const paused = salesPaused((await site).settings);
+    buy.hidden = paused;
+    if (paused) {
+      buySoon.textContent = "Sales paused for now";
+      buySoon.hidden = false;
+    }
     verifiedSession().then(async (session) => {
       if (!session) return;
       const { data } = await account
@@ -2008,11 +2022,13 @@ const signedInGoHome = async (user) => {
         .limit(1);
       if (!data || !data.length) return;
       const paid = data[0].status !== "awaiting_payment";
+      buy.hidden = false;
+      buySoon.hidden = true;
       buy.href = paid ? "profile.html#library" : "profile.html#orders";
       buy.classList.add("is-ordered");
       buyLabel.textContent = paid ? "In your library" : "Ordered · awaiting payment";
     });
-  } else page.querySelector('[data-slot="buy-soon"]').hidden = !prices.length;
+  } else buySoon.hidden = !prices.length;
 
   // Countdown to the trailer
   const countdown = page.querySelector(".countdown");
@@ -2738,16 +2754,18 @@ const signedInGoHome = async (user) => {
   const payForm = page.querySelector(".admin-payments");
   const payMessage = payForm.querySelector(".admin-message");
   const payMode = payForm.querySelector("#payments-mode");
+  const salesMode = payForm.querySelector("#sales-open");
   const planBasic = payForm.querySelector("#plan-basic");
   const planPremium = payForm.querySelector("#plan-premium");
   account
     .from("site_settings")
-    .select("payments, plan_basic_irr, plan_premium_irr")
+    .select("payments, sales_open, plan_basic_irr, plan_premium_irr")
     .eq("id", 1)
     .maybeSingle()
     .then(({ data }) => {
       if (!data) return;
       payMode.value = data.payments || "off";
+      salesMode.value = data.sales_open === false ? "paused" : "open";
       planBasic.value = data.plan_basic_irr ?? "";
       planPremium.value = data.plan_premium_irr ?? "";
     });
@@ -2789,12 +2807,20 @@ const signedInGoHome = async (user) => {
     payMessage.textContent = "Saving…";
     const { error } = await account
       .from("site_settings")
-      .update({ payments: payMode.value, plan_basic_irr: basic, plan_premium_irr: premium, updated_at: new Date().toISOString() })
+      .update({
+        payments: payMode.value,
+        sales_open: salesMode.value === "open",
+        plan_basic_irr: basic,
+        plan_premium_irr: premium,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", 1);
     payMessage.classList.toggle("is-ok", !error);
     payMessage.textContent = error
       ? "Not saved. Check your connection and try again."
-      : { off: "Saved. Online payment is off.", test: "Saved. Test payments are on for admins.", live: "Saved. Online payment is live." }[payMode.value];
+      : salesMode.value === "paused"
+        ? "Saved. Sales are paused: no new orders or payments until you reopen them."
+        : { off: "Saved. Online payment is off.", test: "Saved. Test payments are on for admins.", live: "Saved. Online payment is live." }[payMode.value];
   });
 
   // ---------- Orders ----------
@@ -2848,31 +2874,70 @@ const signedInGoHome = async (user) => {
         const answer = await payment({ action: "status-email", order_id: order.id }, await verifiedSession());
         note.textContent = answer.sent
           ? `Emailed the buyer: ${ORDER_STATUS[order.status].toLowerCase()}.`
-          : answer.error
-            ? "The email didn't go out. Check the test email above."
-            : "No new email: the buyer already had this one.";
+          : answer.failed
+            ? "The email didn't go out yet. It's tried again every 15 minutes."
+            : answer.error
+              ? "The email didn't go out. Check the test email above."
+              : "No new email: the buyer already had this one.";
+        if (answer.failed) loadOrders();
       }
     });
     const note = make("span", "admin-order__note");
     const side = make("div", "admin-order__side");
     side.append(pick, note);
+    // Emails that didn't go out: retried every 15 minutes for a day, or now.
+    if (order.email_pending && order.email_pending.length) {
+      const warn = make("div", "admin-order__mail");
+      const names = order.email_pending.map((kind) => EMAIL_NAMES[kind] || kind).join(", ");
+      warn.append(
+        make(
+          "span",
+          "",
+          `Email not sent: ${names}. ${order.email_tries >= 96 ? "Automatic retries have stopped." : `Tried ${order.email_tries} time${order.email_tries === 1 ? "" : "s"}; retrying every 15 minutes.`}`
+        )
+      );
+      if (order.email_error) warn.title = order.email_error;
+      const again = make("button", "admin-button", "Send again");
+      again.type = "button";
+      again.addEventListener("click", async () => {
+        again.disabled = true;
+        again.textContent = "Sending…";
+        const answer = await payment({ action: "retry-emails", order_id: order.id }, await verifiedSession());
+        if (!answer.error) return loadOrders(); // the row comes back without the warning, or with the new count
+        again.disabled = false;
+        again.textContent = "Send again";
+        note.textContent = "Couldn't reach the payment function. Try again.";
+      });
+      warn.append(again);
+      side.append(warn);
+      row.classList.add("has-mail-problem");
+    }
     row.append(main, buyer, side);
     return row;
   };
-  account
-    .from("orders")
-    .select("id, number, title, amount_irr, name, email, phone, status, created_at, ref_id, card_pan, test")
-    .order("created_at", { ascending: false })
-    .limit(200)
-    .then(({ data, error }) => {
-      if (error) {
-        noOrders.textContent = "Orders couldn't be loaded. Reload the page to try again.";
-        noOrders.hidden = false;
-        return;
-      }
-      orderList.replaceChildren(...data.map(orderRow));
-      noOrders.hidden = data.length > 0;
-    });
+  const EMAIL_NAMES = { placed: "order received", paid: "receipt", processing: "in progress", completed: "completed" };
+  const mailSummary = page.querySelector('[data-slot="mail-problems"]');
+  const loadOrders = () =>
+    account
+      .from("orders")
+      .select("id, number, title, amount_irr, name, email, phone, status, created_at, ref_id, card_pan, test, email_pending, email_error, email_tries")
+      .order("created_at", { ascending: false })
+      .limit(200)
+      .then(({ data, error }) => {
+        if (error) {
+          noOrders.textContent = "Orders couldn't be loaded. Reload the page to try again.";
+          noOrders.hidden = false;
+          return;
+        }
+        orderList.replaceChildren(...data.map(orderRow));
+        noOrders.hidden = data.length > 0;
+        const stuck = data.filter((order) => order.email_pending && order.email_pending.length).length;
+        mailSummary.textContent = stuck
+          ? `${stuck} order${stuck === 1 ? " has" : "s have"} emails that didn't go out (marked below). They're retried every 15 minutes.`
+          : "";
+        mailSummary.hidden = !stuck;
+      });
+  loadOrders();
 
   showList();
 })();
@@ -3023,6 +3088,10 @@ const signedInGoHome = async (user) => {
   // Payment: straight on to the bank when it's open.
   const { settings } = await site;
   const canPay = paymentsOpen(settings);
+  if (salesPaused(settings)) {
+    submit.disabled = true;
+    say(SALES_PAUSED);
+  }
   if (canPay) {
     form.querySelector('[data-slot="pay-note"]').textContent =
       settings.payments === "test"
@@ -3058,6 +3127,10 @@ const signedInGoHome = async (user) => {
     if (error) {
       submit.disabled = false;
       if (error.code === "23505") return location.replace("profile.html#orders");
+      if (error.code === "SF001") {
+        submit.disabled = true;
+        return say(SALES_PAUSED);
+      }
       if (error.code === "P0001") return say("This work isn't on sale right now. Reload the page to see its latest details.");
       return say("Your order wasn't placed. Check your connection and try again.");
     }

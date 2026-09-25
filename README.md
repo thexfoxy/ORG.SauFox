@@ -170,6 +170,16 @@ up. Signed-out visitors log in first and come back to the checkout.
   one sent it. Each goes out once per
   order (`placed_email_at`, `paid_email_at`, `processing_email_at`,
   `completed_email_at`).
+- An email that fails is kept in `email_pending` (with `email_error` and
+  `email_tries`) and retried: the database job `retry-order-emails`
+  (pg_cron, every 15 minutes) calls the payment function with the vault
+  secret `email_retry_key`, for about a day (96 tries). The admin panel
+  marks those orders and has a "Send again" button.
+- Sales switch (admin panel → Payments, `site_settings.sales_open`): while
+  paused, only admins can place an order (the database refuses the rest
+  with code `SF001`) or start a payment; work pages say sales are paused.
+  Orders already placed stay, and payments already at the bank are still
+  confirmed. Use it to catch up when orders or emails pile up.
 - Order statuses: Awaiting payment → Paid → In progress → Completed (or
   Cancelled). Setting one in the admin panel emails the buyer: Paid sends
   the receipt, In progress and Completed their own emails; each once.
