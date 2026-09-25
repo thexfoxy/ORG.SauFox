@@ -15,7 +15,7 @@ npx serve .
 - `index.html`: home page
 - `login.html`: login / sign-up page
 - `profile.html`: profile page (signed-in visitors only)
-- `reset.html`: where the password-reset email lands; sets a new password
+- `emails/`: the sign-up, login and password-reset emails (paste into Supabase)
 - `about.html`, `terms.html`, `privacy.html`: about and contact, terms of use, privacy policy
 - `work.html`: one page per work (`work.html?id=the-candlewood`), filled from the catalogue
 - `admin.html`: admin panel for the catalogue (admins only)
@@ -52,7 +52,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=12`); raise it in all three pages
+JS with a version number (`style.css?v=14`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -83,14 +83,31 @@ The session is kept in localStorage under `saufox.session`; the header and
 the profile page check that key before first paint. Name, photo and currency
 are also cached there so they show without waiting for the server.
 
+Every email sign-in goes through a 6-digit code sent by email: after
+signing up, after the password at every login, and for a forgotten
+password (code plus the new password, all on the login page). The
+database enforces it: `private.verified()` is true only for sessions whose
+JWT `amr` shows something besides the password (an emailed code, or
+Google), and every member policy (profiles, My List, admins, photos) and
+`private.is_admin()` require it. A session made from the password alone
+opens nothing, and the pages clear it (`verifiedSession` in
+`js/main.js`).
+
 Supabase dashboard settings (Authentication):
-- Emails (confirmation, password reset): Supabase's built-in email only
-  reaches the project team's addresses. For real users, add a custom SMTP
-  server (Emails → SMTP settings; Gmail works with an app password). Until
-  then keep "Confirm email" off.
+- Emails → SMTP settings: send from the studio's own address, so emails
+  come from SauFox and reach everyone (Supabase's built-in sender only
+  reaches the project team). With Gmail: host `smtp.gmail.com`, port 465,
+  username `saufoxentertainment@gmail.com`, password a Google app password,
+  sender name `SauFox Entertainment`.
+- Emails → Templates: paste `emails/confirm-signup.html` into "Confirm
+  sign up", `emails/login-code.html` into "Magic link" and
+  `emails/reset-password.html` into "Reset password", each with the
+  subject written at the top of its file. They show the code
+  (`{{ .Token }}`), in Persian and English.
+- Sign In / Providers → Email: "Confirm email" on; email OTP length 6 and
+  expiry 600 seconds (the emails say 10 minutes).
 - URL configuration: Site URL `https://saufoxentertainment.ir`, and
-  `https://saufoxentertainment.ir/**` in the redirect URLs (login.html
-  for confirmations and Google, reset.html for password resets).
+  `https://saufoxentertainment.ir/**` in the redirect URLs (for Google).
 - Google sign-in: Sign In / Providers → Google, with a client ID and secret
   from a Google Cloud OAuth client whose redirect URI is
   `https://gwyqkzhhnspfadqefmix.supabase.co/auth/v1/callback`. The login
@@ -186,10 +203,10 @@ Login page (`login.html`):
       the Sign Up tab.
 - [x] Real accounts through Supabase (see Accounts above): sign-up, login,
       clear error messages, and a confirmation-email step when it is on.
-- [x] Forgot password: a form in place of the login form sends a reset
-      link (the reply doesn't reveal whether an account exists); the link
-      opens `reset.html` to choose a new password. `login.html#reset` opens
-      the form directly.
+- [x] Codes by email: sign-up and every login finish with a 6-digit code
+      (with "Send a new code" after 60 seconds); "Forgot password?" sends a
+      code and takes the new password in the same form. `login.html#reset`
+      opens the forgot-password form directly.
 - [x] Google sign-in, once it's switched on in Supabase (see Accounts).
 - [ ] Apple sign-in: needs a paid Apple developer account; the button says
       it isn't connected.

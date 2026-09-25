@@ -3531,3 +3531,39 @@ a.hero__panel {
     margin-top: max(36px, calc(var(--hero-h) * 0.2885 - 64px));
   }
 }
+
+/* ---------- Login: the emailed code ---------- */
+
+.field__box--code input {
+  font: 600 24px/1 var(--font-body);
+  letter-spacing: 0.5em;
+  text-align: center;
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+}
+
+.field__box--code input::placeholder {
+  letter-spacing: 0.5em;
+  color: #3d3c42;
+}
+
+:root[lang="fa"] .field__box--code input {
+  letter-spacing: 0.5em !important;
+  text-align: center;
+}
+
+.auth__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.auth__links .auth__forgot {
+  margin: 0;
+}
+
+.auth__forgot:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

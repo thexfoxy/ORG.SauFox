@@ -204,6 +204,29 @@ const catalog = document.querySelector(".hero, .works, .title-page, .login-bg, .
   ? loadCatalog()
   : Promise.resolve([]);
 
+// The current session, if it came through an emailed code or Google. The
+// database opens nothing to a session made from the password alone (a login
+// that stopped before its code), so such a leftover is cleared here.
+const passwordOnly = (session) => {
+  try {
+    const claims = JSON.parse(atob(session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const methods = claims.amr || [];
+    return methods.length > 0 && methods.every((m) => m.method === "password");
+  } catch (e) {
+    return false;
+  }
+};
+const verifiedSession = async () => {
+  if (!account) return null;
+  const { session } = (await account.auth.getSession()).data;
+  if (!session) return null;
+  if (passwordOnly(session)) {
+    await account.auth.signOut({ scope: "local" });
+    return null;
+  }
+  return session;
+};
+
 // Keeps the name, photo and currency in this browser too, so the header and
 // the price cards can show them straight away on the next visit.
 const cacheProfile = (profile) => {
@@ -869,6 +892,8 @@ const AUTH_ERRORS = {
   user_already_exists: "There's already an account with this email. Log in instead.",
   weak_password: "Choose a stronger password, one that isn't easy to guess.",
   same_password: "Choose a password different from your old one.",
+  otp_expired: "That code is wrong or has expired. Check it, or send a new one.",
+  otp_disabled: "Codes aren't switched on yet. Try again later.",
   over_request_rate_limit: "Too many tries. Wait a minute and try again.",
   over_email_send_rate_limit: "Too many emails sent. Wait a while and try again.",
 };
@@ -879,11 +904,12 @@ const explainAuthError = (error) =>
 // Checks a form's fields; returns what to fix, or "".
 const formProblem = (form) => {
   for (const input of form.querySelectorAll("input")) {
-    if (input.validity.valid) continue;
+    if (input.validity.valid || input.closest("[hidden]")) continue;
     const name = input.closest(".field").querySelector(".field__label").textContent;
     input.focus();
     if (input.validity.valueMissing) return `Enter your ${name.toLowerCase()}.`;
     if (input.validity.typeMismatch) return "Enter an email address like name@example.com.";
+    if (input.name === "code") return "Enter the 6-digit code from the email.";
     if (input.validity.tooShort) return `Use at least ${input.minLength} characters for your password.`;
     return `Check your ${name.toLowerCase()}.`;
   }
@@ -897,26 +923,30 @@ const signedInGoHome = async (user) => {
   setTimeout(() => (location.href = "index.html"), 700);
 };
 
-// Login page — Login / Sign Up tabs with sliding forms, "Forgot password?",
-// and Google sign-in. Accounts go through Supabase (see `account`).
+// Login page — Login / Sign Up tabs with sliding forms, a 6-digit code sent
+// by email after sign-up and after the password at every login, "Forgot
+// password?" by code, and Google sign-in. The database only opens an
+// account to sessions that came through a code (or Google), so the code
+// step can't be skipped. Accounts go through Supabase (see `account`).
 (function loginPage() {
   const auth = document.querySelector(".auth");
   if (!auth || !auth.querySelector("#tab-login")) return;
 
-  // Tabs and sliding forms. The login slide holds the login form or, after
-  // "Forgot password?", the reset form.
+  // Tabs and sliding forms. The login slide shows one panel at a time:
+  // the login form, the forgot-password form or the code form.
   const tabs = { login: auth.querySelector("#tab-login"), signup: auth.querySelector("#tab-signup") };
   const slides = { login: auth.querySelector("#slide-login"), signup: auth.querySelector("#form-signup") };
   const forms = {
     login: auth.querySelector("#form-login"),
     signup: auth.querySelector("#form-signup"),
     reset: auth.querySelector("#form-reset"),
+    code: auth.querySelector("#form-code"),
   };
   const viewport = auth.querySelector(".auth__viewport");
   let mode = location.hash === "#signup" ? "signup" : "login";
-  let resetting = location.hash === "#reset";
+  let panel = location.hash === "#reset" ? "reset" : "login";
 
-  const activeForm = () => (mode === "signup" ? forms.signup : resetting ? forms.reset : forms.login);
+  const activeForm = () => (mode === "signup" ? forms.signup : forms[panel]);
   const fitHeight = () => (viewport.style.height = `${activeForm().offsetHeight}px`);
 
   const setMode = (next) => {
@@ -927,33 +957,33 @@ const signedInGoHome = async (user) => {
       slides[key].inert = key !== mode;
     });
     fitHeight();
-    // Leave the hash alone while it carries a sign-in from an email link.
+    // Leave the hash alone while it carries a sign-in from Google.
     if (!location.hash || ["#signup", "#reset"].includes(location.hash))
       history.replaceState(null, "", mode === "signup" ? "#signup" : location.pathname + location.search);
   };
 
-  const showReset = (on) => {
-    resetting = on;
-    forms.login.hidden = on;
-    forms.reset.hidden = !on;
-    if (on) forms.reset.querySelector("input").value = forms.login.querySelector('input[name="email"]').value;
+  const showPanel = (name, focus = true) => {
+    panel = name;
+    ["login", "reset", "code"].forEach((key) => (forms[key].hidden = key !== name));
+    if (name !== "login") setMode("login");
     fitHeight();
-    (on ? forms.reset : forms.login).querySelector("input").focus();
+    if (focus) forms[name].querySelector("input").focus();
   };
 
   Object.keys(tabs).forEach((key) =>
     tabs[key].addEventListener("click", () => {
-      if (resetting) showReset(false);
+      if (panel !== "login") showPanel("login", false);
       setMode(key);
     })
   );
   window.addEventListener("resize", fitHeight);
-  auth.querySelector('[data-action="forgot"]').addEventListener("click", () => showReset(true));
-  auth.querySelector('[data-action="back-to-login"]').addEventListener("click", () => showReset(false));
-  if (resetting) {
-    forms.login.hidden = true;
-    forms.reset.hidden = false;
-  }
+  auth.querySelector('[data-action="forgot"]').addEventListener("click", () => {
+    forms.reset.querySelector("input").value = forms.login.querySelector('input[name="email"]').value;
+    showPanel("reset");
+  });
+  auth.querySelector('[data-action="back-to-login"]').addEventListener("click", () => showPanel("login"));
+  auth.querySelector('[data-action="code-back"]').addEventListener("click", () => showPanel("login"));
+  showPanel(panel, false);
   setMode(mode);
 
   const say = (el, text, ok) => {
@@ -961,106 +991,224 @@ const signedInGoHome = async (user) => {
     el.classList.toggle("is-ok", Boolean(ok));
     fitHeight();
   };
+  const messageOf = (form) => form.querySelector(".auth__message");
+  const busy = (form, on) => (form.querySelector(".auth__submit").disabled = on);
 
-  // Login and sign up
-  ["login", "signup"].forEach((key) => {
-    const form = forms[key];
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const message = form.querySelector(".auth__message");
-      const submit = form.querySelector(".auth__submit");
-      const invalid = formProblem(form);
-      if (invalid) return say(message, invalid);
-      if (!account) return say(message, "Accounts aren't available right now. Try again later.");
+  // ---------- The code step ----------
+  // purpose: "signup" (confirming a new account), "login" (after the
+  // password) or "recovery" (forgotten password, with a new one).
+  let pending = null;
+  let cooldown = 0;
+  const resendButton = forms.code.querySelector('[data-action="resend"]');
+  const codeInput = forms.code.querySelector("#code");
+  const newPassword = forms.code.querySelector('[data-slot="new-password"]');
 
-      const email = form.querySelector('input[name="email"]').value.trim();
-      const password = form.querySelector('input[name="password"]').value;
-      const nameInput = form.querySelector('input[name="name"]');
-
-      submit.disabled = true;
-      say(message, key === "login" ? "Logging in…" : "Creating your account…", true);
-      let result;
-      try {
-        result =
-          key === "login"
-            ? await account.auth.signInWithPassword({ email, password })
-            : await account.auth.signUp({
-                email,
-                password,
-                options: {
-                  data: { name: nameInput.value.trim() },
-                  emailRedirectTo: new URL("login.html", location.href).href,
-                },
-              });
-      } catch (e) {
-        result = { error: {} };
+  const startCooldown = () => {
+    let left = 60;
+    clearInterval(cooldown);
+    resendButton.disabled = true;
+    resendButton.textContent = `Send a new code (${left})`;
+    cooldown = setInterval(() => {
+      left -= 1;
+      resendButton.textContent = left > 0 ? `Send a new code (${left})` : "Send a new code";
+      if (left <= 0) {
+        clearInterval(cooldown);
+        resendButton.disabled = false;
       }
-      submit.disabled = false;
+    }, 1000);
+  };
 
-      const { data, error } = result;
-      if (error) return say(message, explainAuthError(error));
-      // With email confirmation on, signing up again with a taken email
-      // returns a user with no identities instead of an error.
-      if (key === "signup" && data.user && data.user.identities && !data.user.identities.length)
-        return say(message, AUTH_ERRORS.user_already_exists);
-      if (!data.session) {
-        local.set("hasAccount", "1");
-        setMode("login");
-        forms.login.querySelector('input[name="email"]').value = email;
-        return say(
-          forms.login.querySelector(".auth__message"),
-          `We sent a confirmation link to ${email}. Open it, then log in.`,
-          true
-        );
-      }
-      submit.disabled = true;
-      say(message, key === "login" ? "Welcome back. Taking you home…" : "Account created. Taking you home…", true);
-      signedInGoHome(data.user);
-    });
+  const askForCode = (purpose, email) => {
+    pending = { purpose, email };
+    forms.code.querySelector('[data-slot="code-intro"]').textContent =
+      purpose === "recovery"
+        ? `We emailed a 6-digit code to ${email}. Enter it with your new password.`
+        : `We emailed a 6-digit code to ${email}. Enter it to continue.`;
+    newPassword.hidden = purpose !== "recovery";
+    forms.code.querySelector(".auth__submit").textContent = purpose === "recovery" ? "Save new password" : "Verify";
+    codeInput.value = "";
+    forms.code.querySelector("#code-password").value = "";
+    say(messageOf(forms.code), "");
+    showPanel("code");
+    startCooldown();
+  };
+
+  // Sends (or re-sends) the code for the current purpose.
+  const sendCode = async (purpose, email) => {
+    try {
+      if (purpose === "signup") return await account.auth.resend({ type: "signup", email });
+      if (purpose === "recovery") return await account.auth.resetPasswordForEmail(email);
+      return await account.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+    } catch (e) {
+      return { error: {} };
+    }
+  };
+
+  const sendFailed = (error) =>
+    error && error.status >= 500
+      ? "We couldn't send the email right now. Try again later, or contact us."
+      : explainAuthError(error);
+
+  codeInput.addEventListener("input", () => {
+    codeInput.value = codeInput.value.replace(/[^0-9۰-۹]/g, "").replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).slice(0, 6);
   });
 
-  // Forgot password: the email links to reset.html. The reply is the same
-  // whether or not there's an account, so the form can't be used to find
-  // out who has one.
+  resendButton.addEventListener("click", async () => {
+    if (!pending) return;
+    resendButton.disabled = true;
+    const { error } = await sendCode(pending.purpose, pending.email);
+    if (error) {
+      resendButton.disabled = false;
+      return say(messageOf(forms.code), sendFailed(error));
+    }
+    say(messageOf(forms.code), "A new code is on its way.", true);
+    startCooldown();
+  });
+
+  forms.code.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = forms.code;
+    const invalid = formProblem(form);
+    if (invalid) return say(messageOf(form), invalid);
+    if (!pending) return showPanel("login");
+
+    busy(form, true);
+    say(messageOf(form), pending.purpose === "recovery" ? "Saving…" : "Checking the code…", true);
+    const token = codeInput.value;
+    let result;
+    try {
+      // A new account's code is checked as "signup"; older servers use "email".
+      result = await account.auth.verifyOtp({
+        email: pending.email,
+        token,
+        type: pending.purpose === "recovery" ? "recovery" : pending.purpose === "signup" ? "signup" : "email",
+      });
+      if (result.error && pending.purpose === "signup")
+        result = await account.auth.verifyOtp({ email: pending.email, token, type: "email" });
+      if (!result.error && pending.purpose === "recovery")
+        result = { ...result, ...(await account.auth.updateUser({ password: form.querySelector("#code-password").value })) };
+    } catch (e) {
+      result = { error: {} };
+    }
+    const { data, error } = result;
+    if (error) {
+      busy(form, false);
+      return say(messageOf(form), explainAuthError(error));
+    }
+    clearInterval(cooldown);
+    const text = {
+      signup: "Account created. Taking you home…",
+      login: "Welcome back. Taking you home…",
+      recovery: "Password changed. Taking you home…",
+    }[pending.purpose];
+    say(messageOf(form), text, true);
+    signedInGoHome(data.user || (data.session && data.session.user));
+  });
+
+  // ---------- Login: password, then a code ----------
+  forms.login.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = forms.login;
+    const invalid = formProblem(form);
+    if (invalid) return say(messageOf(form), invalid);
+    if (!account) return say(messageOf(form), "Accounts aren't available right now. Try again later.");
+
+    const email = form.querySelector('input[name="email"]').value.trim();
+    const password = form.querySelector('input[name="password"]').value;
+    busy(form, true);
+    say(messageOf(form), "Logging in…", true);
+    let result;
+    try {
+      result = await account.auth.signInWithPassword({ email, password });
+    } catch (e) {
+      result = { error: {} };
+    }
+
+    // A new account that never entered its code: send a fresh one.
+    if (result.error && result.error.code === "email_not_confirmed") {
+      const sent = await sendCode("signup", email);
+      busy(form, false);
+      if (sent.error) return say(messageOf(form), sendFailed(sent.error));
+      return askForCode("signup", email);
+    }
+    if (result.error) {
+      busy(form, false);
+      return say(messageOf(form), explainAuthError(result.error));
+    }
+
+    // The password was right. That session opens nothing on its own (see
+    // above), so drop it and ask for the emailed code.
+    await account.auth.signOut({ scope: "local" });
+    const sent = await sendCode("login", email);
+    busy(form, false);
+    if (sent.error) return say(messageOf(form), sendFailed(sent.error));
+    say(messageOf(form), "");
+    askForCode("login", email);
+  });
+
+  // ---------- Sign up: then a code ----------
+  forms.signup.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = forms.signup;
+    const invalid = formProblem(form);
+    if (invalid) return say(messageOf(form), invalid);
+    if (!account) return say(messageOf(form), "Accounts aren't available right now. Try again later.");
+
+    const email = form.querySelector('input[name="email"]').value.trim();
+    busy(form, true);
+    say(messageOf(form), "Creating your account…", true);
+    let result;
+    try {
+      result = await account.auth.signUp({
+        email,
+        password: form.querySelector('input[name="password"]').value,
+        options: { data: { name: form.querySelector('input[name="name"]').value.trim() } },
+      });
+    } catch (e) {
+      result = { error: {} };
+    }
+    busy(form, false);
+    const { data, error } = result;
+    if (error) return say(messageOf(form), error.status >= 500 ? sendFailed(error) : explainAuthError(error));
+    // An email that already has an account comes back with no identities.
+    if (data.user && data.user.identities && !data.user.identities.length)
+      return say(messageOf(form), AUTH_ERRORS.user_already_exists);
+    local.set("hasAccount", "1");
+    say(messageOf(form), "");
+    askForCode("signup", email);
+  });
+
+  // ---------- Forgot password: a code, then a new password ----------
   forms.reset.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = forms.reset;
-    const message = form.querySelector(".auth__message");
-    const submit = form.querySelector(".auth__submit");
     const invalid = formProblem(form);
-    if (invalid) return say(message, invalid);
-    if (!account) return say(message, "Accounts aren't available right now. Try again later.");
+    if (invalid) return say(messageOf(form), invalid);
+    if (!account) return say(messageOf(form), "Accounts aren't available right now. Try again later.");
 
     const email = form.querySelector("input").value.trim();
-    submit.disabled = true;
-    say(message, "Sending…", true);
-    let error;
-    try {
-      ({ error } = await account.auth.resetPasswordForEmail(email, {
-        redirectTo: new URL("reset.html", location.href).href,
-      }));
-    } catch (e) {
-      error = {};
-    }
-    submit.disabled = false;
-    if (error && (error.code || "").startsWith("over_")) return say(message, explainAuthError(error));
-    if (error && !error.status) return say(message, explainAuthError(error));
-    if (error && error.status >= 500) return say(message, "We couldn't send the email right now. Try again later, or contact us.");
-    say(message, `If there's an account for ${email}, a link to set a new password is on its way. Check your inbox and spam folder.`, true);
+    busy(form, true);
+    say(messageOf(form), "Sending…", true);
+    const { error } = await sendCode("recovery", email);
+    busy(form, false);
+    // The reply is the same whether or not there's an account, so the form
+    // can't be used to find out who has one.
+    if (error && (!error.status || error.status >= 500 || (error.code || "").startsWith("over_")))
+      return say(messageOf(form), sendFailed(error));
+    say(messageOf(form), "");
+    askForCode("recovery", email);
   });
 
-  // Arriving from a confirmation email or Google (or already signed in):
-  // go home. A failed Google sign-in comes back with an error instead.
+  // ---------- Coming back from Google (or already signed in) ----------
   const socialMessage = auth.querySelector(".auth__message--social");
   const returned = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
   if (returned.get("error_description"))
     say(socialMessage, "Signing in with Google didn't finish. Try again, or use your email.");
-  if (account)
-    account.auth.getSession().then(({ data }) => {
-      if (!data.session) return;
-      say(forms.login.querySelector(".auth__message"), "You're signed in. Taking you home…", true);
-      signedInGoHome(data.session.user);
-    });
+  verifiedSession().then((session) => {
+    if (!session) return;
+    say(messageOf(forms.login), "You're signed in. Taking you home…", true);
+    signedInGoHome(session.user);
+  });
 
   // Google sign-in, once it's switched on in Supabase (Authentication →
   // Sign In / Providers → Google). Until then the button says so.
@@ -1083,53 +1231,6 @@ const signedInGoHome = async (user) => {
       if (error) say(socialMessage, `${provider} sign-in didn't start. Try again, or use your email.`);
     })
   );
-})();
-
-// New-password page (reset.html) — where the reset email lands. Supabase
-// signs the visitor in from the link; then they choose a new password.
-(async function resetPage() {
-  const form = document.querySelector("#form-new-password");
-  if (!form) return;
-
-  const checking = document.querySelector('[data-slot="checking"]');
-  const expired = document.querySelector(".auth__expired");
-  const message = form.querySelector(".auth__message");
-  const say = (text, ok) => {
-    message.textContent = text;
-    message.classList.toggle("is-ok", Boolean(ok));
-  };
-
-  const failed = new URLSearchParams(location.hash.slice(1)).get("error_code");
-  const session = account && !failed && (await account.auth.getSession()).data.session;
-  checking.hidden = true;
-  if (!session) {
-    expired.hidden = false;
-    return;
-  }
-  history.replaceState(null, "", location.pathname); // drop the tokens from the address
-  form.hidden = false;
-  form.querySelector("input").focus();
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const invalid = formProblem(form);
-    if (invalid) return say(invalid);
-    const submit = form.querySelector(".auth__submit");
-    submit.disabled = true;
-    say("Saving…", true);
-    let error;
-    try {
-      ({ error } = await account.auth.updateUser({ password: form.querySelector("input").value }));
-    } catch (e) {
-      error = {};
-    }
-    if (error) {
-      submit.disabled = false;
-      return say(explainAuthError(error));
-    }
-    say("Password changed. Taking you home…", true);
-    signedInGoHome(session.user);
-  });
 })();
 
 // Profile page — the member's name, email, join date and photo from their
@@ -1207,7 +1308,7 @@ const signedInGoHome = async (user) => {
   pressCurrency();
 
   // ---------- Account ----------
-  const session = account && (await account.auth.getSession()).data.session;
+  const session = await verifiedSession();
   if (!session) {
     local.set("session", null);
     location.replace("login.html");
@@ -1441,7 +1542,7 @@ const signedInGoHome = async (user) => {
   };
   listButton.hidden = false;
   (async () => {
-    const session = account && (await account.auth.getSession()).data.session;
+    const session = await verifiedSession();
     if (!session) {
       listButton.addEventListener("click", () => (location.href = "login.html"));
       return;
@@ -1571,7 +1672,7 @@ const signedInGoHome = async (user) => {
   const form = page.querySelector(".admin__editor");
   const message = form.querySelector(".admin-message");
 
-  const session = account && (await account.auth.getSession()).data.session;
+  const session = await verifiedSession();
   if (!session) {
     local.set("session", null);
     location.replace("login.html");

@@ -24,7 +24,7 @@
   <meta name="description" content="Log in to SauFox Entertainment or create an account.">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=12">
+  <link rel="stylesheet" href="css/style.css?v=14">
 </head>
 <body class="login-page">
   <!-- Background: slanted strips of artwork from the studio's releases,
@@ -77,10 +77,10 @@
                 <button class="auth__submit" type="submit">Login</button>
               </form>
 
-              <!-- Forgot password: asks for the email, Supabase sends a link to
-                   reset.html. Replaces the login form until "Back to login". -->
+              <!-- Forgot password: asks for the email; a code arrives by email
+                   and is entered in the code form below. -->
               <form class="auth__form" id="form-reset" novalidate hidden>
-                <p class="auth__intro">Enter the email you signed up with and we&rsquo;ll send you a link to set a new password.</p>
+                <p class="auth__intro">Enter the email you signed up with and we&rsquo;ll email you a code to set a new password.</p>
                 <label class="field">
                   <span class="field__label">Email</span>
                   <span class="field__box">
@@ -90,8 +90,39 @@
                 </label>
 
                 <p class="auth__message" role="status" aria-live="polite"></p>
-                <button class="auth__submit" type="submit">Send reset link</button>
+                <button class="auth__submit" type="submit">Send code</button>
                 <button class="auth__forgot auth__forgot--back" type="button" data-action="back-to-login">Back to login</button>
+              </form>
+
+              <!-- The emailed 6-digit code, after sign-up, after the password
+                   at login, and for a forgotten password (with the new one). -->
+              <form class="auth__form" id="form-code" novalidate hidden>
+                <p class="auth__intro" data-slot="code-intro"></p>
+                <label class="field">
+                  <span class="field__label">Code</span>
+                  <span class="field__box field__box--code">
+                    <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" placeholder="------" required>
+                  </span>
+                </label>
+
+                <label class="field" data-slot="new-password" hidden>
+                  <span class="field__label">New password</span>
+                  <span class="field__box">
+                    <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
+                    <input id="code-password" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required>
+                    <button class="field__reveal" type="button" aria-label="Show password" aria-pressed="false">
+                      <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <svg class="eye-shut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                    </button>
+                  </span>
+                </label>
+
+                <p class="auth__message" role="status" aria-live="polite"></p>
+                <button class="auth__submit" type="submit">Verify</button>
+                <div class="auth__links">
+                  <button class="auth__forgot" type="button" data-action="resend">Send a new code</button>
+                  <button class="auth__forgot" type="button" data-action="code-back">Back to login</button>
+                </div>
               </form>
             </div>
 
@@ -160,8 +191,8 @@
     </p>
   </main>
 
-  <script src="js/vendor/supabase.js?v=12" defer></script>
-  <script src="js/fa.js?v=13" defer></script>
-  <script src="js/main.js?v=12" defer></script>
+  <script src="js/vendor/supabase.js?v=14" defer></script>
+  <script src="js/fa.js?v=14" defer></script>
+  <script src="js/main.js?v=14" defer></script>
 </body>
 </html>
