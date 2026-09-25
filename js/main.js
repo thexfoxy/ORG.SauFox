@@ -277,7 +277,15 @@ const passwordOnly = (session) => {
 };
 const verifiedSession = async () => {
   if (!account) return null;
-  const { session } = (await account.auth.getSession()).data;
+  let answer;
+  try {
+    answer = await account.auth.getSession();
+  } catch (e) {
+    // A hiccup (network, storage): try once more before giving up.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    answer = await account.auth.getSession();
+  }
+  const { session } = answer.data;
   if (!session) return null;
   if (passwordOnly(session)) {
     await account.auth.signOut({ scope: "local" });
@@ -1759,6 +1767,9 @@ const signedInGoHome = async (user) => {
 
   // What this browser remembers, shown until the account answers.
   showName(local.get("name") || "");
+  page.querySelector('[data-profile="email"]').textContent = local.get("email") || "";
+  if (local.get("since"))
+    page.querySelector('[data-profile="since"]').textContent = dateText(local.get("since"), { month: "long", year: "numeric" });
   showAvatar(local.get("avatar") || DEFAULT_AVATAR);
   nameInput.value = local.get("name") || "";
   pressCurrency();
@@ -1775,22 +1786,28 @@ const signedInGoHome = async (user) => {
 
   page.querySelector('[data-profile="email"]').textContent = user.email;
   page.querySelector('[data-profile="since"]').textContent = dateText(user.created_at, { month: "long", year: "numeric" });
+  local.set("email", user.email || null);
+  local.set("since", user.created_at || null);
 
   showMyList(user.id);
   showOrders(user.id);
   showLibrary(user.id);
-  // Admins get a way into the admin panel.
+  // Admins get a way into the admin panel: shown at once if this browser
+  // knows them as an admin, then confirmed by the database.
+  const adminLink = document.createElement("a");
+  adminLink.href = "admin.html";
+  adminLink.textContent = "Manage works";
+  if (local.get("admin") === "1") page.querySelector(".profile-head__plan").append(adminLink);
   account
     .from("admins")
     .select("user_id")
     .eq("user_id", user.id)
     .maybeSingle()
-    .then(({ data }) => {
-      if (!data) return;
-      const link = document.createElement("a");
-      link.href = "admin.html";
-      link.textContent = "Manage works";
-      page.querySelector(".profile-head__plan").append(link);
+    .then(({ data, error }) => {
+      if (error) return;
+      local.set("admin", data ? "1" : null);
+      if (data) page.querySelector(".profile-head__plan").append(adminLink);
+      else adminLink.remove();
     });
   let profile = await fetchProfile(user);
   if (profile) {
@@ -1892,7 +1909,7 @@ const signedInGoHome = async (user) => {
     try {
       await account.auth.signOut();
     } catch (e) {}
-    ["session", "name", "avatar", "admin"].forEach((key) => local.set(key, null));
+    ["session", "name", "avatar", "admin", "email", "since"].forEach((key) => local.set(key, null));
     location.href = "index.html";
   });
 })();
