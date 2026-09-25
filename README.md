@@ -194,10 +194,10 @@ up. Signed-out visitors log in first and come back to the checkout.
 
 ## Bot check (Cloudflare Turnstile)
 
-The login page can ask Cloudflare Turnstile for a token before every
-sign-up, password login, emailed code and password reset (Google sign-in
-and entering a code don't need one). It stays off until
-`TURNSTILE_SITE_KEY` in `js/main.js` is set. To turn it on:
+The login page asks Cloudflare Turnstile for a token before every
+sign-up, password login, Google sign-in, emailed code and password reset
+(entering a code doesn't need one). It's on: `TURNSTILE_SITE_KEY` in
+`js/main.js` holds the widget's site key. How it was set up:
 
 1. Cloudflare dashboard → Turnstile → Add widget, hostname
    `saufoxentertainment.ir`, mode Managed. Put its site key in

@@ -149,7 +149,7 @@ const SUPABASE_URL = "https://gwyqkzhhnspfadqefmix.supabase.co";
 const SUPABASE_KEY = "sb_publishable_IB06YrDhrsKJbVghWP-zzg_xDgB1mXN";
 // Cloudflare Turnstile site key (public) for the login page's bot check.
 // Empty: no captcha. Set it before turning CAPTCHA protection on in Supabase.
-const TURNSTILE_SITE_KEY = "";
+const TURNSTILE_SITE_KEY = "0x4AAAAAAFDsz8h-Njtg3UzM";
 const timeout = (ms) => (AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
 
 const account = (() => {
