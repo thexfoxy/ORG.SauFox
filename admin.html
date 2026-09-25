@@ -7,7 +7,7 @@
   <title>Manage works · SauFox Entertainment</title>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=26">
+  <link rel="stylesheet" href="css/style.css?v=27">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -58,6 +58,35 @@
         <ol class="admin-orders__list"></ol>
         <p class="admin-orders__empty" hidden>No orders yet.</p>
       </section>
+
+      <!-- Online payment (Zarinpal, through the Supabase Edge Function
+           "payment") and the subscription prices on the home page. -->
+      <form class="admin-payments admin-group" novalidate>
+        <h2 class="admin-rates__title">Payments and subscriptions</h2>
+        <p class="admin-group__hint">Test mode sends only admins to Zarinpal&rsquo;s sandbox, with no real money. Live needs your Zarinpal merchant ID saved as <code>ZARINPAL_MERCHANT_ID</code> in Supabase (Edge Functions &rarr; Secrets). While it&rsquo;s off, orders wait for payment and the checkout says online payment opens soon.</p>
+        <div class="admin-grid admin-grid--3">
+          <label class="admin-field">
+            <span>Online payment</span>
+            <select id="payments-mode">
+              <option value="off">Off</option>
+              <option value="test">Test (sandbox, admins only)</option>
+              <option value="live">Live</option>
+            </select>
+          </label>
+          <label class="admin-field">
+            <span>Basic, per month, in Rials</span>
+            <input id="plan-basic" type="number" min="1" step="1000" inputmode="numeric">
+          </label>
+          <label class="admin-field">
+            <span>Premium, per month, in Rials</span>
+            <input id="plan-premium" type="number" min="1" step="1000" inputmode="numeric">
+          </label>
+        </div>
+        <div class="admin-maintenance__save">
+          <p class="admin-message" role="status" aria-live="polite"></p>
+          <button class="admin-button admin-button--primary" type="submit">Save</button>
+        </div>
+      </form>
 
       <!-- Maintenance mode: visitors see the maintenance page; admins
            still see the site. -->
@@ -285,7 +314,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=26" defer></script>
-  <script src="js/main.js?v=26" defer></script>
+  <script src="js/vendor/supabase.js?v=27" defer></script>
+  <script src="js/main.js?v=27" defer></script>
 </body>
 </html>

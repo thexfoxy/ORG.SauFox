@@ -214,7 +214,7 @@ const loadSite = async () => {
   try {
     const [rows, settings] = await Promise.all([
       get("works?select=*&published=eq.true&order=sort.asc,created_at.asc"),
-      get("site_settings?select=usd_irr,eur_irr,maintenance,maintenance_note,maintenance_note_fa&id=eq.1").catch(() => []),
+      get("site_settings?select=usd_irr,eur_irr,maintenance,maintenance_note,maintenance_note_fa,plan_basic_irr,plan_premium_irr,payments&id=eq.1").catch(() => []),
     ]);
     const rates = settings[0] || {};
     local.set("catalog", JSON.stringify({ rows, rates }));
@@ -225,7 +225,7 @@ const loadSite = async () => {
       if (!saved) return { works: [], settings: {}, offline: true };
       const rows = Array.isArray(saved) ? saved : saved.rows || [];
       // A saved copy doesn't count as maintenance: that needs the server.
-      const rates = { ...(saved.rates || {}), maintenance: false };
+      const rates = { ...(saved.rates || {}), maintenance: false, payments: "off" };
       return { works: rows.map((row) => toWork(row, rates)), settings: rates, offline: false };
     } catch (e2) {
       return { works: [], settings: {}, offline: true };
@@ -234,7 +234,7 @@ const loadSite = async () => {
 };
 
 // Started once, on the pages that show works.
-const site = document.querySelector(".hero, .works, .title-page, .login-bg, .profile-page, .checkout")
+const site = document.querySelector(".hero, .works, .plans, .title-page, .login-bg, .profile-page, .checkout")
   ? loadSite()
   : Promise.resolve({ works: [], settings: {}, offline: false });
 const catalog = site.then((data) => data.works);
@@ -287,6 +287,46 @@ const verifiedSession = async () => {
 const goLogin = () => {
   local.set("next", location.pathname.split("/").pop() + location.search + location.hash);
   location.href = "login.html";
+};
+
+// Online payment (Supabase Edge Function "payment", Zarinpal). Open when
+// the admin panel sets it live, or in test mode for admins only.
+const paymentsOpen = (settings) =>
+  settings.payments === "live" || (settings.payments === "test" && local.get("admin") === "1");
+const PAYMENT_ERRORS = {
+  closed: "Online payment isn't open yet. Your order is saved, and we'll email you when you can pay.",
+  not_configured: "Online payment isn't open yet. Your order is saved, and we'll email you when you can pay.",
+  gateway: "The bank gateway didn't answer. Try again in a moment.",
+  not_payable: "This order can't be paid any more. See its status in your orders.",
+  signed_out: "Your session has ended. Log in again to pay.",
+};
+const payment = async (body, session) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/payment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_KEY,
+        ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify(body),
+      signal: timeout(30000),
+    });
+    return await res.json();
+  } catch (e) {
+    return { error: "network" };
+  }
+};
+// Sends the member to the bank. Returns a message if that can't happen.
+const payOrder = async (orderId) => {
+  const session = await verifiedSession();
+  if (!session) return PAYMENT_ERRORS.signed_out;
+  const answer = await payment({ action: "start", order_id: orderId }, session);
+  if (answer.url) {
+    location.href = answer.url;
+    return "";
+  }
+  return PAYMENT_ERRORS[answer.error] || "Couldn't reach the payment service. Check your connection and try again.";
 };
 
 // Mobile numbers typed with Persian or Arabic digits, spaces or dashes.
@@ -844,22 +884,29 @@ const posterCard = (work) => {
 
 // Section 5 — Subscriptions: plan prices use the same currency ticker as the
 // work cards and follow the currency chosen there ("auto" keeps cycling).
-(function planPrices() {
+(async function planPrices() {
   const boxes = [...document.querySelectorAll(".plan__amounts")];
   if (!boxes.length) return;
 
+  // Prices are set in Rials in the admin panel; dollars and euros follow
+  // the exchange rates there (marked "≈").
+  const { settings } = await site;
+  const plans = boxes.map((box) => pricesOf({ price_irr: settings[`plan_${box.dataset.plan}_irr`] ?? null }, settings));
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const CODES = ["USD", "EUR", "IRR"];
-  const tickers = boxes.map((box) => {
-    const items = CODES.map((code, i) => {
+  const CODES = ["USD", "EUR", "IRR"].filter((code) => plans.every((plan) => plan.prices[code] != null));
+  if (!CODES.length) {
+    boxes.forEach((box) => (box.closest(".plan__price").hidden = true));
+    return;
+  }
+  const tickers = boxes.map((box, b) =>
+    CODES.map((code, i) => {
       const span = document.createElement("span");
       span.className = "card__amount" + (i === 0 ? " is-active" : "");
-      span.textContent = money[code](Number(box.dataset[code.toLowerCase()]));
+      span.textContent = priceText(plans[b], code);
       box.append(span);
       return span;
-    });
-    return items;
-  });
+    })
+  );
 
   let mode = "auto";
   let current = 0;
@@ -867,7 +914,7 @@ const posterCard = (work) => {
   const fit = () =>
     boxes.forEach((box, b) => (box.style.width = `${tickers[b][current].offsetWidth}px`));
   const show = (i) => {
-    if (i === current) return;
+    if (i === current || i < 0) return;
     current = i;
     fit();
     tickers.forEach((items) =>
@@ -889,9 +936,17 @@ const posterCard = (work) => {
   });
 
   setInterval(() => {
-    if (document.hidden || calm.matches || mode !== "auto") return;
+    if (document.hidden || calm.matches || mode !== "auto" || CODES.length < 2) return;
     show((current + 1) % CODES.length);
   }, 2600);
+
+  // Members: subscriptions can't be bought yet, so no sign-up button.
+  if (local.get("session"))
+    document.querySelectorAll(".plan__button").forEach((button) => {
+      button.removeAttribute("href");
+      button.classList.add("is-soon");
+      button.textContent = "Opens soon";
+    });
 })();
 
 // Section 5 — Subscriptions: each plan's hover light follows the pointer.
@@ -1490,6 +1545,7 @@ const signedInGoHome = async (user) => {
 
   // ---------- Orders ----------
   const ORDER_STATUS = { awaiting_payment: "Awaiting payment", paid: "Paid", cancelled: "Cancelled" };
+  let canPay = false;
   const orderRow = (order, works) => {
     const make = (tag, className, text) => {
       const node = document.createElement(tag);
@@ -1515,10 +1571,25 @@ const signedInGoHome = async (user) => {
     const title = make("strong", "", order.title);
     title.translate = false;
     text.append(title, make("span", "", `Order ${order.number} · ${dateText(order.created_at)}`));
+    if (order.ref_id) text.append(make("span", "selectable", `Reference ${order.ref_id}`));
     const side = make("div", "order__side");
     const status = make("span", "order-status", ORDER_STATUS[order.status] || order.status);
     status.dataset.status = order.status;
     side.append(make("span", "order__amount", money.IRR(order.amount_irr)), status);
+    if (order.status === "awaiting_payment" && canPay) {
+      const pay = make("button", "order__pay", "Pay now");
+      pay.type = "button";
+      pay.addEventListener("click", async () => {
+        pay.disabled = true;
+        pay.textContent = "Taking you to the bank…";
+        const problem = await payOrder(order.id);
+        if (!problem) return;
+        pay.disabled = false;
+        pay.textContent = "Pay now";
+        text.append(make("span", "order__problem", problem));
+      });
+      side.append(pay);
+    }
     if (order.status === "awaiting_payment") {
       // Press twice: the first press asks.
       const cancel = make("button", "order__cancel", "Cancel order");
@@ -1538,7 +1609,7 @@ const signedInGoHome = async (user) => {
           .from("orders")
           .update({ status: "cancelled" })
           .eq("id", order.id)
-          .select("id, number, work_id, title, amount_irr, status, created_at")
+          .select("id, number, work_id, title, amount_irr, status, created_at, ref_id")
           .single();
         if (error) {
           cancel.disabled = false;
@@ -1556,11 +1627,12 @@ const signedInGoHome = async (user) => {
   const showOrders = async (userId) => {
     const { data, error } = await account
       .from("orders")
-      .select("id, number, work_id, title, amount_irr, status, created_at")
+      .select("id, number, work_id, title, amount_irr, status, created_at, ref_id")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error || !data.length) return;
     const works = await catalog;
+    canPay = paymentsOpen((await site).settings);
     const list = document.createElement("ol");
     list.className = "order-list";
     list.append(...data.map((order) => orderRow(order, works)));
@@ -2543,6 +2615,44 @@ const signedInGoHome = async (user) => {
     ratesMessage.textContent = error ? "The rates weren't saved. Check your connection and try again." : "Saved. Prices on the site use the new rates.";
   });
 
+  // ---------- Payments and subscription prices ----------
+  const payForm = page.querySelector(".admin-payments");
+  const payMessage = payForm.querySelector(".admin-message");
+  const payMode = payForm.querySelector("#payments-mode");
+  const planBasic = payForm.querySelector("#plan-basic");
+  const planPremium = payForm.querySelector("#plan-premium");
+  account
+    .from("site_settings")
+    .select("payments, plan_basic_irr, plan_premium_irr")
+    .eq("id", 1)
+    .maybeSingle()
+    .then(({ data }) => {
+      if (!data) return;
+      payMode.value = data.payments || "off";
+      planBasic.value = data.plan_basic_irr ?? "";
+      planPremium.value = data.plan_premium_irr ?? "";
+    });
+  payForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const basic = number(planBasic);
+    const premium = number(planPremium);
+    if ([basic, premium].some((n) => n !== null && !(n > 0))) {
+      payMessage.classList.remove("is-ok");
+      payMessage.textContent = "Prices must be numbers above 0, or empty.";
+      return;
+    }
+    payMessage.classList.add("is-ok");
+    payMessage.textContent = "Saving…";
+    const { error } = await account
+      .from("site_settings")
+      .update({ payments: payMode.value, plan_basic_irr: basic, plan_premium_irr: premium, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    payMessage.classList.toggle("is-ok", !error);
+    payMessage.textContent = error
+      ? "Not saved. Check your connection and try again."
+      : { off: "Saved. Online payment is off.", test: "Saved. Test payments are on for admins.", live: "Saved. Online payment is live." }[payMode.value];
+  });
+
   // ---------- Orders ----------
   // Newest first. The status is the only thing that can change here; the
   // buyer sees it in their profile.
@@ -2553,9 +2663,11 @@ const signedInGoHome = async (user) => {
     const row = make("li", "admin-order");
     const main = make("div", "admin-order__main");
     main.append(
-      make("strong", "", `#${order.number} · ${order.title}`),
+      make("strong", "", `#${order.number} · ${order.title}${order.test ? " (test)" : ""}`),
       make("span", "", `${money.IRR(order.amount_irr)} · ${whenText(order.created_at)}`)
     );
+    if (order.ref_id)
+      main.append(make("span", "selectable", `Zarinpal ref ${order.ref_id}${order.card_pan ? ` · card ${order.card_pan}` : ""}`));
     const buyer = make("div", "admin-order__buyer selectable");
     const mail = make("a", "", order.email);
     mail.href = `mailto:${order.email}`;
@@ -2585,7 +2697,7 @@ const signedInGoHome = async (user) => {
   };
   account
     .from("orders")
-    .select("id, number, title, amount_irr, name, email, phone, status, created_at")
+    .select("id, number, title, amount_irr, name, email, phone, status, created_at, ref_id, card_pan, test")
     .order("created_at", { ascending: false })
     .limit(200)
     .then(({ data, error }) => {
@@ -2603,7 +2715,9 @@ const signedInGoHome = async (user) => {
 
 // Checkout (checkout.html?id=<id>) — one work, for members. The order is
 // saved as "awaiting payment"; the database fills in the title, price and
-// email itself, so nothing here can change what's charged.
+// email itself, so nothing here can change what's charged. When online
+// payment is open, the member goes on to Zarinpal, which sends them back to
+// checkout.html?order=<order id>&Authority=…&Status=OK|NOK.
 (async function checkoutPage() {
   const page = document.querySelector(".checkout");
   if (!page) return;
@@ -2621,6 +2735,74 @@ const signedInGoHome = async (user) => {
     message.textContent = text;
     message.classList.toggle("is-ok", Boolean(ok));
   };
+
+  // The closing screen: "placed" (payment not open, or it didn't start),
+  // "paid", or "failed" (back from the bank without paying).
+  const doneSlot = (name) => done.querySelector(`[data-slot="${name}"]`);
+  const retry = done.querySelector('[data-action="pay-again"]');
+  const finish = (state, { number, ref, note = "" }) => {
+    const TEXT = {
+      placed: [
+        "Your order is in",
+        "It’s waiting for payment. Online payment opens soon, and we’ll email you when you can pay. You can follow or cancel it in your profile.",
+      ],
+      paid: ["Payment received", "Thank you! The order is paid and shows in your profile. Keep the reference number for any questions."],
+      failed: [
+        "The payment didn’t go through",
+        "Your order is saved. If money left your account, the bank returns it within 72 hours. You can try again now, or later from your orders.",
+      ],
+    }[state];
+    done.dataset.state = state;
+    doneSlot("done-title").textContent = TEXT[0];
+    doneSlot("done-text").textContent = TEXT[1];
+    const numberLine = doneSlot("done-number");
+    numberLine.replaceChildren();
+    if (number != null) numberLine.append(`Order number ${number}`);
+    if (ref) {
+      const refText = document.createElement("span");
+      refText.className = "selectable";
+      refText.textContent = `Reference ${ref}`;
+      numberLine.append(" · ", refText);
+    }
+    doneSlot("done-message").textContent = note;
+    retry.hidden = state !== "failed";
+    doneSlot("orders-link").classList.toggle("empty__button--accent", state !== "failed");
+    show(done);
+    scrollTo(0, 0);
+  };
+
+  // ---------- Back from the bank ----------
+  const params = new URLSearchParams(location.search);
+  const returning = params.get("order");
+  if (returning) {
+    gate.textContent = "Checking your payment…";
+    const answer = await payment({
+      action: "verify",
+      order_id: returning,
+      authority: params.get("Authority") || "",
+      status: params.get("Status") || "",
+    });
+    // Reloading shouldn't ask the bank again.
+    history.replaceState(null, "", `checkout.html?order=${encodeURIComponent(returning)}`);
+    if (answer.error === "not_found" || answer.error === "bad_request") return show(missing);
+    if (answer.error) {
+      gate.textContent = "Couldn't reach the payment service. Reload the page in a moment to check again.";
+      return;
+    }
+    if (answer.paid) return finish("paid", { number: answer.number, ref: answer.ref_id });
+    finish("failed", { number: answer.number });
+    retry.addEventListener("click", async () => {
+      retry.disabled = true;
+      doneSlot("done-message").classList.add("is-ok");
+      doneSlot("done-message").textContent = "Taking you to the bank…";
+      const problem = await payOrder(returning);
+      if (!problem) return;
+      retry.disabled = false;
+      doneSlot("done-message").classList.remove("is-ok");
+      doneSlot("done-message").textContent = problem;
+    });
+    return;
+  }
 
   const session = await verifiedSession();
   if (!session) return goLogin();
@@ -2673,6 +2855,17 @@ const signedInGoHome = async (user) => {
   form.querySelector('[data-slot="email"]').textContent = user.email;
   nameInput.value = local.get("name") || (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) || "";
   phoneInput.value = local.get("phone") || "";
+
+  // Payment: straight on to the bank when it's open.
+  const { settings } = await site;
+  const canPay = paymentsOpen(settings);
+  if (canPay) {
+    form.querySelector('[data-slot="pay-note"]').textContent =
+      settings.payments === "test"
+        ? "Test mode: you'll go to Zarinpal's sandbox, and no real money moves. Only admins see this."
+        : "After you place the order, you'll go to Zarinpal's secure page to pay, then come back here.";
+    submit.textContent = "Place order and pay";
+  }
   show(form);
 
   form.addEventListener("submit", async (event) => {
@@ -2696,7 +2889,7 @@ const signedInGoHome = async (user) => {
     const { data, error } = await account
       .from("orders")
       .insert({ work_id: work.id, name, phone })
-      .select("number")
+      .select("id, number")
       .single();
     if (error) {
       submit.disabled = false;
@@ -2705,9 +2898,10 @@ const signedInGoHome = async (user) => {
       return say("Your order wasn't placed. Check your connection and try again.");
     }
     local.set("phone", phone);
-    done.querySelector('[data-slot="done-number"]').textContent = `Order number ${data.number}`;
-    show(done);
-    scrollTo(0, 0);
+    if (!canPay) return finish("placed", { number: data.number });
+    say("Taking you to the bank…", true);
+    const problem = await payOrder(data.id);
+    if (problem) finish("placed", { number: data.number, note: problem });
   });
 })();
 

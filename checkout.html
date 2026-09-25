@@ -25,7 +25,7 @@
   <meta name="robots" content="noindex">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=26">
+  <link rel="stylesheet" href="css/style.css?v=27">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -106,11 +106,11 @@
             <div class="checkout-pay">
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M2.5 9.5h19M6.5 15h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
               <div>
-                <strong>Iranian bank card, through Shaparak</strong>
-                <p>You&rsquo;ll pay in Rials on the bank&rsquo;s secure page; your card details never reach this site.</p>
+                <strong>Iranian bank card, through Zarinpal</strong>
+                <p>You&rsquo;ll pay in Rials on the secure Shaparak payment page; your card details never reach this site.</p>
               </div>
             </div>
-            <p class="checkout-card__notice">Online payment opens soon. Place your order now and nothing is charged: we&rsquo;ll email you when you can pay for it.</p>
+            <p class="checkout-card__notice" data-slot="pay-note">Online payment opens soon. Place your order now and nothing is charged: we&rsquo;ll email you when you can pay for it.</p>
           </section>
         </div>
 
@@ -139,16 +139,20 @@
       </div>
     </form>
 
+    <!-- After placing an order, and after coming back from the bank. -->
     <section class="checkout__done" hidden>
       <div class="empty">
         <span class="checkout__tick" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="checkout__tick-ok" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="checkout__tick-no" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
         </span>
-        <p class="empty__title">Your order is in</p>
+        <p class="empty__title" data-slot="done-title">Your order is in</p>
         <p class="empty__text" data-slot="done-number"></p>
-        <p class="empty__text">It&rsquo;s waiting for payment. Online payment opens soon, and we&rsquo;ll email you when you can pay. You can follow or cancel it in your profile.</p>
+        <p class="empty__text" data-slot="done-text">It&rsquo;s waiting for payment. Online payment opens soon, and we&rsquo;ll email you when you can pay. You can follow or cancel it in your profile.</p>
+        <p class="auth__message" data-slot="done-message" role="status" aria-live="polite"></p>
         <div class="checkout__done-actions">
-          <a class="empty__button empty__button--accent" href="profile.html#orders">See my orders</a>
+          <button class="empty__button empty__button--accent" type="button" data-action="pay-again" hidden>Try paying again</button>
+          <a class="empty__button empty__button--accent" href="profile.html#orders" data-slot="orders-link">See my orders</a>
           <a class="empty__button" href="index.html">Back to all works</a>
         </div>
       </div>
@@ -199,8 +203,8 @@
     </div>
   </footer>
 
-  <script src="js/vendor/supabase.js?v=26" defer></script>
-  <script src="js/fa.js?v=26" defer></script>
-  <script src="js/main.js?v=26" defer></script>
+  <script src="js/vendor/supabase.js?v=27" defer></script>
+  <script src="js/fa.js?v=27" defer></script>
+  <script src="js/main.js?v=27" defer></script>
 </body>
 </html>

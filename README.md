@@ -137,10 +137,22 @@ up. Signed-out visitors log in first and come back to the checkout.
 - Members see their orders under Profile → Orders and can cancel an unpaid
   one. Admins see every order in the admin panel and set it to Paid or
   Cancelled.
-- Online payment isn't connected yet: the checkout says so and nothing is
-  charged. Once the eNamad badge is in, a Shaparak payment gateway takes
-  the step after "Place order".
+- Online payment goes through Zarinpal, via the Supabase Edge Function
+  `payment` (source in `supabase/functions/payment/`). "Start" checks the
+  member and the order and returns the bank page; Zarinpal sends the buyer
+  back to `checkout.html?order=<id>&Authority=…&Status=…`, where "verify"
+  asks Zarinpal and marks the order paid with its reference number. Only
+  that function can mark an order paid (the trigger lets the service role
+  through); the amount always comes from the order.
+- The admin panel's "Payments and subscriptions" switches it: Off (orders
+  wait; the checkout says payment opens soon), Test (Zarinpal's sandbox,
+  admins only; orders are marked test) or Live. Live needs the Zarinpal
+  merchant ID in Supabase → Edge Functions → Secrets as
+  `ZARINPAL_MERCHANT_ID`.
 - Terms of purchase and refunds: `terms.html#purchases`.
+- Subscription prices (Rials per month) are set in the same admin form;
+  the home page shows them, in dollars and euros too once exchange rates
+  are set. Subscriptions can't be bought yet: members see "Opens soon".
 
 ## Content protection
 

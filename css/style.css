@@ -4364,3 +4364,66 @@ a.hero__panel {
     justify-self: start;
   }
 }
+
+/* Payments */
+.plan__button.is-soon,
+.plan--premium .plan__button.is-soon {
+  color: var(--muted);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+  text-shadow: none;
+  cursor: default;
+}
+
+.order__pay {
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius);
+  font: 600 13px/1 var(--font-body);
+  color: #1a0d04;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.order__pay:hover {
+  background: #ff8c3a;
+}
+
+.order__pay:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.order__text .order__problem {
+  color: #ff8a7a;
+}
+
+.checkout__tick-no,
+.checkout__done[data-state="failed"] .checkout__tick-ok {
+  display: none;
+}
+
+.checkout__done[data-state="failed"] .checkout__tick-no {
+  display: block;
+}
+
+.checkout__done[data-state="failed"] .checkout__tick {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.checkout__done .auth__message {
+  max-width: 44ch;
+}
+
+.admin-group__hint code {
+  font-size: 13px;
+  color: var(--text);
+}
+
+@media (max-width: 520px) {
+  .order__side {
+    grid-template-columns: auto auto auto 1fr;
+  }
+}
