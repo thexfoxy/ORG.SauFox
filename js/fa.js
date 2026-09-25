@@ -176,6 +176,7 @@ const FA = {
   "We emailed a 6-digit code to {email}. Enter it with your new password.": "یک کد ۶ رقمی به {email} فرستادیم. آن را همراه رمز جدیدتان وارد کنید.",
   "A new code is on its way.": "کد جدید در راه است.",
   "Checking the code…": "در حال بررسی کد…",
+  "Signing in…": "در حال ورود…",
   "Enter the 6-digit code from the email.": "کد ۶ رقمی ایمیل را وارد کنید.",
   "That code is wrong or has expired. Check it, or send a new one.": "این کد اشتباه است یا منقضی شده. دوباره بررسی کنید یا کد جدید بگیرید.",
   "Codes aren't switched on yet. Try again later.": "ارسال کد هنوز فعال نشده است. کمی بعد دوباره امتحان کنید.",

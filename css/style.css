@@ -3567,3 +3567,19 @@ a.hero__panel {
   opacity: 0.55;
   cursor: default;
 }
+
+/* Google's own sign-in button (an iframe it draws), in the Google slot. */
+.social--google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  background: none;
+  overflow: hidden;
+}
+
+.social--google:hover {
+  background: none;
+}

@@ -52,7 +52,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=14`); raise it in all three pages
+JS with a version number (`style.css?v=15`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -207,7 +207,12 @@ Login page (`login.html`):
       (with "Send a new code" after 60 seconds); "Forgot password?" sends a
       code and takes the new password in the same form. `login.html#reset`
       opens the forgot-password form directly.
-- [x] Google sign-in, once it's switched on in Supabase (see Accounts).
+- [x] Google sign-in with Google's own button on the page (Google Identity
+      Services, client ID in `js/main.js`), so Google shows
+      saufoxentertainment.ir; the ID token goes to Supabase with a one-time
+      nonce. If Google's script doesn't load, the plain button signs in by
+      redirect instead. The OAuth client needs
+      `https://saufoxentertainment.ir` under Authorized JavaScript origins.
 - [ ] Apple sign-in: needs a paid Apple developer account; the button says
       it isn't connected.
 

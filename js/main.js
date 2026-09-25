@@ -1217,7 +1217,74 @@ const signedInGoHome = async (user) => {
     .then((settings) => settings.external || {})
     .catch(() => ({}));
 
-  auth.querySelectorAll(".social").forEach((button) =>
+  // Google's own button, on this site: Google shows saufoxentertainment.ir
+  // (not the Supabase address), signs in in a small window and hands back
+  // a signed token that Supabase checks. If Google's script doesn't load,
+  // the plain button below stays and signs in the old way (a redirect).
+  const GOOGLE_CLIENT_ID = "514760919689-jq63kmblt3icbfeorg3mhf9scg4g0i22.apps.googleusercontent.com";
+  (async function googleOnSite() {
+    const fallback = auth.querySelector('.social[data-provider="Google"]');
+    if (!account || !fallback || !window.crypto || !crypto.subtle) return;
+    const loaded = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = reject;
+      setTimeout(reject, 8000);
+      document.head.append(script);
+    });
+    try {
+      await loaded;
+    } catch (e) {
+      return;
+    }
+    const gsi = window.google && google.accounts && google.accounts.id;
+    if (!gsi) return;
+
+    // Google puts the hash of this one-time value in the token; Supabase
+    // checks it against the value itself, so a token can't be replayed.
+    const nonce = Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, "0")).join("");
+    const hashed = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(nonce))), (b) =>
+      b.toString(16).padStart(2, "0")
+    ).join("");
+
+    gsi.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      nonce: hashed,
+      ux_mode: "popup",
+      use_fedcm_for_button: true,
+      callback: async ({ credential }) => {
+        say(socialMessage, "Signing in…", true);
+        let result;
+        try {
+          result = await account.auth.signInWithIdToken({ provider: "google", token: credential, nonce });
+        } catch (e) {
+          result = { error: {} };
+        }
+        if (result.error) return say(socialMessage, "Signing in with Google didn't finish. Try again, or use your email.");
+        say(socialMessage, "You're signed in. Taking you home…", true);
+        signedInGoHome(result.data.user);
+      },
+    });
+
+    const slot = document.createElement("div");
+    slot.className = "social social--google";
+    fallback.before(slot);
+    gsi.renderButton(slot, {
+      type: "standard",
+      theme: "filled_black",
+      size: "large",
+      shape: "rectangular",
+      text: "continue_with",
+      logo_alignment: "center",
+      locale: LANG,
+      width: Math.max(200, Math.min(400, Math.round(slot.clientWidth || fallback.offsetWidth))),
+    });
+    fallback.hidden = true;
+  })();
+
+  auth.querySelectorAll(".social[data-provider]").forEach((button) =>
     button.addEventListener("click", async () => {
       const provider = button.dataset.provider;
       const id = provider.toLowerCase();
