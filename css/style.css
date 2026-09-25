@@ -4427,3 +4427,7 @@ a.hero__panel {
     grid-template-columns: auto auto auto 1fr;
   }
 }
+
+.admin-payments__ip {
+  margin: 16px 0 0;
+}

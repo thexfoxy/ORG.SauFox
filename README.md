@@ -149,6 +149,12 @@ up. Signed-out visitors log in first and come back to the checkout.
   admins only; orders are marked test) or Live. Live needs the Zarinpal
   merchant ID in Supabase → Edge Functions → Secrets as
   `ZARINPAL_MERCHANT_ID`.
+- Zarinpal only accepts requests from the server IPs registered with it.
+  Edge Functions leave from a different IP each time, so the function sends
+  its Zarinpal requests through the database (`public.zarinpal_call`, the
+  `http` extension, service role only), which always leaves from the same
+  IP. The admin panel shows that IP (`public.server_ip()`); if it ever
+  changes (after a project restore or upgrade), update it in Zarinpal.
 - Terms of purchase and refunds: `terms.html#purchases`.
 - Subscription prices (Rials per month) are set in the same admin form;
   the home page shows them, in dollars and euros too once exchange rates

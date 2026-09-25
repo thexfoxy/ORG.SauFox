@@ -2632,6 +2632,11 @@ const signedInGoHome = async (user) => {
       planBasic.value = data.plan_basic_irr ?? "";
       planPremium.value = data.plan_premium_irr ?? "";
     });
+  // Zarinpal only takes requests from registered IPs; the payment function
+  // sends them from the database, so that's the IP to register.
+  account.rpc("server_ip").then(({ data, error }) => {
+    payForm.querySelector('[data-slot="server-ip"]').textContent = error || !data ? "couldn't check" : data;
+  });
   payForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const basic = number(planBasic);

@@ -9,6 +9,11 @@
 // .payments switches it: "off", "test" (Zarinpal's sandbox; only admins can
 // start a payment, and orders paid there are marked test) or "live" (needs
 // the ZARINPAL_MERCHANT_ID secret in Edge Functions → Secrets).
+//
+// Zarinpal only accepts requests from registered server IPs. Edge Functions
+// leave from a different IP each time, so the requests themselves go out
+// from the database (public.zarinpal_call), whose IP stays the same; the
+// admin panel shows it.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SITE = "https://saufoxentertainment.ir";
@@ -26,24 +31,18 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const gateway = (test: boolean) => {
-  const host = test ? "https://sandbox.zarinpal.com" : "https://payment.zarinpal.com";
-  return {
-    merchant: test ? SANDBOX_MERCHANT : Deno.env.get("ZARINPAL_MERCHANT_ID") || "",
-    request: `${host}/pg/v4/payment/request.json`,
-    verify: `${host}/pg/v4/payment/verify.json`,
-    startPay: (authority: string) => `${host}/pg/StartPay/${authority}`,
-  };
-};
+const gateway = (test: boolean) => ({
+  test,
+  merchant: test ? SANDBOX_MERCHANT : Deno.env.get("ZARINPAL_MERCHANT_ID") || "",
+  startPay: (authority: string) =>
+    `${test ? "https://sandbox.zarinpal.com" : "https://payment.zarinpal.com"}/pg/StartPay/${authority}`,
+});
 
-const post = async (url: string, body: unknown) => {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(20000),
-  });
-  return res.json().catch(() => ({}));
+// Sends a request to Zarinpal through the database (see above).
+const zarinpal = async (test: boolean, action: "request" | "verify", payload: unknown) => {
+  const { data, error } = await db.rpc("zarinpal_call", { test, action, payload });
+  if (error) console.error("zarinpal_call", error.message);
+  return data || {};
 };
 
 // The caller, if their session came through an emailed code or Google
@@ -105,7 +104,7 @@ Deno.serve(async (req) => {
     if (!order || order.user_id !== user.id) return reply({ error: "not_found" }, 404);
     if (order.status !== "awaiting_payment") return reply({ error: "not_payable", status: order.status }, 409);
 
-    const answer = await post(zp.request, {
+    const answer = await zarinpal(test, "request", {
       merchant_id: zp.merchant,
       amount: order.amount_irr,
       currency: "IRR",
@@ -140,7 +139,7 @@ Deno.serve(async (req) => {
     if (body.status !== "OK") return reply({ paid: false, number: order.number });
 
     const zp = gateway(order.test);
-    const answer = await post(zp.verify, { merchant_id: zp.merchant, amount: order.amount_irr, authority });
+    const answer = await zarinpal(order.test, "verify", { merchant_id: zp.merchant, amount: order.amount_irr, authority });
     const code = answer?.data?.code;
     if (code !== 100 && code !== 101) {
       console.error("zarinpal verify", JSON.stringify(answer));
