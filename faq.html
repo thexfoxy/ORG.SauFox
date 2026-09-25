@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en" data-auth="new">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Language: the visitor's choice, else Persian if their browser prefers
+    // it. A Persian page stays hidden until js/main.js has put its text in.
+    (function () {
+      var lang = "en";
+      try {
+        lang = localStorage.getItem("saufox.lang") ||
+          ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
+      } catch (e) {}
+      if (lang !== "fa") return;
+      var root = document.documentElement;
+      root.lang = "fa";
+      root.dir = "rtl";
+      root.classList.add("i18n-pending");
+      setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
+    })();
+  </script>
+  <title>Help &amp; FAQ · SauFox Entertainment</title>
+  <meta name="description" content="Answers about accounts, buying, payment, refunds and pre-orders at SauFox Entertainment.">
+  <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css?v=32">
+  <script>
+    // Same header states as the home page (see index.html).
+    (function () {
+      var state = "new";
+      try {
+        if (localStorage.getItem("saufox.session")) state = "member";
+        else if (localStorage.getItem("saufox.hasAccount")) state = "returning";
+      } catch (e) {}
+      document.documentElement.dataset.auth = state;
+    })();
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="profile-chip" href="profile.html" aria-label="Profile">
+        <span class="profile-chip__avatar">
+          <img src="assets/avatar-default.svg" alt="">
+        </span>
+        <span class="profile-chip__label">Profile</span>
+      </a>
+
+      <a class="brand" href="index.html" aria-label="SauFox Entertainment">
+        <span class="brand__text">SauFox<span class="brand__sub"> Entertainment</span></span>
+        <span class="brand__blur" aria-hidden="true">SauFox<span class="brand__sub"> Entertainment</span></span>
+      </a>
+
+      <a class="cta cta--login" href="login.html" data-animate-letters data-hover-text="Welcome Back">Login</a>
+      <a class="cta cta--signup" href="login.html#signup" data-animate-letters data-hover-text="Sign Up Now">Wanna create an account?</a>
+    </div>
+  </header>
+
+  <!-- Help & FAQ. Each answer opens in place (<details>). -->
+  <main class="doc">
+    <div data-only="en" translate="no">
+      <p class="doc__kicker">Help</p>
+      <h1 class="doc__title">Questions and answers</h1>
+      <p class="doc__lead">Quick answers about your account, buying, payment and refunds. Can&rsquo;t find yours? <a href="about.html#contact">Contact us</a>.</p>
+
+      <h2>Your account</h2>
+      <div class="faq">
+        <details class="faq__item">
+          <summary>How do I create an account?</summary>
+          <div class="faq__answer"><p>On the <a href="login.html#signup">sign-up page</a>, enter your name, email and a password, or use &ldquo;Continue with Google&rdquo;. We email you a code; enter it on the site and your account is ready.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>Why do I get a code every time I log in?</summary>
+          <div class="faq__answer"><p>To keep your account safe. After your password, we email a one-time code, so even someone who knows your password can&rsquo;t get in without your email.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>The code didn&rsquo;t arrive.</summary>
+          <div class="faq__answer"><p>Check your spam or promotions folder, and wait a minute: emails can be slow. Then press &ldquo;Send a new code&rdquo;. Each code works for 10 minutes. The email comes from saufoxentertainment@gmail.com.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>I forgot my password.</summary>
+          <div class="faq__answer"><p>On the <a href="login.html">login page</a>, press &ldquo;Forgot password?&rdquo;, enter your email, then the code we send you and your new password.</p></div>
+        </details>
+      </div>
+
+      <h2>Buying and payment</h2>
+      <div class="faq">
+        <details class="faq__item">
+          <summary>How do I buy a work?</summary>
+          <div class="faq__answer"><p>Open the work&rsquo;s page and press &ldquo;Buy&rdquo; (or &ldquo;Pre-order now&rdquo; before it&rsquo;s out). On the checkout page, enter your name and mobile number, accept the terms, and place the order. You then pay on Zarinpal&rsquo;s secure page and come back to the site.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>How can I pay?</summary>
+          <div class="faq__answer"><p>With any Iranian bank card, through Zarinpal, a payment gateway licensed by Shaparak. Prices are in Rials; amounts shown in dollars or euros with &ldquo;&asymp;&rdquo; are only for your information.</p><p>Until online payment opens, your order is saved without any payment, and we email you when you can pay.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>Is it safe to pay on this site?</summary>
+          <div class="faq__answer"><p>Yes. You enter your card details on the bank&rsquo;s own page, not on our site, so we never see or keep your card number, CVV2 or PIN.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>Money left my account, but my order isn&rsquo;t paid.</summary>
+          <div class="faq__answer"><p>If the bank didn&rsquo;t confirm the payment, it returns the money to your card within 72 hours. If it hasn&rsquo;t come back by then, email us your order number and the bank&rsquo;s reference number.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>Where do I find what I bought?</summary>
+          <div class="faq__answer"><p>In your profile, under <a href="profile.html#library">Library</a>. We also email you a receipt with the reference number. Your orders and their status are under <a href="profile.html#orders">Orders</a>.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>What is a pre-order?</summary>
+          <div class="faq__answer"><p>You buy a work before its release. It&rsquo;s added to your Library on release day, and you can cancel it for a full refund at any time before then.</p></div>
+        </details>
+      </div>
+
+      <h2>Cancelling and refunds</h2>
+      <div class="faq">
+        <details class="faq__item">
+          <summary>Can I cancel an order?</summary>
+          <div class="faq__answer"><p>An unpaid order: yes, any time, from <a href="profile.html#orders">Orders</a> in your profile. A paid one: see refunds below.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>How do refunds work?</summary>
+          <div class="faq__answer"><p>A paid pre-order is refunded in full if you cancel before release day. For a released work, you can ask for a refund within 7 days of paying. Email us with your order number; the money goes back to the card you paid with within 7 working days. The full rules are in the <a href="terms.html#purchases">terms of purchase</a>.</p></div>
+        </details>
+      </div>
+
+      <h2>Everything else</h2>
+      <div class="faq">
+        <details class="faq__item">
+          <summary>When do subscriptions open?</summary>
+          <div class="faq__answer"><p>Soon. The plans and their prices are on the <a href="index.html#plans">home page</a>, and members will hear first when they open.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>Can I use the site in English or Persian?</summary>
+          <div class="faq__answer"><p>Both. Use the language button at the bottom of any page; the site remembers your choice.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>How do I contact you?</summary>
+          <div class="faq__answer"><p>By email at <a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a>, or by phone; our numbers and address are on the <a href="about.html#contact">contact page</a>.</p></div>
+        </details>
+      </div>
+    </div>
+
+    <div data-only="fa">
+      <p class="doc__kicker">راهنما</p>
+      <h1 class="doc__title">سوالات متداول</h1>
+      <p class="doc__lead">پاسخ کوتاه به سوال‌های رایج درباره‌ی حساب کاربری، خرید، پرداخت و بازگشت وجه. پاسخ سوالتان را پیدا نکردید؟ <a href="about.html#contact">با ما تماس بگیرید</a>.</p>
+
+      <h2>حساب کاربری</h2>
+      <div class="faq">
+        <details class="faq__item">
+          <summary>چطور حساب بسازم؟</summary>
+          <div class="faq__answer"><p>در <a href="login.html#signup">صفحه‌ی ثبت‌نام</a> نام، ایمیل و یک رمز عبور وارد کنید، یا «ادامه با گوگل» را بزنید. یک کد به ایمیلتان می‌فرستیم؛ آن را در سایت وارد کنید و حسابتان آماده است.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>چرا هر بار موقع ورود کد می‌آید؟</summary>
+          <div class="faq__answer"><p>برای امنیت حساب شما. بعد از رمز عبور یک کد یک‌بارمصرف به ایمیلتان می‌فرستیم؛ پس حتی اگر کسی رمزتان را بداند، بدون دسترسی به ایمیل شما نمی‌تواند وارد شود.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>کد به دستم نرسید.</summary>
+          <div class="faq__answer"><p>پوشه‌ی اسپم یا تبلیغات را نگاه کنید و یک دقیقه صبر کنید؛ گاهی ایمیل دیر می‌رسد. بعد «ارسال کد جدید» را بزنید. هر کد ۱۰ دقیقه اعتبار دارد و ایمیل از طرف saufoxentertainment@gmail.com می‌آید.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>رمز عبورم را فراموش کرده‌ام.</summary>
+          <div class="faq__answer"><p>در <a href="login.html">صفحه‌ی ورود</a> روی «رمز را فراموش کرده‌اید؟» بزنید، ایمیلتان را وارد کنید و بعد کدی که می‌فرستیم و رمز جدید را.</p></div>
+        </details>
+      </div>
+
+      <h2>خرید و پرداخت</h2>
+      <div class="faq">
+        <details class="faq__item">
+          <summary>چطور یک اثر را بخرم؟</summary>
+          <div class="faq__answer"><p>صفحه‌ی اثر را باز کنید و «خرید» (یا پیش از انتشار «پیش‌خرید») را بزنید. در صفحه‌ی ثبت سفارش، نام و شماره‌ی موبایل را وارد کنید، قوانین را بپذیرید و سفارش را ثبت کنید. بعد در صفحه‌ی امن زرین‌پال پرداخت می‌کنید و به سایت برمی‌گردید.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>با چه روشی می‌توانم پرداخت کنم؟</summary>
+          <div class="faq__answer"><p>با همه‌ی کارت‌های بانکی عضو شتاب، از طریق زرین‌پال که درگاه پرداخت دارای مجوز شاپرک است. قیمت‌ها به ریال است و مبلغ‌های دلاری یا یورویی با «≈» فقط برای اطلاع شماست.</p><p>تا وقتی پرداخت آنلاین فعال نشده، سفارش بدون پرداخت ثبت می‌شود و وقتی امکان پرداخت فراهم شد به شما ایمیل می‌زنیم.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>پرداخت در این سایت امن است؟</summary>
+          <div class="faq__answer"><p>بله. اطلاعات کارت را در صفحه‌ی خود بانک وارد می‌کنید، نه در سایت ما؛ بنابراین ما هرگز شماره‌ی کارت، CVV2 یا رمز شما را نمی‌بینیم و نگه نمی‌داریم.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>پول از حسابم کم شد ولی سفارش پرداخت‌نشده است.</summary>
+          <div class="faq__answer"><p>اگر بانک پرداخت را تأیید نکرده باشد، مبلغ را ظرف ۷۲ ساعت به کارت شما برمی‌گرداند. اگر تا آن زمان برنگشت، شماره‌ی سفارش و شماره‌ی پیگیری بانک را برای ما ایمیل کنید.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>چیزهایی که خریده‌ام کجاست؟</summary>
+          <div class="faq__answer"><p>در پروفایل، بخش <a href="profile.html#library">کتابخانه</a>. رسید پرداخت با شماره‌ی پیگیری هم به ایمیلتان فرستاده می‌شود. سفارش‌ها و وضعیتشان در بخش <a href="profile.html#orders">سفارش‌ها</a> است.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>پیش‌خرید یعنی چه؟</summary>
+          <div class="faq__answer"><p>یعنی اثر را پیش از انتشار می‌خرید. در روز انتشار به کتابخانه‌ی شما اضافه می‌شود و تا پیش از آن هر زمان بخواهید می‌توانید لغوش کنید و کل مبلغ را پس بگیرید.</p></div>
+        </details>
+      </div>
+
+      <h2>لغو و بازگشت وجه</h2>
+      <div class="faq">
+        <details class="faq__item">
+          <summary>می‌توانم سفارش را لغو کنم؟</summary>
+          <div class="faq__answer"><p>سفارش پرداخت‌نشده را بله، هر زمان، از بخش <a href="profile.html#orders">سفارش‌ها</a> در پروفایل. برای سفارش پرداخت‌شده، بخش بازگشت وجه را ببینید.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>بازگشت وجه چطور است؟</summary>
+          <div class="faq__answer"><p>پیش‌خرید پرداخت‌شده اگر پیش از روز انتشار لغو شود، کل مبلغش برگردانده می‌شود. برای اثر منتشرشده تا ۷ روز پس از پرداخت می‌توانید درخواست بازگشت وجه بدهید. شماره‌ی سفارش را برای ما ایمیل کنید؛ مبلغ ظرف ۷ روز کاری به همان کارتی که با آن پرداخت کرده‌اید برمی‌گردد. قوانین کامل در <a href="terms.html#purchases">قوانین خرید</a> آمده است.</p></div>
+        </details>
+      </div>
+
+      <h2>سایر سوالات</h2>
+      <div class="faq">
+        <details class="faq__item">
+          <summary>اشتراک‌ها کی فعال می‌شوند؟</summary>
+          <div class="faq__answer"><p>به‌زودی. پلن‌ها و قیمتشان در <a href="index.html#plans">صفحه‌ی اصلی</a> هست و اعضای سایت زودتر از همه باخبر می‌شوند.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>سایت فارسی و انگلیسی دارد؟</summary>
+          <div class="faq__answer"><p>هر دو. با دکمه‌ی زبان در پایین هر صفحه زبان را عوض کنید؛ سایت انتخاب شما را به خاطر می‌سپارد.</p></div>
+        </details>
+        <details class="faq__item">
+          <summary>چطور با شما تماس بگیرم؟</summary>
+          <div class="faq__answer"><p>با ایمیل <a class="selectable" href="mailto:saufoxentertainment@gmail.com" dir="ltr">saufoxentertainment@gmail.com</a> یا تلفن؛ شماره‌ها و نشانی ما در <a href="about.html#contact">صفحه‌ی تماس</a> است.</p></div>
+        </details>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <div class="site-footer__brand">
+        <a class="site-footer__logo" href="index.html">SauFox <span>Entertainment</span></a>
+        <p>Games, animation, films and novels, in physical and digital editions.</p>
+      </div>
+
+      <nav class="site-footer__col" aria-label="Studio">
+        <h2>Studio</h2>
+        <a href="about.html">About us</a>
+        <a href="about.html#contact">Contact</a>
+        <a href="faq.html">Help &amp; FAQ</a>
+        <a href="index.html#plans">Subscriptions</a>
+      </nav>
+
+      <nav class="site-footer__col" aria-label="Legal">
+        <h2>Legal</h2>
+        <a href="terms.html">Terms of use</a>
+        <a href="privacy.html">Privacy policy</a>
+      </nav>
+
+      <div class="site-footer__col">
+        <h2>Contact</h2>
+        <a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a>
+        <a class="selectable" href="tel:+985133409142" dir="ltr">+98 51 3340 9142</a>
+        <a class="selectable" href="tel:+989301053524" dir="ltr">+98 930 105 3524</a>
+        <div class="social-links">
+          <a href="https://www.instagram.com/saufox.entertainment" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.3" cy="6.7" r="1.2" fill="currentColor"/></svg>
+          </a>
+          <a href="https://t.me/saufoxentertainment" target="_blank" rel="noopener" aria-label="Telegram">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.4 3.6 2.9 10.8c-1 .4-1 1.7.1 2l4.6 1.4 1.8 5.5c.3.8 1.2 1 1.8.5l2.6-2.4 4.9 3.6c.7.5 1.6.1 1.8-.7l3.1-15c.2-1-.8-1.7-1.7-1.3zM9.7 14.2l-.4 3.7-1.3-4.2 9.3-6.5-7.6 7z"/></svg>
+          </a>
+          <a href="https://x.com/saufoxent" target="_blank" rel="noopener" aria-label="X">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.7 3h3.1l-6.8 7.8L22 21h-6.3l-4.9-6.4L5.2 21H2.1l7.3-8.3L1.8 3h6.4l4.4 5.9L17.7 3zm-1.1 16.2h1.7L7.2 4.7H5.4l11.2 14.5z"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="site-footer__bottom">
+      <p>&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+      <button class="lang-switch" type="button" data-lang-switch translate="no">فارسی</button>
+    </div>
+  </footer>
+
+  <script src="js/fa.js?v=32" defer></script>
+  <script src="js/main.js?v=32" defer></script>
+</body>
+</html>

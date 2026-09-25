@@ -18,6 +18,7 @@ npx serve .
 - `emails/`: the sign-up, login and password-reset emails (paste into Supabase)
 - `404.html`, `status.html`: page not found (GitHub Pages shows 404.html for any missing address), and `status.html?reason=maintenance|offline|forbidden|error`
 - `about.html`, `terms.html`, `privacy.html`: about and contact, terms of use, privacy policy
+- `faq.html`: help and frequently asked questions (accounts, buying, payment, refunds)
 - `work.html`: one page per work (`work.html?id=the-candlewood`), filled from the catalogue
 - `checkout.html`: checkout for one work (`checkout.html?id=the-candlewood`), members only
 - `admin.html`: admin panel for the catalogue and orders (admins only)

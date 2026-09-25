@@ -4446,3 +4446,60 @@ a.hero__panel {
 .admin-payments__ip {
   margin: 16px 0 0;
 }
+
+/* Help & FAQ: each question opens its answer in place. */
+.faq {
+  display: grid;
+  gap: 8px;
+}
+
+.faq__item {
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.faq__item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  font-weight: 600;
+  color: var(--text);
+  list-style: none;
+  cursor: pointer;
+}
+
+.faq__item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq__item summary::after {
+  content: "";
+  flex: 0 0 10px;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: translateY(-3px) rotate(45deg);
+  transition: transform 0.25s var(--ease-out);
+}
+
+.faq__item[open] summary::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+.faq__item summary:hover::after {
+  border-color: var(--text);
+}
+
+.faq__item summary:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+.faq__answer {
+  padding: 0 18px 4px;
+  color: #d9d6d0;
+}
