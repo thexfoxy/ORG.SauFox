@@ -6,6 +6,9 @@
 //   -> { paid, number, ref_id? }  asks Zarinpal whether the payment went through
 // POST { action: "placed", order_id }           signed-in member, own order
 //   -> { ok }  emails "order received" (sent while online payment is closed)
+// POST { action: "status-email", order_id }     admins, after changing a status
+//   -> { sent }  the buyer's email for the order's status (paid: receipt,
+//   processing: in progress, completed: done), once each
 // POST { action: "email-test" }                 admins
 //   -> { ok } or { error }  sends a sample receipt to the studio address
 //
@@ -22,7 +25,7 @@
 // from the database (public.zarinpal_call), whose IP stays the same; the
 // admin panel shows it.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { mailReady, paidEmail, placedEmail, send, STUDIO, studioEmail, type Order } from "./mail.ts";
+import { mailReady, paidEmail, placedEmail, send, stageEmail, STUDIO, studioEmail, type Order } from "./mail.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
@@ -78,12 +81,14 @@ const later = (work: Promise<unknown>) => {
   else work.catch(() => {});
 };
 
-// Sends an order's "placed" or "paid" emails, once: the column marks them
-// sent before sending, and is cleared again if sending fails.
+// Sends an order's email for one stage, once: the column marks it sent
+// before sending, and is cleared again if sending fails. The studio gets a
+// copy of new and paid orders. Returns whether an email went out.
+type Stage = "placed" | "paid" | "processing" | "completed";
 const ORDER_FIELDS = "id, number, title, amount_irr, name, email, phone, ref_id, card_pan, paid_at, created_at, test, work_id";
-const emailOnce = async (orderId: string, kind: "placed" | "paid") => {
-  if (!mailReady()) return;
-  const column = kind === "placed" ? "placed_email_at" : "paid_email_at";
+const emailOnce = async (orderId: string, kind: Stage) => {
+  if (!mailReady()) return false;
+  const column = `${kind}_email_at`;
   const { data } = await db
     .from("orders")
     .update({ [column]: new Date().toISOString() })
@@ -91,19 +96,21 @@ const emailOnce = async (orderId: string, kind: "placed" | "paid") => {
     .is(column, null)
     .select(ORDER_FIELDS);
   const order = data?.[0] as (Order & { work_id: string }) | undefined;
-  if (!order) return;
+  if (!order) return false;
   try {
     if (kind === "placed") await send(placedEmail(order, false));
-    else {
+    else if (kind === "paid") {
       const { data: work } = await db.from("works").select("status").eq("id", order.work_id).maybeSingle();
       await send(paidEmail(order, work?.status === "released"));
-    }
+    } else await send(stageEmail(order, kind));
   } catch (e) {
     console.error(`${kind} email`, (e as Error).message);
     await db.from("orders").update({ [column]: null }).eq("id", orderId);
-    return;
+    return false;
   }
-  await send(studioEmail(order, kind)).catch((e) => console.error("studio email", (e as Error).message));
+  if (kind === "placed" || kind === "paid")
+    await send(studioEmail(order, kind)).catch((e) => console.error("studio email", (e as Error).message));
+  return true;
 };
 
 const mobileOf = (phone: string) => {
@@ -146,6 +153,18 @@ Deno.serve(async (req) => {
 
   const { data: settings } = await db.from("site_settings").select("payments").eq("id", 1).single();
   const mode = settings?.payments || "off";
+
+  // ---------- Status changed in the admin panel ----------
+  if (body.action === "status-email") {
+    const user = await caller(req);
+    if (!user) return reply({ error: "signed_out" }, 401);
+    const { data: isAdmin } = await db.from("admins").select("user_id").eq("user_id", user.id).maybeSingle();
+    if (!isAdmin) return reply({ error: "forbidden" }, 403);
+    const { data: order } = await db.from("orders").select("id, status").eq("id", orderId).maybeSingle();
+    if (!order) return reply({ error: "not_found" }, 404);
+    if (!["paid", "processing", "completed"].includes(order.status)) return reply({ sent: false });
+    return reply({ sent: await emailOnce(order.id, order.status as Stage) });
+  }
 
   // ---------- Placed (online payment closed) ----------
   if (body.action === "placed") {
@@ -207,7 +226,8 @@ Deno.serve(async (req) => {
       .eq("id", orderId)
       .maybeSingle();
     if (!order) return reply({ error: "not_found" }, 404);
-    if (order.status === "paid") return reply({ paid: true, number: order.number, ref_id: order.ref_id });
+    if (["paid", "processing", "completed"].includes(order.status))
+      return reply({ paid: true, number: order.number, ref_id: order.ref_id });
     const authority = String(body.authority || "");
     if (!(order.authorities || []).includes(authority)) return reply({ error: "not_found" }, 404);
     if (body.status !== "OK") return reply({ paid: false, number: order.number });
@@ -224,7 +244,7 @@ Deno.serve(async (req) => {
       .from("orders")
       .update({ status: "paid", authority, ref_id: ref, card_pan: answer.data.card_pan || null, paid_at: new Date().toISOString() })
       .eq("id", order.id)
-      .neq("status", "paid");
+      .not("status", "in", "(paid,processing,completed)");
     later(emailOnce(order.id, "paid"));
     return reply({ paid: true, number: order.number, ref_id: ref });
   }

@@ -140,7 +140,7 @@ export const paidEmail = (order: Order, released: boolean) => {
         ["اثر", `<span dir="ltr">${esc(order.title)}</span>`],
         ["شماره‌ی سفارش", faNum(order.number)],
         ["مبلغ پرداخت‌شده", rialsFa(order.amount_irr)],
-        ["شماره‌ی پیگیری", `<span dir="ltr">${esc(order.ref_id)}</span>`],
+        ["شماره‌ی پیگیری", `<span dir="ltr">${esc(order.ref_id || "—")}</span>`],
         ...(order.card_pan ? ([["کارت", `<span dir="ltr">${esc(order.card_pan)}</span>`]] as [string, string][]) : []),
         ["تاریخ", whenFa(when)],
       ],
@@ -157,7 +157,7 @@ export const paidEmail = (order: Order, released: boolean) => {
         ["Work", esc(order.title)],
         ["Order number", String(order.number)],
         ["Amount paid", rialsEn(order.amount_irr)],
-        ["Reference", esc(order.ref_id)],
+        ["Reference", esc(order.ref_id || "—")],
         ...(order.card_pan ? ([["Card", esc(order.card_pan)]] as [string, string][]) : []),
         ["Date", whenEn(when)],
       ],
@@ -175,6 +175,59 @@ export const paidEmail = (order: Order, released: boolean) => {
       button(`${SITE}/profile.html#library`, "کتابخانه‌ی من", "My library"),
       `برای بازگشت وجه، طبق <a href="${SITE}/terms.html#purchases" style="color:#ff7a1a;">قوانین خرید</a>، شماره‌ی سفارش را به همین ایمیل پاسخ دهید.`,
       `For a refund under the <a href="${SITE}/terms.html#purchases" style="color:#ff7a1a;">terms of purchase</a>, reply to this email with your order number.`
+    ),
+  };
+};
+
+// ---------- To the buyer: the order is being worked on / is done ----------
+// Sent when an admin moves a paid order to "processing" or "completed".
+export const stageEmail = (order: Order, stage: "processing" | "completed") => {
+  const done = stage === "completed";
+  const fa =
+    hello(order.name, true) +
+    `<p style="margin:0;">${done ? "سفارش شما انجام شد." : "سفارش شما در حال انجام است."}</p>` +
+    rows(
+      [
+        ["اثر", `<span dir="ltr">${esc(order.title)}</span>`],
+        ["شماره‌ی سفارش", faNum(order.number)],
+        ["وضعیت", done ? "انجام شد" : "در حال انجام"],
+      ],
+      true
+    ) +
+    `<p style="margin:16px 0 0;">${
+      done
+        ? "همه‌ی مراحل سفارش شما تمام شده است و اثر در «کتابخانه»ی پروفایل شماست. از خریدتان سپاسگزاریم."
+        : "پرداخت شما دریافت شده و سفارش را در حال آماده‌سازی داریم. وقتی کامل شد، دوباره به شما ایمیل می‌زنیم."
+    }</p>`;
+  const en =
+    hello(order.name, false) +
+    `<p style="margin:0;">${done ? "Your order is complete." : "Your order is in progress."}</p>` +
+    rows(
+      [
+        ["Work", esc(order.title)],
+        ["Order number", String(order.number)],
+        ["Status", done ? "Completed" : "In progress"],
+      ],
+      false
+    ) +
+    `<p style="margin:16px 0 0;">${
+      done
+        ? "Everything for your order is done, and the work is in the Library in your profile. Thank you for your purchase."
+        : "We&rsquo;ve received your payment and are getting your order ready. We&rsquo;ll email you again when it&rsquo;s complete."
+    }</p>`;
+  return {
+    to: order.email,
+    subject: done
+      ? `سفارش ${faNum(order.number)} ساوفاکس انجام شد${testTag(order, true)} | SauFox order ${order.number} is complete${testTag(order, false)}`
+      : `سفارش ${faNum(order.number)} ساوفاکس در حال انجام است${testTag(order, true)} | SauFox order ${order.number} is in progress${testTag(order, false)}`,
+    html: page(
+      fa,
+      en,
+      done
+        ? button(`${SITE}/profile.html#library`, "کتابخانه‌ی من", "My library")
+        : button(`${SITE}/profile.html#orders`, "سفارش‌های من", "My orders"),
+      "پرسشی دارید؟ به همین ایمیل پاسخ دهید.",
+      "Questions? Just reply to this email."
     ),
   };
 };

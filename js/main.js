@@ -1621,7 +1621,7 @@ const signedInGoHome = async (user) => {
       .from("orders")
       .select("work_id, test, paid_at")
       .eq("user_id", userId)
-      .eq("status", "paid")
+      .in("status", ["paid", "processing", "completed"])
       .order("paid_at", { ascending: false });
     if (error || !data.length) return;
     const works = await catalog;
@@ -1646,7 +1646,13 @@ const signedInGoHome = async (user) => {
   };
 
   // ---------- Orders ----------
-  const ORDER_STATUS = { awaiting_payment: "Awaiting payment", paid: "Paid", cancelled: "Cancelled" };
+  const ORDER_STATUS = {
+    awaiting_payment: "Awaiting payment",
+    paid: "Paid",
+    processing: "In progress",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
   let canPay = false;
   const orderRow = (order, works) => {
     const make = (tag, className, text) => {
@@ -1998,10 +2004,10 @@ const signedInGoHome = async (user) => {
         .select("status")
         .eq("user_id", session.user.id)
         .eq("work_id", work.id)
-        .in("status", ["awaiting_payment", "paid"])
+        .in("status", ["awaiting_payment", "paid", "processing", "completed"])
         .limit(1);
       if (!data || !data.length) return;
-      const paid = data[0].status === "paid";
+      const paid = data[0].status !== "awaiting_payment";
       buy.href = paid ? "profile.html#library" : "profile.html#orders";
       buy.classList.add("is-ordered");
       buyLabel.textContent = paid ? "In your library" : "Ordered · awaiting payment";
@@ -2790,7 +2796,13 @@ const signedInGoHome = async (user) => {
   // ---------- Orders ----------
   // Newest first. The status is the only thing that can change here; the
   // buyer sees it in their profile.
-  const ORDER_STATUS = { awaiting_payment: "Awaiting payment", paid: "Paid", cancelled: "Cancelled" };
+  const ORDER_STATUS = {
+    awaiting_payment: "Awaiting payment",
+    paid: "Paid",
+    processing: "In progress",
+    completed: "Completed",
+    cancelled: "Cancelled",
+  };
   const orderList = page.querySelector(".admin-orders__list");
   const noOrders = page.querySelector(".admin-orders__empty");
   const orderRow = (order) => {
@@ -2825,8 +2837,22 @@ const signedInGoHome = async (user) => {
       else order.status = pick.value;
       pick.dataset.status = order.status;
       pick.disabled = false;
+      // The buyer's email for the new status (receipt, in progress, done),
+      // once per status.
+      if (!error && ["paid", "processing", "completed"].includes(order.status)) {
+        note.textContent = "Emailing the buyer…";
+        const answer = await payment({ action: "status-email", order_id: order.id }, await verifiedSession());
+        note.textContent = answer.sent
+          ? `Emailed the buyer: ${ORDER_STATUS[order.status].toLowerCase()}.`
+          : answer.error
+            ? "The email didn't go out. Check the test email above."
+            : "No new email: the buyer already had this one.";
+      }
     });
-    row.append(main, buyer, pick);
+    const note = make("span", "admin-order__note");
+    const side = make("div", "admin-order__side");
+    side.append(pick, note);
+    row.append(main, buyer, side);
     return row;
   };
   account
@@ -2951,7 +2977,7 @@ const signedInGoHome = async (user) => {
     .select("id")
     .eq("user_id", user.id)
     .eq("work_id", work.id)
-    .in("status", ["awaiting_payment", "paid"])
+    .in("status", ["awaiting_payment", "paid", "processing", "completed"])
     .limit(1);
   if (open && open.length) return location.replace("profile.html#orders");
 

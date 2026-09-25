@@ -163,7 +163,11 @@ up. Signed-out visitors log in first and come back to the checkout.
   gets a copy of each. They need the secret `SMTP_PASSWORD` (the same Gmail
   app password as in Supabase Auth → SMTP settings) in Edge Functions →
   Secrets; without it no order emails are sent. Each goes out once per
-  order (`placed_email_at`, `paid_email_at`).
+  order (`placed_email_at`, `paid_email_at`, `processing_email_at`,
+  `completed_email_at`).
+- Order statuses: Awaiting payment → Paid → In progress → Completed (or
+  Cancelled). Setting one in the admin panel emails the buyer: Paid sends
+  the receipt, In progress and Completed their own emails; each once.
   "Send a test email" in the admin panel sends a sample receipt to the
   studio inbox, or says why it couldn't.
 - Paid works appear in Profile → Library ("Pre-ordered · arrives on release

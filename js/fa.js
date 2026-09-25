@@ -332,4 +332,6 @@ const FA = {
   "We couldn't check that you're not a robot. Reload the page and try again.": "نتوانستیم بررسی کنیم که ربات نیستید. صفحه را دوباره باز کنید و دوباره امتحان کنید.",
   "Help & FAQ": "راهنما و سوالات متداول",
   "Help & FAQ · SauFox Entertainment": "راهنما و سوالات متداول · ساوفاکس اینترتینمنت",
+  "In progress": "در حال انجام",
+  "Completed": "انجام شد",
 };
