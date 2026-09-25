@@ -1196,6 +1196,7 @@ const signedInGoHome = async (user) => {
       setTimeout(reject, 15000);
       document.head.append(script);
     });
+    ready.catch(() => {}); // reported when a token is asked for
     let widget;
     let waiting = null;
     const settle = (ok, value) => {
