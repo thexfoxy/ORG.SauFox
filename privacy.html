@@ -3,11 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Language: the visitor's choice, else Persian if their browser prefers
+    // it. A Persian page stays hidden until js/main.js has put its text in.
+    (function () {
+      var lang = "en";
+      try {
+        lang = localStorage.getItem("saufox.lang") ||
+          ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
+      } catch (e) {}
+      if (lang !== "fa") return;
+      var root = document.documentElement;
+      root.lang = "fa";
+      root.dir = "rtl";
+      root.classList.add("i18n-pending");
+      setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
+    })();
+  </script>
   <title>Privacy policy · SauFox Entertainment</title>
   <meta name="description" content="What SauFox Entertainment collects, why, and what you can do about it.">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=11">
+  <link rel="stylesheet" href="css/style.css?v=12">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -41,49 +58,97 @@
   </header>
 
   <main class="doc">
-    <p class="doc__kicker">Legal</p>
-    <h1 class="doc__title">Privacy policy</h1>
-    <p class="doc__updated">Last updated 25 September 2026</p>
+    <div data-only="en" translate="no">
+      <p class="doc__kicker">Legal</p>
+      <h1 class="doc__title">Privacy policy</h1>
+      <p class="doc__updated">Last updated 25 September 2026</p>
 
-    <p>This policy explains what SauFox Entertainment (&ldquo;we&rdquo;) collects when you use saufoxentertainment.ir, why, and what you can do about it.</p>
+      <p>This policy explains what SauFox Entertainment (&ldquo;we&rdquo;) collects when you use saufoxentertainment.ir, why, and what you can do about it.</p>
 
-    <h2>What we collect</h2>
-    <ul>
-      <li><strong>Your account:</strong> the name, email address and password you sign up with. Passwords are stored only in scrambled (hashed) form; we can&rsquo;t read them.</li>
-      <li><strong>Your profile:</strong> a profile photo if you upload one, and the currency you prefer prices in.</li>
-      <li><strong>My List:</strong> the works you save to My List.</li>
-      <li><strong>In your browser:</strong> your sign-in session and a few preferences (such as your currency choice) are kept in your browser&rsquo;s storage so the site remembers you.</li>
-    </ul>
-    <p>We don&rsquo;t use advertising, we don&rsquo;t use tracking or analytics tools, and we don&rsquo;t sell or share your information with advertisers.</p>
+      <h2>What we collect</h2>
+      <ul>
+        <li><strong>Your account:</strong> the name, email address and password you sign up with. Passwords are stored only in scrambled (hashed) form; we can&rsquo;t read them.</li>
+        <li><strong>Your profile:</strong> a profile photo if you upload one, and the currency you prefer prices in.</li>
+        <li><strong>My List:</strong> the works you save to My List.</li>
+        <li><strong>In your browser:</strong> your sign-in session and a few preferences (such as your currency choice) are kept in your browser&rsquo;s storage so the site remembers you.</li>
+      </ul>
+      <p>We don&rsquo;t use advertising, we don&rsquo;t use tracking or analytics tools, and we don&rsquo;t sell or share your information with advertisers.</p>
 
-    <h2>Why we use it</h2>
-    <p>Only to run your account: to sign you in, show your name and photo, keep My List, and show prices the way you chose.</p>
+      <h2>Why we use it</h2>
+      <p>Only to run your account: to sign you in, show your name and photo, keep My List, and show prices the way you chose.</p>
 
-    <h2>Where it&rsquo;s kept</h2>
-    <ul>
-      <li>Account and profile information is stored with our database provider, Supabase, on servers in Frankfurt, Germany.</li>
-      <li>The website itself is served by GitHub Pages, which may keep basic technical logs (such as IP addresses) for security.</li>
-      <li>Trailers play from Aparat. When you press play, Aparat receives the request like any video site would.</li>
-    </ul>
+      <h2>Where it&rsquo;s kept</h2>
+      <ul>
+        <li>Account and profile information is stored with our database provider, Supabase, on servers in Frankfurt, Germany.</li>
+        <li>The website itself is served by GitHub Pages, which may keep basic technical logs (such as IP addresses) for security.</li>
+        <li>Trailers play from Aparat. When you press play, Aparat receives the request like any video site would.</li>
+      </ul>
 
-    <h2>Purchases</h2>
-    <p>Buying and subscriptions aren&rsquo;t open yet. Before they open, we&rsquo;ll update this policy to explain what payment information is handled and by whom.</p>
+      <h2>Purchases</h2>
+      <p>Buying and subscriptions aren&rsquo;t open yet. Before they open, we&rsquo;ll update this policy to explain what payment information is handled and by whom.</p>
 
-    <h2>Your choices</h2>
-    <ul>
-      <li>Change your name, photo and currency at any time in your profile&rsquo;s Settings.</li>
-      <li>Remove works from My List on their page.</li>
-      <li>To delete your account and everything linked to it, email us from the address you signed up with and we&rsquo;ll do it.</li>
-    </ul>
+      <h2>Your choices</h2>
+      <ul>
+        <li>Change your name, photo and currency at any time in your profile&rsquo;s Settings.</li>
+        <li>Remove works from My List on their page.</li>
+        <li>To delete your account and everything linked to it, email us from the address you signed up with and we&rsquo;ll do it.</li>
+      </ul>
 
-    <h2>Young people</h2>
-    <p>Much of our audience is teenagers. If you are under 13, please ask a parent or guardian before creating an account.</p>
+      <h2>Young people</h2>
+      <p>Much of our audience is teenagers. If you are under 13, please ask a parent or guardian before creating an account.</p>
 
-    <h2>Changes</h2>
-    <p>If we change this policy, we&rsquo;ll update the date at the top of this page.</p>
+      <h2>Changes</h2>
+      <p>If we change this policy, we&rsquo;ll update the date at the top of this page.</p>
 
-    <h2>Contact</h2>
-    <p>Questions about your information: <a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a></p>
+      <h2>Contact</h2>
+      <p>Questions about your information: <a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a></p>
+    </div>
+
+    <div data-only="fa">
+      <p class="doc__kicker">قوانین</p>
+      <h1 class="doc__title">حریم خصوصی</h1>
+      <p class="doc__updated">آخرین به‌روزرسانی: ۳ مهر ۱۴۰۵</p>
+
+      <p>این صفحه توضیح می‌دهد ساوفاکس اینترتینمنت («ما») هنگام استفاده‌ی شما از saufoxentertainment.ir چه اطلاعاتی جمع می‌کند، چرا، و شما چه اختیاری در این باره دارید.</p>
+
+      <h2>چه اطلاعاتی جمع می‌کنیم</h2>
+      <ul>
+        <li><strong>حساب کاربری:</strong> نام، ایمیل و رمز عبوری که با آن ثبت‌نام می‌کنید. رمز عبور فقط به شکل رمزنگاری‌شده (هش) نگه داشته می‌شود و ما نمی‌توانیم آن را بخوانیم.</li>
+        <li><strong>پروفایل:</strong> عکس پروفایل، اگر آپلود کنید، و واحد پولی که قیمت‌ها را با آن می‌بینید.</li>
+        <li><strong>لیست من:</strong> آثاری که به «لیست من» اضافه می‌کنید.</li>
+        <li><strong>در مرورگر شما:</strong> نشست ورود و چند تنظیم (مثل واحد پول و زبان) در حافظه‌ی مرورگرتان نگه داشته می‌شود تا سایت شما را به خاطر بسپارد.</li>
+      </ul>
+      <p>ما تبلیغات نداریم، از ابزارهای ردیابی و آمارگیری استفاده نمی‌کنیم و اطلاعات شما را به تبلیغ‌کنندگان نمی‌فروشیم یا نمی‌دهیم.</p>
+
+      <h2>چرا از آن استفاده می‌کنیم</h2>
+      <p>فقط برای اداره‌ی حساب شما: ورود، نمایش نام و عکس، نگه داشتن «لیست من» و نمایش قیمت‌ها به شکلی که انتخاب کرده‌اید.</p>
+
+      <h2>اطلاعات کجا نگه داشته می‌شود</h2>
+      <ul>
+        <li>اطلاعات حساب و پروفایل نزد ارائه‌دهنده‌ی پایگاه داده‌ی ما، Supabase، روی سرورهایی در فرانکفورت آلمان نگه داشته می‌شود.</li>
+        <li>خود سایت از طریق GitHub Pages ارائه می‌شود که ممکن است برای امنیت، گزارش‌های فنی پایه (مثل آدرس IP) نگه دارد.</li>
+        <li>تریلرها از آپارات پخش می‌شوند. وقتی دکمه‌ی پخش را می‌زنید، آپارات مثل هر سایت ویدیویی دیگری درخواست را دریافت می‌کند.</li>
+      </ul>
+
+      <h2>خرید</h2>
+      <p>خرید و اشتراک هنوز فعال نشده است. پیش از فعال شدن، این صفحه را به‌روز می‌کنیم تا توضیح دهیم چه اطلاعات پرداختی و توسط چه کسی پردازش می‌شود.</p>
+
+      <h2>اختیارات شما</h2>
+      <ul>
+        <li>نام، عکس و واحد پول را هر زمان در بخش «تنظیمات» پروفایل تغییر دهید.</li>
+        <li>آثار را از صفحه‌ی خودشان از «لیست من» بردارید.</li>
+        <li>برای حذف حساب و همه‌ی اطلاعات مربوط به آن، از همان ایمیلی که با آن ثبت‌نام کرده‌اید به ما ایمیل بزنید تا انجامش دهیم.</li>
+      </ul>
+
+      <h2>نوجوانان</h2>
+      <p>بخش بزرگی از مخاطبان ما نوجوانان هستند. اگر کمتر از ۱۳ سال دارید، پیش از ساختن حساب از پدر، مادر یا سرپرست خود اجازه بگیرید.</p>
+
+      <h2>تغییرات</h2>
+      <p>اگر این سیاست را تغییر دهیم، تاریخ بالای همین صفحه را به‌روز می‌کنیم.</p>
+
+      <h2>تماس</h2>
+      <p>برای پرسش درباره‌ی اطلاعاتتان: <a class="selectable" href="mailto:saufoxentertainment@gmail.com" dir="ltr">saufoxentertainment@gmail.com</a></p>
+    </div>
   </main>
 
   <footer class="site-footer">
@@ -123,9 +188,13 @@
         </div>
       </div>
     </div>
-    <p class="site-footer__bottom">&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+    <div class="site-footer__bottom">
+      <p>&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+      <button class="lang-switch" type="button" data-lang-switch translate="no">فارسی</button>
+    </div>
   </footer>
 
-  <script src="js/main.js?v=11" defer></script>
+  <script src="js/fa.js?v=12" defer></script>
+  <script src="js/main.js?v=12" defer></script>
 </body>
 </html>

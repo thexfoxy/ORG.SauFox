@@ -3,11 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Language: the visitor's choice, else Persian if their browser prefers
+    // it. A Persian page stays hidden until js/main.js has put its text in.
+    (function () {
+      var lang = "en";
+      try {
+        lang = localStorage.getItem("saufox.lang") ||
+          ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
+      } catch (e) {}
+      if (lang !== "fa") return;
+      var root = document.documentElement;
+      root.lang = "fa";
+      root.dir = "rtl";
+      root.classList.add("i18n-pending");
+      setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
+    })();
+  </script>
   <title>Terms of use · SauFox Entertainment</title>
   <meta name="description" content="The terms for using saufoxentertainment.ir.">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=11">
+  <link rel="stylesheet" href="css/style.css?v=12">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -41,42 +58,83 @@
   </header>
 
   <main class="doc">
-    <p class="doc__kicker">Legal</p>
-    <h1 class="doc__title">Terms of use</h1>
-    <p class="doc__updated">Last updated 25 September 2026</p>
+    <div data-only="en" translate="no">
+      <p class="doc__kicker">Legal</p>
+      <h1 class="doc__title">Terms of use</h1>
+      <p class="doc__updated">Last updated 25 September 2026</p>
 
-    <p>These terms apply when you use saufoxentertainment.ir. By using the site or creating an account, you agree to them.</p>
+      <p>These terms apply when you use saufoxentertainment.ir. By using the site or creating an account, you agree to them.</p>
 
-    <h2>Your account</h2>
-    <ul>
-      <li>Give your real name and an email address you use, and keep your password to yourself.</li>
-      <li>An account is for one person. You&rsquo;re responsible for what happens under your account.</li>
-      <li>We may close accounts that break these terms.</li>
-    </ul>
+      <h2>Your account</h2>
+      <ul>
+        <li>Give your real name and an email address you use, and keep your password to yourself.</li>
+        <li>An account is for one person. You&rsquo;re responsible for what happens under your account.</li>
+        <li>We may close accounts that break these terms.</li>
+      </ul>
 
-    <h2>Our work</h2>
-    <p>The games, films, animation, novels, artwork, trailers and text on this site belong to SauFox Entertainment or the people who licensed them to us. You may view them here for your own use. Copying, re-uploading, selling or sharing them elsewhere without our written permission isn&rsquo;t allowed.</p>
+      <h2>Our work</h2>
+      <p>The games, films, animation, novels, artwork, trailers and text on this site belong to SauFox Entertainment or the people who licensed them to us. You may view them here for your own use. Copying, re-uploading, selling or sharing them elsewhere without our written permission isn&rsquo;t allowed.</p>
 
-    <h2>Purchases and subscriptions</h2>
-    <p>Buying works and subscribing aren&rsquo;t open yet. Prices shown are for information until then. When they open, the terms for payment, delivery of physical editions and refunds will be added here.</p>
+      <h2>Purchases and subscriptions</h2>
+      <p>Buying works and subscribing aren&rsquo;t open yet. Prices shown are for information until then. When they open, the terms for payment, delivery of physical editions and refunds will be added here.</p>
 
-    <h2>Using the site</h2>
-    <ul>
-      <li>Don&rsquo;t try to break into, overload or disrupt the site or other people&rsquo;s accounts.</li>
-      <li>Don&rsquo;t use the site for anything unlawful.</li>
-    </ul>
+      <h2>Using the site</h2>
+      <ul>
+        <li>Don&rsquo;t try to break into, overload or disrupt the site or other people&rsquo;s accounts.</li>
+        <li>Don&rsquo;t use the site for anything unlawful.</li>
+      </ul>
 
-    <h2>The service</h2>
-    <p>We work to keep the site running and accurate, but it&rsquo;s provided as it is, and features, prices and release dates may change.</p>
+      <h2>The service</h2>
+      <p>We work to keep the site running and accurate, but it&rsquo;s provided as it is, and features, prices and release dates may change.</p>
 
-    <h2>Law</h2>
-    <p>These terms are governed by the laws of the Islamic Republic of Iran.</p>
+      <h2>Law</h2>
+      <p>These terms are governed by the laws of the Islamic Republic of Iran.</p>
 
-    <h2>Changes</h2>
-    <p>If we change these terms, we&rsquo;ll update the date at the top of this page. Using the site after that means you accept the new terms.</p>
+      <h2>Changes</h2>
+      <p>If we change these terms, we&rsquo;ll update the date at the top of this page. Using the site after that means you accept the new terms.</p>
 
-    <h2>Contact</h2>
-    <p><a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a></p>
+      <h2>Contact</h2>
+      <p><a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a></p>
+    </div>
+
+    <div data-only="fa">
+      <p class="doc__kicker">قوانین</p>
+      <h1 class="doc__title">قوانین استفاده</h1>
+      <p class="doc__updated">آخرین به‌روزرسانی: ۳ مهر ۱۴۰۵</p>
+
+      <p>این قوانین هنگام استفاده از saufoxentertainment.ir اعمال می‌شود. با استفاده از سایت یا ساختن حساب کاربری، این قوانین را می‌پذیرید.</p>
+
+      <h2>حساب کاربری شما</h2>
+      <ul>
+        <li>نام واقعی و ایمیلی که از آن استفاده می‌کنید را وارد کنید و رمز عبورتان را در اختیار دیگران نگذارید.</li>
+        <li>هر حساب متعلق به یک نفر است و مسئولیت کارهایی که با حساب شما انجام می‌شود با خود شماست.</li>
+        <li>ممکن است حساب‌هایی را که این قوانین را زیر پا بگذارند ببندیم.</li>
+      </ul>
+
+      <h2>آثار ما</h2>
+      <p>بازی‌ها، فیلم‌ها، انیمیشن‌ها، رمان‌ها، تصاویر، تریلرها و متن‌های این سایت متعلق به ساوفاکس اینترتینمنت یا صاحبان مجوز آن‌هاست. شما می‌توانید آن‌ها را برای استفاده‌ی شخصی در همین سایت ببینید. کپی، بارگذاری دوباره، فروش یا انتشار آن‌ها در جای دیگر بدون اجازه‌ی کتبی ما مجاز نیست.</p>
+
+      <h2>خرید و اشتراک</h2>
+      <p>خرید آثار و اشتراک هنوز فعال نشده است و تا آن زمان قیمت‌ها فقط برای اطلاع نمایش داده می‌شوند. با فعال شدن خرید، شرایط پرداخت، ارسال نسخه‌های فیزیکی و بازگشت وجه به این صفحه اضافه می‌شود.</p>
+
+      <h2>استفاده از سایت</h2>
+      <ul>
+        <li>برای نفوذ، ایجاد بار سنگین یا اختلال در سایت یا حساب دیگران تلاش نکنید.</li>
+        <li>از سایت برای هیچ کار غیرقانونی استفاده نکنید.</li>
+      </ul>
+
+      <h2>خدمات</h2>
+      <p>تلاش می‌کنیم سایت همیشه در دسترس و درست باشد، اما خدمات به همین شکلی که هست ارائه می‌شود و امکانات، قیمت‌ها و تاریخ‌های انتشار ممکن است تغییر کنند.</p>
+
+      <h2>قانون حاکم</h2>
+      <p>این قوانین تابع قوانین جمهوری اسلامی ایران است.</p>
+
+      <h2>تغییرات</h2>
+      <p>اگر این قوانین را تغییر دهیم، تاریخ بالای همین صفحه را به‌روز می‌کنیم. ادامه‌ی استفاده از سایت پس از آن به معنای پذیرش قوانین جدید است.</p>
+
+      <h2>تماس</h2>
+      <p><a class="selectable" href="mailto:saufoxentertainment@gmail.com" dir="ltr">saufoxentertainment@gmail.com</a></p>
+    </div>
   </main>
 
   <footer class="site-footer">
@@ -116,9 +174,13 @@
         </div>
       </div>
     </div>
-    <p class="site-footer__bottom">&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+    <div class="site-footer__bottom">
+      <p>&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+      <button class="lang-switch" type="button" data-lang-switch translate="no">فارسی</button>
+    </div>
   </footer>
 
-  <script src="js/main.js?v=11" defer></script>
+  <script src="js/fa.js?v=12" defer></script>
+  <script src="js/main.js?v=12" defer></script>
 </body>
 </html>

@@ -21,9 +21,29 @@ npx serve .
 - `admin.html`: admin panel for the catalogue (admins only)
 - `css/style.css`: styles; design tokens live in `:root`
 - `js/main.js`: scripts
+- `js/fa.js`: Persian text for everything the pages and scripts show
 - `js/vendor/supabase.js`: supabase-js 2.117.1 (UMD build, MIT), served from this site so it doesn't depend on a CDN
 - `assets/`: default avatar, artwork (`works/`: stills from the released works), and self-hosted fonts (Great Vibes,
-  Barlow Condensed, Inter; all SIL Open Font License)
+  Barlow Condensed, Inter, Vazirmatn; all SIL Open Font License)
+
+## Languages
+
+English, or Persian (right to left). The inline script at the top of each
+page's `<head>` picks the language, from the visitor's choice
+(`saufox.lang` in localStorage) or else from their browser, and sets
+`<html lang="fa" dir="rtl">`. A Persian page stays hidden until
+`js/main.js` has swapped every English text and label listed in
+`js/fa.js` for Persian; it keeps doing so for text the scripts add later.
+To translate something new, add its exact English to `js/fa.js`
+(`{name}` marks a part that changes). Work titles, names and emails are
+marked `translate="no"` and stay as they are. About, Terms and Privacy
+carry both languages in the HTML (`data-only="en"` / `data-only="fa"`).
+
+In Persian, numbers use Persian digits and dates the Iranian calendar,
+the Vazirmatn font is used (self-hosted, SIL OFL), and the card rows and
+the hero keep their shape. A work's status text and synopsis can be given
+in Persian in the admin panel. The switch is in the footer and on the
+login pages. The admin panel stays in English.
 
 ## Hosting
 
@@ -32,7 +52,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=11`); raise it in all three pages
+JS with a version number (`style.css?v=12`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts

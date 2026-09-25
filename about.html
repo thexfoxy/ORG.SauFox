@@ -3,11 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Language: the visitor's choice, else Persian if their browser prefers
+    // it. A Persian page stays hidden until js/main.js has put its text in.
+    (function () {
+      var lang = "en";
+      try {
+        lang = localStorage.getItem("saufox.lang") ||
+          ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
+      } catch (e) {}
+      if (lang !== "fa") return;
+      var root = document.documentElement;
+      root.lang = "fa";
+      root.dir = "rtl";
+      root.classList.add("i18n-pending");
+      setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
+    })();
+  </script>
   <title>About · SauFox Entertainment</title>
   <meta name="description" content="About SauFox Entertainment, a studio making games, animation, films and novels, and how to contact us.">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=11">
+  <link rel="stylesheet" href="css/style.css?v=12">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -41,35 +58,69 @@
   </header>
 
   <main class="doc">
-    <p class="doc__kicker">About us</p>
-    <h1 class="doc__title">Stories that stay with you</h1>
-    <p class="doc__lead">SauFox Entertainment is an entertainment studio working across games, animation, short films, feature films and novels, released in physical and digital editions.</p>
-    <p>In everything we make, we set out to build powerful, realistic media: stories that take their audience seriously and help teenagers work toward their own goals.</p>
+    <div data-only="en" translate="no">
+      <p class="doc__kicker">About us</p>
+      <h1 class="doc__title">Stories that stay with you</h1>
+      <p class="doc__lead">SauFox Entertainment is an entertainment studio working across games, animation, short films, feature films and novels, released in physical and digital editions.</p>
+      <p>In everything we make, we set out to build powerful, realistic media: stories that take their audience seriously and help teenagers work toward their own goals.</p>
 
-    <h2 id="contact">Contact</h2>
-    <p>For business, press or anything else, reach us here.</p>
-    <dl class="doc__contact">
-      <div>
-        <dt>Email</dt>
-        <dd><a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a></dd>
-      </div>
-      <div>
-        <dt>Phone</dt>
-        <dd><a class="selectable" href="tel:+989301053524" dir="ltr">+98 930 105 3524</a></dd>
-      </div>
-      <div>
-        <dt>Instagram</dt>
-        <dd><a href="https://www.instagram.com/saufox.entertainment" target="_blank" rel="noopener">@saufox.entertainment</a></dd>
-      </div>
-      <div>
-        <dt>Telegram</dt>
-        <dd><a href="https://t.me/saufoxentertainment" target="_blank" rel="noopener">t.me/saufoxentertainment</a></dd>
-      </div>
-      <div>
-        <dt>X</dt>
-        <dd><a href="https://x.com/saufoxent" target="_blank" rel="noopener">@saufoxent</a></dd>
-      </div>
-    </dl>
+      <h2 id="contact">Contact</h2>
+      <p>For business, press or anything else, reach us here.</p>
+      <dl class="doc__contact">
+        <div>
+          <dt>Email</dt>
+          <dd><a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a></dd>
+        </div>
+        <div>
+          <dt>Phone</dt>
+          <dd><a class="selectable" href="tel:+989301053524" dir="ltr">+98 930 105 3524</a></dd>
+        </div>
+        <div>
+          <dt>Instagram</dt>
+          <dd><a href="https://www.instagram.com/saufox.entertainment" target="_blank" rel="noopener">@saufox.entertainment</a></dd>
+        </div>
+        <div>
+          <dt>Telegram</dt>
+          <dd><a href="https://t.me/saufoxentertainment" target="_blank" rel="noopener">t.me/saufoxentertainment</a></dd>
+        </div>
+        <div>
+          <dt>X</dt>
+          <dd><a href="https://x.com/saufoxent" target="_blank" rel="noopener">@saufoxent</a></dd>
+        </div>
+      </dl>
+    </div>
+
+    <div data-only="fa">
+      <p class="doc__kicker">درباره‌ی ما</p>
+      <h1 class="doc__title">قصه‌هایی که با شما می‌مانند</h1>
+      <p class="doc__lead">ساوفاکس اینترتینمنت یک استودیوی سرگرمی است که در زمینه‌ی بازی، انیمیشن، فیلم کوتاه، فیلم سینمایی و رمان کار می‌کند و آثارش را در نسخه‌های فیزیکی و دیجیتال منتشر می‌کند.</p>
+      <p>هدف ما در همه‌ی کارهایمان ساختن رسانه‌ای قدرتمند و واقع‌گرایانه است: قصه‌هایی که مخاطبشان را جدی می‌گیرند و به نوجوانان کمک می‌کنند به اهداف خودشان برسند.</p>
+
+      <h2 id="contact-fa">تماس با ما</h2>
+      <p>برای همکاری، رسانه یا هر موضوع دیگری از این راه‌ها با ما در ارتباط باشید.</p>
+      <dl class="doc__contact">
+        <div>
+          <dt>ایمیل</dt>
+          <dd><a class="selectable" href="mailto:saufoxentertainment@gmail.com" dir="ltr">saufoxentertainment@gmail.com</a></dd>
+        </div>
+        <div>
+          <dt>تلفن</dt>
+          <dd><a class="selectable" href="tel:+989301053524" dir="ltr">+98 930 105 3524</a></dd>
+        </div>
+        <div>
+          <dt>اینستاگرام</dt>
+          <dd><a href="https://www.instagram.com/saufox.entertainment" target="_blank" rel="noopener" dir="ltr">@saufox.entertainment</a></dd>
+        </div>
+        <div>
+          <dt>تلگرام</dt>
+          <dd><a href="https://t.me/saufoxentertainment" target="_blank" rel="noopener" dir="ltr">t.me/saufoxentertainment</a></dd>
+        </div>
+        <div>
+          <dt>ایکس</dt>
+          <dd><a href="https://x.com/saufoxent" target="_blank" rel="noopener" dir="ltr">@saufoxent</a></dd>
+        </div>
+      </dl>
+    </div>
   </main>
 
   <footer class="site-footer">
@@ -109,9 +160,13 @@
         </div>
       </div>
     </div>
-    <p class="site-footer__bottom">&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+    <div class="site-footer__bottom">
+      <p>&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+      <button class="lang-switch" type="button" data-lang-switch translate="no">فارسی</button>
+    </div>
   </footer>
 
-  <script src="js/main.js?v=11" defer></script>
+  <script src="js/fa.js?v=12" defer></script>
+  <script src="js/main.js?v=12" defer></script>
 </body>
 </html>

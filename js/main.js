@@ -21,6 +21,118 @@ const local = {
   },
 };
 
+// ---------- Language ----------
+// English, or Persian (right to left). The inline script in each page's
+// <head> picks the language before first paint and hides a Persian page
+// until its text is in. Here every English text and label listed in FA
+// (js/fa.js) becomes Persian, now and whenever the scripts add more. Parts
+// marked translate="no" (work titles, names, emails) are left alone.
+const LANG = document.documentElement.lang === "fa" && typeof FA !== "undefined" ? "fa" : "en";
+
+const faDigits = (text) => String(text).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+const digits = (text) => (LANG === "fa" ? faDigits(text) : String(text));
+const num = (n, decimals = 0) =>
+  n.toLocaleString(LANG === "fa" ? "fa-IR" : "en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+const money = {
+  USD: (n) => (LANG === "fa" ? `${num(n, 2)} دلار` : `$${num(n, 2)}`),
+  EUR: (n) => (LANG === "fa" ? `${num(n, 2)} یورو` : `€${num(n, 2)}`),
+  IRR: (n) => (LANG === "fa" ? `${num(Math.round(n))} ریال` : `${num(Math.round(n))} Rials`),
+};
+// Dates in Tehran time; Persian uses the Iranian calendar.
+const dateText = (iso, options = { day: "numeric", month: "long", year: "numeric" }) =>
+  new Date(iso).toLocaleDateString(LANG === "fa" ? "fa-IR" : "en-GB", { ...options, timeZone: "Asia/Tehran" });
+
+// Keys with {name} parts become patterns.
+const faPatterns =
+  LANG === "fa"
+    ? Object.keys(FA)
+        .filter((key) => key.includes("{"))
+        .map((key) => {
+          const names = [];
+          const source = key
+            .replace(/[.*+?^$()|[\]\\{}]/g, "\\$&")
+            .replace(/\\\{(\w+)\\\}/g, (_, name) => {
+              names.push(name);
+              return "(.+?)";
+            });
+          return { key, names, re: new RegExp(`^${source}$`) };
+        })
+    : [];
+
+const t = (text) => {
+  if (LANG !== "fa" || !text) return text;
+  const trimmed = text.trim();
+  if (!trimmed) return text;
+  let out = FA[trimmed];
+  if (out === undefined) {
+    for (const { key, names, re } of faPatterns) {
+      const match = trimmed.match(re);
+      if (!match) continue;
+      out = names.reduce((s, name, i) => {
+        const value = match[i + 1];
+        return s.replace(`{${name}}`, /^\d+$/.test(value) ? faDigits(value) : FA[value] || value);
+      }, FA[key]);
+      break;
+    }
+  }
+  return out === undefined ? text : text.replace(trimmed, out);
+};
+
+(function translatePage() {
+  if (LANG !== "fa") return;
+  const SKIP = "script, style, textarea, [translate='no']";
+  const ATTRS = ["placeholder", "aria-label", "title", "alt", "data-hover-text"];
+
+  const translateText = (node) => {
+    if (!node.parentElement || node.parentElement.closest(SKIP)) return;
+    const next = t(node.nodeValue);
+    if (next !== node.nodeValue) node.nodeValue = next;
+  };
+  const translateAttr = (el, name) => {
+    const value = el.getAttribute(name);
+    const next = value && t(value);
+    if (next && next !== value && !el.closest(SKIP)) el.setAttribute(name, next);
+  };
+  const translateTree = (root) => {
+    if (root.nodeType === Node.TEXT_NODE) return translateText(root);
+    if (root.nodeType !== Node.ELEMENT_NODE || root.closest(SKIP)) return;
+    [root, ...root.querySelectorAll(ATTRS.map((a) => `[${a}]`).join(","))].forEach((el) =>
+      ATTRS.forEach((a) => el.hasAttribute(a) && translateAttr(el, a))
+    );
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) translateText(walker.currentNode);
+  };
+
+  translateTree(document.documentElement);
+  // The Persian about page has its own contact heading.
+  if (location.hash === "#contact" && document.getElementById("contact-fa"))
+    addEventListener("load", () => document.getElementById("contact-fa").scrollIntoView());
+  new MutationObserver((records) => {
+    for (const r of records) {
+      if (r.type === "childList") r.addedNodes.forEach(translateTree);
+      else if (r.type === "characterData") translateText(r.target);
+      else translateAttr(r.target, r.attributeName);
+    }
+  }).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ATTRS,
+  });
+})();
+document.documentElement.classList.remove("i18n-pending");
+
+// Language switch (footer, login pages): remembers the choice and reloads.
+document.querySelectorAll("[data-lang-switch]").forEach((button) => {
+  button.textContent = LANG === "fa" ? "English" : "فارسی";
+  button.lang = LANG === "fa" ? "en" : "fa";
+  button.addEventListener("click", () => {
+    local.set("lang", LANG === "fa" ? "en" : "fa");
+    location.reload();
+  });
+});
+
 // Accounts live in Supabase (project saufox-entertainment). This key is the
 // public one meant for browsers; the database's row-level security decides
 // what each member can read and change. The session is stored under
@@ -53,7 +165,7 @@ const toWork = (row) => ({
   title: row.title,
   kind: row.kind,
   status: row.status,
-  statusText: row.status_text || "",
+  statusText: (LANG === "fa" && row.status_text_fa) || row.status_text || "",
   prices: { USD: row.price_usd, EUR: row.price_eur, IRR: row.price_irr },
   images: [row.cover_url || row.hero_url].filter(Boolean),
   hero: row.hero_url || "",
@@ -61,7 +173,7 @@ const toWork = (row) => ({
   stills: row.stills || [],
   trailerDate: row.trailer_date,
   trailer: row.trailer || "",
-  synopsis: row.synopsis || "",
+  synopsis: (LANG === "fa" && row.synopsis_fa) || row.synopsis || "",
   genres: row.genres || [],
   platforms: row.platforms || [],
   rating: row.rating || "",
@@ -119,7 +231,7 @@ const fetchProfile = async (user) => {
     const line = document.createElement("span");
     line.className = `cta__line cta__line--${kind}`;
     line.setAttribute("aria-hidden", "true");
-    const chars = Array.from(text);
+    const chars = LANG === "fa" ? text.split(/(\s+)/).filter(Boolean) : Array.from(text);
     // Short words get a slower, clearly readable wave; long ones stay ~1.4s.
     const step = Math.min(140, 1400 / chars.length);
     chars.forEach((ch, i) => {
@@ -400,11 +512,6 @@ const dragScroll = (track) => {
     coming: "Coming soon",
     production: "In production",
   };
-  const money = {
-    USD: (n) => `$${n.toFixed(2)}`,
-    EUR: (n) => `€${n.toFixed(2)}`,
-    IRR: (n) => `${Math.round(n).toLocaleString("en-US")} Rials`,
-  };
   const el = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -448,7 +555,9 @@ const dragScroll = (track) => {
       return dot;
     });
     const caption = el("div", "card__caption");
-    caption.append(el("h2", "card__title", work.title), el("span", "card__kind", work.kind));
+    const title = el("h2", "card__title", work.title);
+    title.translate = false; // titles stay as they are
+    caption.append(title, el("span", "card__kind", work.kind));
     media.append(...slides, caption);
     if (slides.length > 1) media.append(dots);
 
@@ -584,6 +693,7 @@ const posterCard = (work) => {
   }
   const title = document.createElement("span");
   title.className = "poster-card__title";
+  title.translate = false;
   title.textContent = work.title;
   const kind = document.createElement("span");
   kind.className = "poster-card__kind";
@@ -638,17 +748,11 @@ const posterCard = (work) => {
 
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
   const CODES = ["USD", "EUR", "IRR"];
-  const format = {
-    USD: (n) => `$${n.toFixed(2)}`,
-    EUR: (n) => `€${n.toFixed(2)}`,
-    IRR: (n) => `${Math.round(n).toLocaleString("en-US")} Rials`,
-  };
-
   const tickers = boxes.map((box) => {
     const items = CODES.map((code, i) => {
       const span = document.createElement("span");
       span.className = "card__amount" + (i === 0 ? " is-active" : "");
-      span.textContent = format[code](Number(box.dataset[code.toLowerCase()]));
+      span.textContent = money[code](Number(box.dataset[code.toLowerCase()]));
       box.append(span);
       return span;
     });
@@ -1113,10 +1217,7 @@ const signedInGoHome = async (user) => {
   const fallbackName = (user.email || "").split("@")[0] || "SauFox fan";
 
   page.querySelector('[data-profile="email"]').textContent = user.email;
-  page.querySelector('[data-profile="since"]').textContent = new Date(user.created_at).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  page.querySelector('[data-profile="since"]').textContent = dateText(user.created_at, { month: "long", year: "numeric" });
 
   showMyList(user.id);
   // Admins get a way into the admin panel.
@@ -1280,18 +1381,11 @@ const signedInGoHome = async (user) => {
   } else page.querySelector(".title-poster").hidden = true;
 
   // Facts
-  const money = {
-    USD: (n) => `$${n.toFixed(2)}`,
-    EUR: (n) => `\u20ac${n.toFixed(2)}`,
-    IRR: (n) => `${Math.round(n).toLocaleString("en-US")} Rials`,
-  };
-  const dateText = (iso) =>
-    new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Tehran" });
   const prices = work.prices ? Object.keys(money).filter((code) => work.prices[code] != null) : [];
   const facts = [
     ["Price", prices.map((code) => money[code](work.prices[code])).join(" / ")],
-    ["Genre", (work.genres || []).join(", ")],
-    ["Platforms", (work.platforms || []).join(", ")],
+    ["Genre", (work.genres || []).map(t).join(LANG === "fa" ? "، " : ", ")],
+    ["Platforms", (work.platforms || []).join(LANG === "fa" ? "، " : ", ")],
     ["Age rating", work.rating],
   ];
   const factList = page.querySelector(".title-facts");
@@ -1324,10 +1418,10 @@ const signedInGoHome = async (user) => {
     const tick = () => {
       const left = Math.max(0, target - Date.now());
       const s = Math.floor(left / 1000);
-      units.days.textContent = Math.floor(s / 86400);
-      units.hours.textContent = String(Math.floor(s / 3600) % 24).padStart(2, "0");
-      units.minutes.textContent = String(Math.floor(s / 60) % 60).padStart(2, "0");
-      units.seconds.textContent = String(s % 60).padStart(2, "0");
+      units.days.textContent = digits(Math.floor(s / 86400));
+      units.hours.textContent = digits(String(Math.floor(s / 3600) % 24).padStart(2, "0"));
+      units.minutes.textContent = digits(String(Math.floor(s / 60) % 60).padStart(2, "0"));
+      units.seconds.textContent = digits(String(s % 60).padStart(2, "0"));
       if (!left) {
         clearInterval(timer);
         countdown.querySelector(".countdown__label").textContent = "The trailer is out. Check back shortly.";
@@ -1380,7 +1474,9 @@ const signedInGoHome = async (user) => {
     const list = page.querySelector(".title-credits__list");
     work.credits.forEach(({ role, name }) => {
       const row = make("div");
-      row.append(make("dt", "", role), make("dd", "", name));
+      const who = make("dd", "", name);
+      who.translate = false;
+      row.append(make("dt", "", role), who);
       list.append(row);
     });
     page.querySelector(".title-credits").hidden = false;
@@ -1427,8 +1523,10 @@ const signedInGoHome = async (user) => {
     if (viewer.hidden) return;
     if (event.key === "Escape") close();
     const isStill = stage.firstElementChild && stage.firstElementChild.tagName === "IMG";
-    if (isStill && event.key === "ArrowLeft") showStill(current - 1);
-    if (isStill && event.key === "ArrowRight") showStill(current + 1);
+    const back = LANG === "fa" ? "ArrowRight" : "ArrowLeft";
+    const forward = LANG === "fa" ? "ArrowLeft" : "ArrowRight";
+    if (isStill && event.key === back) showStill(current - 1);
+    if (isStill && event.key === forward) showStill(current + 1);
   });
 
   // Aparat plays in Iran without a VPN; the ID comes from aparat.com/v/<ID>.
@@ -1597,6 +1695,7 @@ const signedInGoHome = async (user) => {
     kind: $("w-kind"),
     status: $("w-status"),
     statusText: $("w-status-text"),
+    statusTextFa: $("w-status-text-fa"),
     published: $("w-published"),
     irr: $("w-price-irr"),
     usd: $("w-price-usd"),
@@ -1605,6 +1704,7 @@ const signedInGoHome = async (user) => {
     trailerDate: $("w-trailer-date"),
     trailer: $("w-trailer"),
     synopsis: $("w-synopsis"),
+    synopsisFa: $("w-synopsis-fa"),
     genres: $("w-genres"),
     platforms: $("w-platforms"),
     rating: $("w-rating"),
@@ -1719,6 +1819,7 @@ const signedInGoHome = async (user) => {
     fields.kind.value = w.kind || "";
     fields.status.value = w.status || "coming";
     fields.statusText.value = w.status_text || "";
+    fields.statusTextFa.value = w.status_text_fa || "";
     fields.published.checked = Boolean(w.published);
     fields.irr.value = w.price_irr ?? "";
     fields.usd.value = w.price_usd ?? "";
@@ -1729,6 +1830,7 @@ const signedInGoHome = async (user) => {
     fields.trailerDate.value = toLocalInput(w.trailer_date);
     fields.trailer.value = w.trailer ? `https://www.aparat.com/v/${w.trailer}` : "";
     fields.synopsis.value = w.synopsis || "";
+    fields.synopsisFa.value = w.synopsis_fa || "";
     fields.genres.value = (w.genres || []).join(", ");
     fields.platforms.value = (w.platforms || []).join(", ");
     fields.rating.value = w.rating || "";
@@ -1846,6 +1948,7 @@ const signedInGoHome = async (user) => {
       kind,
       status: fields.status.value,
       status_text: fields.statusText.value.trim() || null,
+      status_text_fa: fields.statusTextFa.value.trim() || null,
       published: fields.published.checked,
       price_irr: number(fields.irr),
       price_usd: number(fields.usd),
@@ -1857,6 +1960,7 @@ const signedInGoHome = async (user) => {
       trailer_date: fromLocalInput(fields.trailerDate.value),
       trailer: trailer || null,
       synopsis: fields.synopsis.value.trim() || null,
+      synopsis_fa: fields.synopsisFa.value.trim() || null,
       genres: list(fields.genres.value),
       platforms: list(fields.platforms.value),
       rating: fields.rating.value.trim() || null,

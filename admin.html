@@ -7,7 +7,7 @@
   <title>Manage works · SauFox Entertainment</title>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=11">
+  <link rel="stylesheet" href="css/style.css?v=12">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -103,6 +103,11 @@
             <input id="w-status-text" name="status_text" type="text" maxlength="40" placeholder="e.g. Trailer 24 Nov">
             <small>Replaces the status wording on the card.</small>
           </label>
+          <label class="admin-field">
+            <span>Status text in Persian <em>optional</em></span>
+            <input id="w-status-text-fa" name="status_text_fa" type="text" maxlength="40" dir="rtl" placeholder="مثلاً تریلر ۳ آذر">
+            <small>Shown on the Persian site.</small>
+          </label>
           <label class="admin-check admin-field--wide">
             <input id="w-published" name="published" type="checkbox">
             <span>Show on the site</span>
@@ -188,6 +193,11 @@
             <span>Synopsis</span>
             <textarea id="w-synopsis" name="synopsis" rows="5" maxlength="4000"></textarea>
           </label>
+          <label class="admin-field admin-field--wide">
+            <span>Synopsis in Persian <em>optional</em></span>
+            <textarea id="w-synopsis-fa" name="synopsis_fa" rows="5" maxlength="4000" dir="rtl"></textarea>
+            <small>Shown on the Persian site; without it, the English synopsis shows there.</small>
+          </label>
           <label class="admin-field">
             <span>Genres <em>comma separated</em></span>
             <input id="w-genres" name="genres" type="text" placeholder="Mystery, Crime">
@@ -217,7 +227,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=11" defer></script>
-  <script src="js/main.js?v=11" defer></script>
+  <script src="js/vendor/supabase.js?v=12" defer></script>
+  <script src="js/main.js?v=12" defer></script>
 </body>
 </html>

@@ -3,11 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Language: the visitor's choice, else Persian if their browser prefers
+    // it. A Persian page stays hidden until js/main.js has put its text in.
+    (function () {
+      var lang = "en";
+      try {
+        lang = localStorage.getItem("saufox.lang") ||
+          ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
+      } catch (e) {}
+      if (lang !== "fa") return;
+      var root = document.documentElement;
+      root.lang = "fa";
+      root.dir = "rtl";
+      root.classList.add("i18n-pending");
+      setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
+    })();
+  </script>
   <title>SauFox Entertainment</title>
   <meta name="description" content="A release from SauFox Entertainment.">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=11">
+  <link rel="stylesheet" href="css/style.css?v=12">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -50,7 +67,7 @@
 
     <section class="title-head">
       <p class="title-head__kicker"></p>
-      <h1 class="title-head__name"></h1>
+      <h1 class="title-head__name" translate="no"></h1>
     </section>
 
     <section class="title-main">
@@ -143,7 +160,10 @@
         </div>
       </div>
     </div>
-    <p class="site-footer__bottom">&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+    <div class="site-footer__bottom">
+      <p>&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+      <button class="lang-switch" type="button" data-lang-switch translate="no">فارسی</button>
+    </div>
   </footer>
 
   <!-- Full-size stills and the trailer player. -->
@@ -160,7 +180,8 @@
     </button>
   </div>
 
-  <script src="js/vendor/supabase.js?v=11" defer></script>
-  <script src="js/main.js?v=11" defer></script>
+  <script src="js/vendor/supabase.js?v=12" defer></script>
+  <script src="js/fa.js?v=12" defer></script>
+  <script src="js/main.js?v=12" defer></script>
 </body>
 </html>

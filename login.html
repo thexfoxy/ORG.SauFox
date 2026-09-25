@@ -3,11 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Language: the visitor's choice, else Persian if their browser prefers
+    // it. A Persian page stays hidden until js/main.js has put its text in.
+    (function () {
+      var lang = "en";
+      try {
+        lang = localStorage.getItem("saufox.lang") ||
+          ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
+      } catch (e) {}
+      if (lang !== "fa") return;
+      var root = document.documentElement;
+      root.lang = "fa";
+      root.dir = "rtl";
+      root.classList.add("i18n-pending");
+      setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
+    })();
+  </script>
   <title>Login · SauFox Entertainment</title>
   <meta name="description" content="Log in to SauFox Entertainment or create an account.">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=11">
+  <link rel="stylesheet" href="css/style.css?v=12">
 </head>
 <body class="login-page">
   <!-- Background: slanted strips of artwork from the studio's releases,
@@ -15,6 +32,7 @@
   <div class="login-bg" aria-hidden="true"></div>
 
   <main class="login">
+    <button class="lang-switch lang-switch--corner" type="button" data-lang-switch translate="no">فارسی</button>
     <a class="login__brand" href="index.html">SauFox <span>Entertainment</span></a>
 
     <div class="auth">
@@ -136,10 +154,14 @@
       </div>
     </div>
 
-    <p class="login__legal">By creating an account you agree to the <a href="terms.html">Terms of use</a> and <a href="privacy.html">Privacy policy</a>.</p>
+    <p class="login__legal">
+      <span data-only="en" translate="no">By creating an account you agree to the <a href="terms.html">Terms of use</a> and <a href="privacy.html">Privacy policy</a>.</span>
+      <span data-only="fa">با ساختن حساب، <a href="terms.html">قوانین استفاده</a> و <a href="privacy.html">حریم خصوصی</a> را می‌پذیرید.</span>
+    </p>
   </main>
 
-  <script src="js/vendor/supabase.js?v=11" defer></script>
-  <script src="js/main.js?v=11" defer></script>
+  <script src="js/vendor/supabase.js?v=12" defer></script>
+  <script src="js/fa.js?v=12" defer></script>
+  <script src="js/main.js?v=12" defer></script>
 </body>
 </html>

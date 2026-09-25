@@ -29,6 +29,15 @@
   font-display: swap;
 }
 
+/* Persian letters only (Latin falls through to Inter). */
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("../assets/fonts/vazirmatn-nl.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ---------- Tokens ---------- */
 
 :root {
@@ -824,7 +833,7 @@ main {
 .card__amount {
   position: absolute;
   inset: 0;
-  text-align: right;
+  text-align: end;
   font: 600 17px/24px var(--font-body);
   font-variant-numeric: tabular-nums;
   transform: translateY(100%);
@@ -957,9 +966,10 @@ main {
 }
 
 .plan__amounts .card__amount {
-  inset: 0 auto 0 0;
+  inset: 0;
+  inset-inline-end: auto;
   white-space: nowrap;
-  text-align: left;
+  text-align: start;
   font: 600 clamp(28px, 2.6vw, 36px)/44px var(--font-body);
   letter-spacing: -0.02em;
 }
@@ -2720,7 +2730,7 @@ a.hero__panel {
 
 .doc ul {
   margin: 0 0 14px;
-  padding-left: 20px;
+  padding-inline-start: 20px;
 }
 
 .doc li {
@@ -3376,4 +3386,148 @@ a.hero__panel {
   display: grid;
   place-items: center;
   text-decoration: none;
+}
+
+/* ==========================================================================
+   Persian (html[lang="fa"], right to left)
+   js/fa.js holds the text; js/main.js swaps it in. The page is hidden until
+   then (see the inline script in each <head>).
+   ========================================================================== */
+
+.i18n-pending body {
+  visibility: hidden;
+}
+
+/* Blocks written once per language. */
+:root:not([lang="fa"]) [data-only="fa"],
+:root[lang="fa"] [data-only="en"] {
+  display: none !important;
+}
+
+:root[lang="fa"] {
+  --font-body: "Vazirmatn", "Inter", system-ui, sans-serif;
+  --font-action: "Vazirmatn", "Inter", system-ui, sans-serif;
+  --font-logo: "Great Vibes", "Vazirmatn", cursive;
+}
+
+/* Persian has no italics, and letter spacing breaks its joined letters. */
+:root[lang="fa"] * {
+  font-style: normal !important;
+  letter-spacing: 0 !important;
+}
+
+:root[lang="fa"] body {
+  line-height: 1.7;
+}
+
+/* Emails and passwords read left to right. */
+:root[lang="fa"] input[type="email"],
+:root[lang="fa"] input[type="password"],
+:root[lang="fa"] input[name="password"] {
+  direction: ltr;
+  text-align: right;
+}
+
+:root[lang="fa"] input[type="email"]::placeholder {
+  direction: ltr;
+}
+
+/* Tab markers slide the other way. */
+[dir="rtl"] .auth__tab-marker,
+[dir="rtl"] .profile-tabs__marker {
+  left: auto;
+  right: 4px;
+}
+
+[dir="rtl"] .auth[data-mode="signup"] .auth__tab-marker {
+  transform: translateX(-100%);
+}
+
+[dir="rtl"] .profile-tabs__marker {
+  transform: translateX(calc(var(--tab) * -100%));
+}
+
+/* The login and sign-up forms slide the other way. */
+[dir="rtl"] .auth[data-mode="signup"] .auth__slider {
+  transform: translateX(50%);
+}
+
+[dir="rtl"] .field__box {
+  padding: 0 14px 0 6px;
+}
+
+/* Card rows keep their order, left to right, so they still fade under the
+   hero's curve on the right; each card reads right to left. */
+[dir="rtl"] .works__track,
+[dir="rtl"] .shelf__track {
+  direction: ltr;
+}
+
+[dir="rtl"] .works__track > *,
+[dir="rtl"] .shelf__track > * {
+  direction: rtl;
+}
+
+/* The hero's shape doesn't flip, so the text in its free corner stays on
+   the left. */
+@media (min-width: 901px) {
+  [dir="rtl"] .slogan__quote,
+  [dir="rtl"] .title-head > * {
+    max-width: 32%;
+    margin-right: auto;
+    margin-left: 0;
+  }
+}
+
+/* Viewer arrows point the reading way. */
+[dir="rtl"] .viewer__step svg,
+[dir="rtl"] .admin-back svg {
+  transform: scaleX(-1);
+}
+
+/* Language switch (footer, login pages). */
+.lang-switch {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  font: 500 13px/1.2 "Vazirmatn", "Inter", system-ui, sans-serif;
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.lang-switch:hover {
+  background: #2a2a2f;
+}
+
+.lang-switch:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.lang-switch--corner {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  inset-inline-end: var(--gutter);
+  z-index: 2;
+}
+
+.site-footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.site-footer__bottom p {
+  margin: 0;
+}
+
+/* Right to left, the title page's poster and facts sit on the right, where
+   the hero reaches lowest, so they start below it. */
+@media (min-width: 901px) {
+  [dir="rtl"] .title-main {
+    margin-top: max(36px, calc(var(--hero-h) * 0.2885 - 64px));
+  }
 }
