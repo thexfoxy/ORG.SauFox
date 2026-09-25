@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=42">
+  <link rel="stylesheet" href="css/style.css?v=43">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -62,6 +62,48 @@
         <ol class="admin-orders__list"></ol>
         <p class="admin-orders__empty" hidden>No orders yet.</p>
       </section>
+
+      <!-- Files buyers download (games, and later films and novels), kept
+           in the private Cloudflare R2 bucket; see the "library" Edge
+           Function. -->
+      <form class="admin-files admin-group" novalidate>
+        <h2 class="admin-rates__title">Files for buyers</h2>
+        <p class="admin-group__hint">Upload a build of a work (up to 5 GB). Buyers see a published file as a download button in their Library, with a link that works for an hour; unpublished files are only for admins. Needs the R2 secrets in Supabase (Edge Functions &rarr; Secrets).</p>
+        <div class="admin-grid admin-grid--3">
+          <label class="admin-field">
+            <span>Work</span>
+            <select id="file-work" required></select>
+          </label>
+          <label class="admin-field">
+            <span>Platform</span>
+            <select id="file-platform">
+              <option value="windows">Windows</option>
+              <option value="mac">macOS</option>
+              <option value="linux">Linux</option>
+              <option value="android">Android</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label class="admin-field">
+            <span>Version</span>
+            <input id="file-version" type="text" maxlength="40" placeholder="e.g. 1.0.0" required>
+          </label>
+          <label class="admin-field admin-field--wide">
+            <span>File</span>
+            <input id="file-input" type="file" required>
+          </label>
+        </div>
+        <label class="admin-check">
+          <input id="file-published" type="checkbox">
+          <span>Publish now (buyers can download it)</span>
+        </label>
+        <progress class="admin-files__progress" max="1" value="0" hidden></progress>
+        <div class="admin-maintenance__save">
+          <p class="admin-message" role="status" aria-live="polite"></p>
+          <button class="admin-button admin-button--primary" type="submit">Upload</button>
+        </div>
+        <ol class="admin-files__list"></ol>
+      </form>
 
       <!-- Online payment (Zarinpal, through the Supabase Edge Function
            "payment") and the subscription prices on the home page. -->
@@ -331,7 +373,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=42" defer></script>
-  <script src="js/main.js?v=42" defer></script>
+  <script src="js/vendor/supabase.js?v=43" defer></script>
+  <script src="js/main.js?v=43" defer></script>
 </body>
 </html>

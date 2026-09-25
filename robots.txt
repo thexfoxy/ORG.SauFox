@@ -4,5 +4,6 @@ Disallow: /admin.html
 Disallow: /checkout.html
 Disallow: /profile.html
 Disallow: /status.html
+Disallow: /launcher.html
 
 Sitemap: https://saufoxentertainment.ir/sitemap.xml

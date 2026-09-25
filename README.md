@@ -208,6 +208,30 @@ sign-up, password login, Google sign-in, emailed code and password reset
 In that order: with CAPTCHA on in Supabase but no site key on the site,
 nobody can log in.
 
+## Library: files and the launcher
+
+- Files buyers download (game builds now; films and novels later) are in a
+  private Cloudflare R2 bucket. The `builds` table lists them (work,
+  platform, version, file key, size, published); buyers can only read the
+  published builds of works they've paid for. `downloads` logs each link.
+- Edge Function `library` (`supabase/functions/library/`): `download` gives
+  an owner a link to the file that works for an hour (10 a day per file);
+  admins get `upload` (a link to PUT a file of up to 5 GB straight into the
+  bucket) and `delete`. `r2.ts` signs the links (AWS Signature v4).
+  Secrets: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+  `R2_BUCKET`. The bucket needs a CORS rule allowing `PUT` and `GET` from
+  `https://saufoxentertainment.ir` for uploads from the admin panel.
+- Admin panel → Files for buyers: upload, publish, delete. Profile →
+  Library shows a download button for the newest file of each platform.
+- Launcher sign-in: the launcher listens on `http://127.0.0.1:<port>`, opens
+  `https://saufoxentertainment.ir/launcher.html?port=<port>&state=<random,
+  16-128 of A-Z a-z 0-9 _ ->` in the browser, and after the member allows
+  it receives `/callback?state=…&token_hash=…&email=…` (or `error=
+  cancelled`). It checks `state`, then signs in with supabase-js
+  `auth.verifyOtp({ token_hash, type: "magiclink" })`, which gives it its
+  own session. With that session it reads `orders` and `builds` through the
+  REST API and asks `library` for `download` links (`source: "launcher"`).
+
 ## Search engines (SEO)
 
 - Each page is in English at its plain address and in Persian at

@@ -375,9 +375,9 @@ const PAYMENT_ERRORS = {
   not_payable: "This order can't be paid any more. See its status in your orders.",
   signed_out: "Your session has ended. Log in again to pay.",
 };
-const payment = async (body, session) => {
+const callFunction = async (name, body, session) => {
   try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/payment`, {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -391,6 +391,16 @@ const payment = async (body, session) => {
   } catch (e) {
     return { error: "network" };
   }
+};
+const payment = (body, session) => callFunction("payment", body, session);
+// Files of the works a member owns (Edge Function "library").
+const library = (body, session) => callFunction("library", body, session);
+const PLATFORMS = { windows: "Windows", mac: "macOS", linux: "Linux", android: "Android", other: "Download" };
+const fileSize = (bytes) => {
+  if (!(bytes > 0)) return "";
+  const [value, unit] =
+    bytes >= 1e9 ? [bytes / 1e9, LANG === "fa" ? "گیگابایت" : "GB"] : [bytes / 1e6, LANG === "fa" ? "مگابایت" : "MB"];
+  return `${num(value, value < 10 ? 1 : 0)} ${unit}`;
 };
 // Sends the member to the bank. Returns a message if that can't happen.
 const payOrder = async (orderId) => {
@@ -1685,7 +1695,32 @@ const signedInGoHome = async (user) => {
   };
 
   // ---------- Library: every work the member has paid for ----------
-  // Released works are theirs now; pre-orders arrive on release day.
+  // Released works are theirs now; pre-orders arrive on release day. Works
+  // with files (builds) get a download button for each.
+  const DOWNLOAD_ERRORS = {
+    limit: "You've downloaded this file many times today. Try again tomorrow, or write to us.",
+    not_configured: "Downloads aren't open yet. Try again soon.",
+    signed_out: "Your session has ended. Log in again to download.",
+  };
+  const downloadButton = (build) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "library-item__download";
+    const label = `${PLATFORMS[build.platform] || PLATFORMS.other} · v${build.version}`;
+    const size = fileSize(build.size_bytes);
+    button.textContent = size ? `${label} · ${size}` : label;
+    button.addEventListener("click", async () => {
+      const item = button.closest(".library-item");
+      const problem = item.querySelector(".library-item__problem");
+      button.disabled = true;
+      problem.textContent = "";
+      const answer = await library({ action: "download", build_id: build.id, source: "site" }, await verifiedSession());
+      button.disabled = false;
+      if (answer.url) location.href = answer.url;
+      else problem.textContent = DOWNLOAD_ERRORS[answer.error] || "The download didn't start. Check your connection and try again.";
+    });
+    return button;
+  };
   const showLibrary = async (userId) => {
     const { data, error } = await account
       .from("orders")
@@ -1695,6 +1730,12 @@ const signedInGoHome = async (user) => {
       .order("paid_at", { ascending: false });
     if (error || !data.length) return;
     const works = await catalog;
+    // Only files of owned works come back (row-level security).
+    const { data: builds } = await account
+      .from("builds")
+      .select("id, work_id, platform, version, size_bytes, created_at")
+      .eq("published", true)
+      .order("created_at", { ascending: false });
     const cards = data
       .map((order) => {
         const work = works.find((w) => w.id === order.work_id);
@@ -1705,7 +1746,18 @@ const signedInGoHome = async (user) => {
         note.textContent =
           (work.status === "released" ? "Yours" : "Pre-ordered · arrives on release day") + (order.test ? " · test" : "");
         card.append(note);
-        return card;
+        // The newest file for each platform.
+        const files = (builds || [])
+          .filter((b) => b.work_id === work.id)
+          .filter((b, i, all) => all.findIndex((other) => other.platform === b.platform) === i);
+        if (!files.length) return card;
+        const item = document.createElement("div");
+        item.className = "library-item";
+        const problem = document.createElement("span");
+        problem.className = "library-item__problem";
+        problem.setAttribute("role", "status");
+        item.append(card, ...files.map(downloadButton), problem);
+        return item;
       })
       .filter(Boolean);
     if (!cards.length) return;
@@ -3010,6 +3062,136 @@ const signedInGoHome = async (user) => {
       });
   loadOrders();
 
+  // ---------- Files for buyers ----------
+  // The file goes straight from this browser into the R2 bucket, through a
+  // link the library function signs; then the build is saved here.
+  const fileForm = page.querySelector(".admin-files");
+  const fileMessage = fileForm.querySelector(".admin-message");
+  const fileWork = fileForm.querySelector("#file-work");
+  const fileInput = fileForm.querySelector("#file-input");
+  const fileVersion = fileForm.querySelector("#file-version");
+  const filePlatform = fileForm.querySelector("#file-platform");
+  const filePublished = fileForm.querySelector("#file-published");
+  const fileProgress = fileForm.querySelector(".admin-files__progress");
+  const fileList = fileForm.querySelector(".admin-files__list");
+  const fileSubmit = fileForm.querySelector('[type="submit"]');
+  const fileSay = (text, ok) => {
+    fileMessage.textContent = text;
+    fileMessage.classList.toggle("is-ok", Boolean(ok));
+  };
+  const FILE_ERRORS = {
+    not_configured: "The R2 secrets aren't set in Supabase yet (Edge Functions → Secrets).",
+    signed_out: "Your session has ended. Log in again.",
+    forbidden: "Only admins can do this.",
+  };
+  let workTitles = {};
+  const fileRow = (build) => {
+    const row = make("li", "admin-file");
+    const main = make("div", "admin-file__main");
+    main.append(
+      make("strong", "", `${workTitles[build.work_id] || build.work_id} · ${PLATFORMS[build.platform] || build.platform} · v${build.version}`),
+      make("span", "", `${build.file_name}${build.size_bytes ? ` · ${fileSize(build.size_bytes)}` : ""} · ${whenText(build.created_at)}`)
+    );
+    const side = make("div", "admin-file__side");
+    const toggle = make("label", "admin-check");
+    const box = make("input");
+    box.type = "checkbox";
+    box.checked = build.published;
+    toggle.append(box, make("span", "", "Published"));
+    box.addEventListener("change", async () => {
+      box.disabled = true;
+      const { error } = await account.from("builds").update({ published: box.checked }).eq("id", build.id);
+      if (error) box.checked = !box.checked;
+      box.disabled = false;
+    });
+    const remove = make("button", "admin-button admin-button--danger", "Delete");
+    remove.type = "button";
+    remove.addEventListener("click", async () => {
+      // Press twice: the first press asks.
+      if (!remove.dataset.armed) {
+        remove.dataset.armed = "1";
+        remove.textContent = "Delete the file?";
+        setTimeout(() => {
+          delete remove.dataset.armed;
+          remove.textContent = "Delete";
+        }, 4000);
+        return;
+      }
+      remove.disabled = true;
+      const answer = await library({ action: "delete", build_id: build.id }, await verifiedSession());
+      if (answer.ok) return row.remove();
+      remove.disabled = false;
+      fileSay(FILE_ERRORS[answer.error] || "The file wasn't deleted. Try again.");
+    });
+    side.append(toggle, remove);
+    row.append(main, side);
+    return row;
+  };
+  const loadFiles = async () => {
+    const [{ data: works }, { data: builds }] = await Promise.all([
+      account.from("works").select("id, title").order("sort"),
+      account.from("builds").select("*").order("created_at", { ascending: false }),
+    ]);
+    workTitles = Object.fromEntries((works || []).map((w) => [w.id, w.title]));
+    if (!fileWork.options.length)
+      (works || []).forEach((w) => {
+        const option = make("option", "", w.title);
+        option.value = w.id;
+        fileWork.append(option);
+      });
+    fileList.replaceChildren(...(builds || []).map(fileRow));
+  };
+  // PUT with progress (fetch can't report upload progress).
+  const put = (url, file) =>
+    new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", url);
+      xhr.upload.onprogress = (e) => e.lengthComputable && (fileProgress.value = e.loaded / e.total);
+      xhr.onload = () => resolve(xhr.status >= 200 && xhr.status < 300);
+      xhr.onerror = () => resolve(false);
+      xhr.send(file);
+    });
+  fileForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const file = fileInput.files[0];
+    const version = fileVersion.value.trim();
+    if (!fileWork.value) return fileSay("Choose a work.");
+    if (!version) return fileSay("Enter the version, such as 1.0.0.");
+    if (!file) return fileSay("Choose the file to upload.");
+    if (file.size > 5e9) return fileSay("Files over 5 GB can't be uploaded here. Upload it with rclone or wrangler, then tell Claude.");
+    fileSubmit.disabled = true;
+    fileSay("Getting the upload ready…", true);
+    const answer = await library({ action: "upload", work_id: fileWork.value, file_name: file.name }, await verifiedSession());
+    if (!answer.url) {
+      fileSubmit.disabled = false;
+      return fileSay(FILE_ERRORS[answer.error] || "Couldn't start the upload. Try again.");
+    }
+    fileSay(`Uploading ${file.name}…`, true);
+    fileProgress.value = 0;
+    fileProgress.hidden = false;
+    const uploaded = await put(answer.url, file);
+    fileProgress.hidden = true;
+    if (!uploaded) {
+      fileSubmit.disabled = false;
+      return fileSay("The upload failed. Check the bucket's CORS settings and your connection, then try again.");
+    }
+    const { error } = await account.from("builds").insert({
+      work_id: fileWork.value,
+      platform: filePlatform.value,
+      version,
+      file_key: answer.key,
+      file_name: file.name,
+      size_bytes: file.size,
+      published: filePublished.checked,
+    });
+    fileSubmit.disabled = false;
+    if (error) return fileSay("The file is uploaded, but it wasn't saved to the list. Try again.");
+    fileSay(filePublished.checked ? "Uploaded. Buyers can download it now." : "Uploaded. Publish it when it's ready for buyers.", true);
+    fileForm.reset();
+    loadFiles();
+  });
+  loadFiles();
+
   showList();
 })();
 
@@ -3220,7 +3402,7 @@ const signedInGoHome = async (user) => {
 // maintenance, can't reach the server, or a general error. Maintenance and
 // outages check again by themselves and go back when the site is up.
 (function statusPage() {
-  const page = document.querySelector(".status");
+  const page = document.querySelector(".status:not(.launcher-page)");
   if (!page) return;
 
   const params = new URLSearchParams(location.search);
@@ -3310,4 +3492,63 @@ const signedInGoHome = async (user) => {
   if (reason === "offline") {
     setInterval(() => settings().then(() => location.replace(back)).catch(() => {}), 20000);
   }
+})();
+
+// Launcher sign-in (launcher.html?port=…&state=…) — the SauFox launcher on
+// this computer opens this page in the browser. Once the member agrees,
+// the page sends them back to the launcher's local address with a one-time
+// sign-in (see the "library" Edge Function); the launcher makes its own
+// session from it, so this browser's session stays here.
+(async function launcherPage() {
+  const page = document.querySelector(".launcher-page");
+  if (!page) return;
+  const title = page.querySelector(".status__title");
+  const text = page.querySelector(".status__text");
+  const actions = page.querySelector(".status__actions");
+  const hint = page.querySelector(".status__hint");
+  const params = new URLSearchParams(location.search);
+  const port = Number(params.get("port"));
+  const state = params.get("state") || "";
+  if (!(Number.isInteger(port) && port >= 1024 && port <= 65535 && /^[A-Za-z0-9_-]{16,128}$/.test(state))) {
+    title.textContent = "This link isn't from the SauFox launcher";
+    text.textContent = "Open the launcher and choose Sign in there.";
+    return;
+  }
+  const callback = (query) => `http://127.0.0.1:${port}/callback?${new URLSearchParams({ state, ...query })}`;
+  const session = await verifiedSession();
+  if (!session) return goLogin();
+
+  title.textContent = "Sign in to the SauFox launcher?";
+  text.textContent = `The launcher on this computer will be signed in as ${session.user.email}. Only allow it if you just opened it yourself.`;
+  const button = (label, primary) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = primary ? "status__button status__button--primary" : "status__button";
+    b.textContent = label;
+    return b;
+  };
+  const allow = button("Allow", true);
+  const cancel = button("Cancel");
+  actions.replaceChildren(allow, cancel);
+  allow.addEventListener("click", async () => {
+    allow.disabled = cancel.disabled = true;
+    hint.textContent = "Signing the launcher in…";
+    const answer = await library({ action: "launcher-token" }, await verifiedSession());
+    if (!answer.token_hash) {
+      allow.disabled = cancel.disabled = false;
+      hint.textContent = "That didn't work. Try again in a moment.";
+      return;
+    }
+    title.textContent = "You're signed in to the launcher";
+    text.textContent = "You can close this tab and go back to the launcher.";
+    actions.replaceChildren();
+    hint.textContent = "";
+    location.href = callback({ token_hash: answer.token_hash, email: answer.email });
+  });
+  cancel.addEventListener("click", () => {
+    title.textContent = "Sign-in cancelled";
+    text.textContent = "The launcher wasn't signed in. You can close this tab.";
+    actions.replaceChildren();
+    location.href = callback({ error: "cancelled" });
+  });
 })();

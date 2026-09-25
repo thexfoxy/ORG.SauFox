@@ -4611,3 +4611,101 @@ a.hero__panel {
     justify-items: start;
   }
 }
+
+/* Library: a work the member owns, with a button for each of its files. */
+.library-item {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.library-item__download {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius);
+  font: 600 12px/1.3 var(--font-body);
+  color: #1a0d04;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.library-item__download::before {
+  content: "↓ ";
+}
+
+.library-item__download:hover {
+  background: #ff8c3a;
+}
+
+.library-item__download:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.library-item__problem {
+  font-size: 12px;
+  color: #ff8a7a;
+}
+
+.library-item__problem:empty {
+  display: none;
+}
+
+/* Admin: files for buyers. */
+.admin-files__progress {
+  width: 100%;
+  height: 8px;
+  margin-top: 14px;
+  accent-color: var(--accent);
+}
+
+.admin-files__list {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-files__list:empty {
+  display: none;
+}
+
+.admin-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.admin-file__main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.admin-file__main strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.admin-file__main span {
+  overflow-wrap: anywhere;
+}
+
+.admin-file__side {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-file__side .admin-check {
+  margin: 0;
+}

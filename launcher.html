@@ -25,30 +25,33 @@
     })();
   </script>
   <meta name="robots" content="noindex">
-  <title>Page not found · SauFox Entertainment</title>
-  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <title>Launcher sign-in · SauFox Entertainment</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="/assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/style.css?v=43">
 </head>
 <body class="status-page">
-  <!-- GitHub Pages shows this for any address on the site that has no page. Same page as status.html, set to "404"; js/main.js (statusPage) fills it in.
-       Paths start at the site root: a missing page can be at any depth. -->
+  <!-- Signs the SauFox launcher in: launcher.html?port=<port>&state=<state>.
+       The launcher listens on http://127.0.0.1:<port>/callback and gets
+       ?state=…&token_hash=…&email=… (or ?state=…&error=cancelled); it turns
+       token_hash into its own session with auth.verifyOtp({ token_hash,
+       type: "magiclink" }). js/main.js (launcherPage) runs it. -->
   <header class="status-top">
     <a class="status-brand" href="/index.html">SauFox <span>Entertainment</span></a>
     <button class="lang-switch" type="button" data-lang-switch translate="no">فارسی</button>
   </header>
 
-  <main class="status" data-reason="404">
-    <p class="status__mark" aria-hidden="true" translate="no"></p>
-    <h1 class="status__title"></h1>
+  <main class="status launcher-page" data-reason="launcher">
+    <p class="status__mark" aria-hidden="true" translate="no">SauFox</p>
+    <h1 class="status__title">Checking your account…</h1>
     <p class="status__text"></p>
-    <p class="status__note" translate="no" hidden></p>
     <div class="status__actions"></div>
     <p class="status__hint" role="status" aria-live="polite"></p>
   </main>
 
+  <script src="/js/vendor/supabase.js?v=43" defer></script>
   <script src="/js/fa.js?v=43" defer></script>
   <script src="/js/main.js?v=43" defer></script>
 </body>
