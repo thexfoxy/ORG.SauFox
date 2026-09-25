@@ -161,11 +161,13 @@ up. Signed-out visitors log in first and come back to the checkout.
   English, with a plain-text copy, through Resend from
   `orders@saufoxentertainment.ir` once `RESEND_API_KEY` is set in Edge
   Functions → Secrets (optional `MAIL_FROM` overrides the address), or
-  otherwise from the studio's Gmail over SMTP: "order received" while online
-  payment is closed, and a payment receipt once paid; the studio address
-  gets a copy of each. They need the secret `SMTP_PASSWORD` (the same Gmail
-  app password as in Supabase Auth → SMTP settings) in Edge Functions →
-  Secrets; without it no order emails are sent. Each goes out once per
+  otherwise from the studio's Gmail over SMTP, which also takes over if
+  Resend refuses one: "order received" while online payment is closed, and
+  a payment receipt once paid; the studio address gets a copy of each.
+  Gmail needs the secret `SMTP_PASSWORD` (the same Gmail app password as in
+  Supabase Auth → SMTP settings) in Edge Functions → Secrets; with neither
+  secret no order emails are sent. The admin panel's test email says which
+  one sent it. Each goes out once per
   order (`placed_email_at`, `paid_email_at`, `processing_email_at`,
   `completed_email_at`).
 - Order statuses: Awaiting payment → Paid → In progress → Completed (or
