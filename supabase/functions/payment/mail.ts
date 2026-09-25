@@ -213,7 +213,8 @@ export const send = async (mail: { to: string; subject: string; html: string; re
     host: "smtp.gmail.com",
     port: 465,
     secure: true,
-    auth: { user: STUDIO, pass: Deno.env.get("SMTP_PASSWORD") },
+    // Google shows app passwords in groups of four; the spaces aren't part of it.
+    auth: { user: STUDIO, pass: (Deno.env.get("SMTP_PASSWORD") || "").replace(/\s+/g, "") },
     connectionTimeout: 15000,
   });
   await transport.sendMail({ from: { name: "SauFox Entertainment", address: STUDIO }, ...mail });

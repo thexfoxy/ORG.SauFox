@@ -6,6 +6,8 @@
 //   -> { paid, number, ref_id? }  asks Zarinpal whether the payment went through
 // POST { action: "placed", order_id }           signed-in member, own order
 //   -> { ok }  emails "order received" (sent while online payment is closed)
+// POST { action: "email-test" }                 admins
+//   -> { ok } or { error }  sends a sample receipt to the studio address
 //
 // Emails (mail.ts): the buyer gets "order received" or a payment receipt,
 // and the studio a copy of each; every email goes out once per order.
@@ -20,7 +22,7 @@
 // from the database (public.zarinpal_call), whose IP stays the same; the
 // admin panel shows it.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { mailReady, paidEmail, placedEmail, send, studioEmail, type Order } from "./mail.ts";
+import { mailReady, paidEmail, placedEmail, send, STUDIO, studioEmail, type Order } from "./mail.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
@@ -119,6 +121,26 @@ Deno.serve(async (req) => {
   } catch {
     return reply({ error: "bad_request" }, 400);
   }
+  // ---------- Test email (admin panel) ----------
+  if (body.action === "email-test") {
+    const user = await caller(req);
+    if (!user) return reply({ error: "signed_out" }, 401);
+    const { data: isAdmin } = await db.from("admins").select("user_id").eq("user_id", user.id).maybeSingle();
+    if (!isAdmin) return reply({ error: "forbidden" }, 403);
+    if (!mailReady()) return reply({ error: "no_password" });
+    const now = new Date().toISOString();
+    const sample: Order = {
+      id: "test", number: 1000, title: "The CandleWood", amount_irr: 3130000, name: "SauFox", email: STUDIO,
+      phone: "09000000000", ref_id: "000000000000", card_pan: "6037-99**-****-0000", paid_at: now, created_at: now, test: true,
+    };
+    try {
+      await send(paidEmail(sample, true));
+      return reply({ ok: true, to: STUDIO });
+    } catch (e) {
+      return reply({ error: "send_failed", detail: (e as Error).message.slice(0, 200) });
+    }
+  }
+
   const orderId = String(body.order_id || "");
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) return reply({ error: "bad_request" }, 400);
 

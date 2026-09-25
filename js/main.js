@@ -2733,6 +2733,22 @@ const signedInGoHome = async (user) => {
   account.rpc("server_ip").then(({ data, error }) => {
     payForm.querySelector('[data-slot="server-ip"]').textContent = error || !data ? "couldn't check" : data;
   });
+  // Checks the order emails: a sample receipt to the studio inbox.
+  const mailButton = payForm.querySelector('[data-action="email-test"]');
+  const mailNote = payForm.querySelector('[data-slot="email-test"]');
+  mailButton.addEventListener("click", async () => {
+    mailButton.disabled = true;
+    mailNote.textContent = "Sending…";
+    const answer = await payment({ action: "email-test" }, await verifiedSession());
+    mailButton.disabled = false;
+    mailNote.textContent = answer.ok
+      ? `Sent to ${answer.to}. Check that inbox, and the spam folder.`
+      : answer.error === "no_password"
+        ? "Not sent: the SMTP_PASSWORD secret isn't set in Supabase (Edge Functions → Secrets)."
+        : answer.error === "send_failed"
+          ? `Gmail refused it: ${answer.detail}`
+          : "Not sent: couldn't reach the payment function. Try again.";
+  });
   payForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const basic = number(planBasic);

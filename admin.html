@@ -7,7 +7,7 @@
   <title>Manage works · SauFox Entertainment</title>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=32">
+  <link rel="stylesheet" href="css/style.css?v=33">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -83,6 +83,10 @@
           </label>
         </div>
         <p class="admin-group__hint admin-payments__ip">Server IP to give Zarinpal: <code class="selectable" data-slot="server-ip">checking…</code></p>
+        <div class="admin-payments__mail">
+          <button class="admin-button" type="button" data-action="email-test">Send a test email</button>
+          <p class="admin-group__hint" data-slot="email-test">Order emails need the <code>SMTP_PASSWORD</code> secret. This sends a sample receipt to the studio inbox.</p>
+        </div>
         <div class="admin-maintenance__save">
           <p class="admin-message" role="status" aria-live="polite"></p>
           <button class="admin-button admin-button--primary" type="submit">Save</button>
@@ -315,7 +319,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=32" defer></script>
-  <script src="js/main.js?v=32" defer></script>
+  <script src="js/vendor/supabase.js?v=33" defer></script>
+  <script src="js/main.js?v=33" defer></script>
 </body>
 </html>

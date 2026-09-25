@@ -164,6 +164,8 @@ up. Signed-out visitors log in first and come back to the checkout.
   app password as in Supabase Auth → SMTP settings) in Edge Functions →
   Secrets; without it no order emails are sent. Each goes out once per
   order (`placed_email_at`, `paid_email_at`).
+  "Send a test email" in the admin panel sends a sample receipt to the
+  studio inbox, or says why it couldn't.
 - Paid works appear in Profile → Library ("Pre-ordered · arrives on release
   day" until they're released), and their page's buy button becomes "In
   your library".
