@@ -7,7 +7,7 @@
   <meta name="description" content="Log in to SauFox Entertainment or create an account.">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=10">
+  <link rel="stylesheet" href="css/style.css?v=11">
 </head>
 <body class="login-page">
   <!-- Background: slanted strips of artwork from the studio's releases,
@@ -31,30 +31,51 @@
 
         <div class="auth__viewport">
           <div class="auth__slider">
-            <form class="auth__form" id="form-login" role="tabpanel" aria-labelledby="tab-login" novalidate>
-              <label class="field">
-                <span class="field__label">Email</span>
-                <span class="field__box">
-                  <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6 8.5-6"/></svg>
-                  <input id="login-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
-                </span>
-              </label>
+            <div class="auth__slide" id="slide-login">
+              <form class="auth__form" id="form-login" role="tabpanel" aria-labelledby="tab-login" novalidate>
+                <label class="field">
+                  <span class="field__label">Email</span>
+                  <span class="field__box">
+                    <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6 8.5-6"/></svg>
+                    <input id="login-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+                  </span>
+                </label>
 
-              <label class="field">
-                <span class="field__label">Password</span>
-                <span class="field__box">
-                  <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
-                  <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Your password" required>
-                  <button class="field__reveal" type="button" aria-label="Show password" aria-pressed="false">
-                    <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-                    <svg class="eye-shut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
-                  </button>
-                </span>
-              </label>
+                <label class="field">
+                  <span class="field__label">Password</span>
+                  <span class="field__box">
+                    <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
+                    <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Your password" required>
+                    <button class="field__reveal" type="button" aria-label="Show password" aria-pressed="false">
+                      <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <svg class="eye-shut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                    </button>
+                  </span>
+                </label>
 
-              <p class="auth__message" role="status" aria-live="polite"></p>
-              <button class="auth__submit" type="submit">Login</button>
-            </form>
+                <button class="auth__forgot" type="button" data-action="forgot">Forgot password?</button>
+
+                <p class="auth__message" role="status" aria-live="polite"></p>
+                <button class="auth__submit" type="submit">Login</button>
+              </form>
+
+              <!-- Forgot password: asks for the email, Supabase sends a link to
+                   reset.html. Replaces the login form until "Back to login". -->
+              <form class="auth__form" id="form-reset" novalidate hidden>
+                <p class="auth__intro">Enter the email you signed up with and we&rsquo;ll send you a link to set a new password.</p>
+                <label class="field">
+                  <span class="field__label">Email</span>
+                  <span class="field__box">
+                    <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6 8.5-6"/></svg>
+                    <input id="reset-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+                  </span>
+                </label>
+
+                <p class="auth__message" role="status" aria-live="polite"></p>
+                <button class="auth__submit" type="submit">Send reset link</button>
+                <button class="auth__forgot auth__forgot--back" type="button" data-action="back-to-login">Back to login</button>
+              </form>
+            </div>
 
             <form class="auth__form" id="form-signup" role="tabpanel" aria-labelledby="tab-signup" novalidate>
               <label class="field">
@@ -118,7 +139,7 @@
     <p class="login__legal">By creating an account you agree to the <a href="terms.html">Terms of use</a> and <a href="privacy.html">Privacy policy</a>.</p>
   </main>
 
-  <script src="js/vendor/supabase.js?v=10" defer></script>
-  <script src="js/main.js?v=10" defer></script>
+  <script src="js/vendor/supabase.js?v=11" defer></script>
+  <script src="js/main.js?v=11" defer></script>
 </body>
 </html>

@@ -15,6 +15,7 @@ npx serve .
 - `index.html`: home page
 - `login.html`: login / sign-up page
 - `profile.html`: profile page (signed-in visitors only)
+- `reset.html`: where the password-reset email lands; sets a new password
 - `about.html`, `terms.html`, `privacy.html`: about and contact, terms of use, privacy policy
 - `work.html`: one page per work (`work.html?id=the-candlewood`), filled from the catalogue
 - `admin.html`: admin panel for the catalogue (admins only)
@@ -31,7 +32,7 @@ The site is published with GitHub Pages at https://saufoxentertainment.ir
 are).
 
 Pages lets browsers cache files for 10 minutes. The HTML files load CSS and
-JS with a version number (`style.css?v=10`); raise it in all three pages
+JS with a version number (`style.css?v=11`); raise it in all three pages
 whenever CSS or JS changes, so visitors never get old scripts with new pages.
 
 ## Accounts
@@ -63,11 +64,19 @@ the profile page check that key before first paint. Name, photo and currency
 are also cached there so they show without waiting for the server.
 
 Supabase dashboard settings (Authentication):
-- Email confirmation: Supabase's built-in email only reaches the project
-  team's addresses. Either turn off "Confirm email" or add a custom SMTP
-  server.
-- URL configuration: Site URL `https://saufoxentertainment.ir`, with
-  `https://saufoxentertainment.ir/login.html` in the redirect URLs.
+- Emails (confirmation, password reset): Supabase's built-in email only
+  reaches the project team's addresses. For real users, add a custom SMTP
+  server (Emails → SMTP settings; Gmail works with an app password). Until
+  then keep "Confirm email" off.
+- URL configuration: Site URL `https://saufoxentertainment.ir`, and
+  `https://saufoxentertainment.ir/**` in the redirect URLs (login.html
+  for confirmations and Google, reset.html for password resets).
+- Google sign-in: Sign In / Providers → Google, with a client ID and secret
+  from a Google Cloud OAuth client whose redirect URI is
+  `https://gwyqkzhhnspfadqefmix.supabase.co/auth/v1/callback`. The login
+  page asks Supabase whether Google is on and says "isn't connected yet"
+  until it is. New Google accounts get their name and photo in their
+  profile.
 
 ## Content protection
 
@@ -157,7 +166,13 @@ Login page (`login.html`):
       the Sign Up tab.
 - [x] Real accounts through Supabase (see Accounts above): sign-up, login,
       clear error messages, and a confirmation-email step when it is on.
-- [ ] Google and Apple sign-in: the buttons say they aren't connected yet.
+- [x] Forgot password: a form in place of the login form sends a reset
+      link (the reply doesn't reveal whether an account exists); the link
+      opens `reset.html` to choose a new password. `login.html#reset` opens
+      the form directly.
+- [x] Google sign-in, once it's switched on in Supabase (see Accounts).
+- [ ] Apple sign-in: needs a paid Apple developer account; the button says
+      it isn't connected.
 
 Profile page (`profile.html`):
 - [x] The avatar (the header chip's pinched shape, larger) with the name,

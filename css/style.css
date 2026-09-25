@@ -3311,3 +3311,69 @@ a.hero__panel {
 .admin-message.is-ok {
   color: var(--muted);
 }
+
+/* ---------- Login: forgot password, and the new-password page ---------- */
+
+.auth__slide {
+  flex: 0 0 50%;
+  min-width: 0;
+  transition: opacity 0.45s ease;
+}
+
+.auth__slide[inert] {
+  opacity: 0;
+}
+
+.auth__forgot {
+  justify-self: end;
+  margin-top: -6px;
+  padding: 0;
+  border: 0;
+  font: 500 13px/1 var(--font-body);
+  color: var(--muted);
+  background: none;
+  cursor: pointer;
+}
+
+.auth__forgot:hover {
+  color: var(--text);
+}
+
+.auth__forgot--back {
+  justify-self: center;
+  margin-top: 0;
+}
+
+.auth__forgot:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.auth__intro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.auth--single {
+  grid-template-columns: minmax(0, 1fr);
+  width: min(460px, 100%);
+}
+
+.auth__heading {
+  margin: 0;
+  font: 600 22px/1.2 var(--font-body);
+}
+
+.auth__expired {
+  display: grid;
+  gap: 16px;
+}
+
+.auth__submit--link {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+}

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>New password · SauFox Entertainment</title>
+  <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css?v=11">
+</head>
+<body class="login-page">
+  <div class="login-bg" aria-hidden="true"></div>
+
+  <!-- Where the "reset your password" email lands. Supabase signs the
+       visitor in from the link; js/main.js (resetPage) then asks for the
+       new password. -->
+  <main class="login">
+    <a class="login__brand" href="index.html">SauFox <span>Entertainment</span></a>
+
+    <div class="auth auth--single">
+      <div class="auth__main">
+        <div class="auth__top">
+          <span class="auth__logo" aria-hidden="true">S</span>
+          <h1 class="auth__heading">Set a new password</h1>
+        </div>
+
+        <p class="auth__intro" data-slot="checking">Checking your link…</p>
+
+        <form class="auth__form" id="form-new-password" novalidate hidden>
+          <label class="field">
+            <span class="field__label">New password</span>
+            <span class="field__box">
+              <svg class="field__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
+              <input id="new-password" name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" required>
+              <button class="field__reveal" type="button" aria-label="Show password" aria-pressed="false">
+                <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-shut" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+              </button>
+            </span>
+          </label>
+
+          <p class="auth__message" role="status" aria-live="polite"></p>
+          <button class="auth__submit" type="submit">Save new password</button>
+        </form>
+
+        <div class="auth__expired" hidden>
+          <p class="auth__intro">This link has expired or was already used. Reset links work once, for a short time.</p>
+          <a class="auth__submit auth__submit--link" href="login.html#reset">Send a new link</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/vendor/supabase.js?v=11" defer></script>
+  <script src="js/main.js?v=11" defer></script>
+</body>
+</html>

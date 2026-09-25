@@ -36,7 +36,8 @@ const account = (() => {
   const old = local.get("session");
   if (old && !old.startsWith("{")) local.set("session", null);
   return window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: { storageKey: "saufox.session" },
+      // "implicit": links in emails work on whichever device opens them.
+    auth: { storageKey: "saufox.session", flowType: "implicit" },
       // Give up after 20 seconds so a stalled connection shows an error
       // instead of leaving the page waiting.
     global: { fetch: (url, options = {}) => fetch(url, { ...options, signal: options.signal || timeout(20000) }) },
@@ -87,7 +88,7 @@ const loadCatalog = async () => {
 };
 
 // Started once, on the pages that show works.
-const catalog = document.querySelector(".hero, .works, .title-page, .auth, .profile-page")
+const catalog = document.querySelector(".hero, .works, .title-page, .login-bg, .profile-page")
   ? loadCatalog()
   : Promise.resolve([]);
 
@@ -710,21 +711,16 @@ const posterCard = (work) => {
   );
 })();
 
-// Login page — background strips, curved art layers, Login / Sign Up tabs
-// with sliding forms, and password reveal.
-// Accounts go through Supabase (see `account` at the top of this file).
-(function loginPage() {
-  const auth = document.querySelector(".auth");
-  if (!auth) return;
+// Login and new-password pages — background strips and art layers, from
+// the catalogue's artwork.
+(function loginBackground() {
+  const bg = document.querySelector(".login-bg");
+  if (!bg) return;
 
-  // Background strips and art layers, from the catalogue's artwork.
   catalog.then((works) => {
     const images = [...new Set(works.flatMap((w) => [...w.stills, ...w.images, w.hero]).filter(Boolean))];
-    if (images.length) paintBackground(images.sort(() => Math.random() - 0.5));
-  });
-
-  function paintBackground(shuffled) {
-    const bg = document.querySelector(".login-bg");
+    if (!images.length) return;
+    const shuffled = images.sort(() => Math.random() - 0.5);
     const count = window.matchMedia("(max-width: 760px)").matches ? 4 : 6;
     bg.style.setProperty("--n", count);
     // Images repeat when there are fewer works than slots.
@@ -741,94 +737,135 @@ const posterCard = (work) => {
     });
 
     // Curved art layers, plus one more image in the corner behind them
-    auth.querySelectorAll(".auth__band").forEach((band, i) => {
+    document.querySelectorAll(".auth__band").forEach((band, i) => {
       band.style.backgroundImage = `url("${pick(count + i)}")`;
     });
-    auth.querySelector(".auth__art").style.backgroundImage = `url("${pick(count + 3)}")`;
-  }
+    const corner = document.querySelector(".auth__art");
+    if (corner) corner.style.backgroundImage = `url("${pick(count + 3)}")`;
+  });
+})();
 
-  // Tabs and sliding forms
+// Show / hide password, wherever there's a password field.
+document.querySelectorAll(".field__reveal").forEach((button) => {
+  const input = button.parentElement.querySelector("input");
+  button.addEventListener("click", () => {
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    button.setAttribute("aria-pressed", String(show));
+    button.setAttribute("aria-label", show ? "Hide password" : "Show password");
+    input.focus();
+  });
+});
+
+// Messages for Supabase Auth errors, shared by the login and new-password
+// pages.
+const AUTH_ERRORS = {
+  invalid_credentials: "That email and password don't match. Check them and try again.",
+  email_not_confirmed: "Confirm your email first: open the link we sent you, then log in.",
+  user_already_exists: "There's already an account with this email. Log in instead.",
+  weak_password: "Choose a stronger password, one that isn't easy to guess.",
+  same_password: "Choose a password different from your old one.",
+  over_request_rate_limit: "Too many tries. Wait a minute and try again.",
+  over_email_send_rate_limit: "Too many emails sent. Wait a while and try again.",
+};
+const explainAuthError = (error) =>
+  AUTH_ERRORS[error.code] ||
+  (error.status ? error.message : "Couldn't reach the server. Check your connection and try again.");
+
+// Checks a form's fields; returns what to fix, or "".
+const formProblem = (form) => {
+  for (const input of form.querySelectorAll("input")) {
+    if (input.validity.valid) continue;
+    const name = input.closest(".field").querySelector(".field__label").textContent;
+    input.focus();
+    if (input.validity.valueMissing) return `Enter your ${name.toLowerCase()}.`;
+    if (input.validity.typeMismatch) return "Enter an email address like name@example.com.";
+    if (input.validity.tooShort) return `Use at least ${input.minLength} characters for your password.`;
+    return `Check your ${name.toLowerCase()}.`;
+  }
+  return "";
+};
+
+// Remembers the member here and goes to the home page.
+const signedInGoHome = async (user) => {
+  local.set("hasAccount", "1");
+  cacheProfile(await fetchProfile(user));
+  setTimeout(() => (location.href = "index.html"), 700);
+};
+
+// Login page — Login / Sign Up tabs with sliding forms, "Forgot password?",
+// and Google sign-in. Accounts go through Supabase (see `account`).
+(function loginPage() {
+  const auth = document.querySelector(".auth");
+  if (!auth || !auth.querySelector("#tab-login")) return;
+
+  // Tabs and sliding forms. The login slide holds the login form or, after
+  // "Forgot password?", the reset form.
   const tabs = { login: auth.querySelector("#tab-login"), signup: auth.querySelector("#tab-signup") };
-  const forms = { login: auth.querySelector("#form-login"), signup: auth.querySelector("#form-signup") };
+  const slides = { login: auth.querySelector("#slide-login"), signup: auth.querySelector("#form-signup") };
+  const forms = {
+    login: auth.querySelector("#form-login"),
+    signup: auth.querySelector("#form-signup"),
+    reset: auth.querySelector("#form-reset"),
+  };
   const viewport = auth.querySelector(".auth__viewport");
   let mode = location.hash === "#signup" ? "signup" : "login";
+  let resetting = location.hash === "#reset";
 
-  const fitHeight = () => (viewport.style.height = `${forms[mode].offsetHeight}px`);
+  const activeForm = () => (mode === "signup" ? forms.signup : resetting ? forms.reset : forms.login);
+  const fitHeight = () => (viewport.style.height = `${activeForm().offsetHeight}px`);
 
   const setMode = (next) => {
     mode = next;
     auth.dataset.mode = mode;
     Object.keys(tabs).forEach((key) => {
       tabs[key].setAttribute("aria-selected", String(key === mode));
-      forms[key].inert = key !== mode;
+      slides[key].inert = key !== mode;
     });
     fitHeight();
-    // Leave the hash alone while it carries a sign-in from a confirmation link.
-    if (!location.hash || location.hash === "#signup")
+    // Leave the hash alone while it carries a sign-in from an email link.
+    if (!location.hash || ["#signup", "#reset"].includes(location.hash))
       history.replaceState(null, "", mode === "signup" ? "#signup" : location.pathname + location.search);
   };
 
-  Object.keys(tabs).forEach((key) => tabs[key].addEventListener("click", () => setMode(key)));
+  const showReset = (on) => {
+    resetting = on;
+    forms.login.hidden = on;
+    forms.reset.hidden = !on;
+    if (on) forms.reset.querySelector("input").value = forms.login.querySelector('input[name="email"]').value;
+    fitHeight();
+    (on ? forms.reset : forms.login).querySelector("input").focus();
+  };
+
+  Object.keys(tabs).forEach((key) =>
+    tabs[key].addEventListener("click", () => {
+      if (resetting) showReset(false);
+      setMode(key);
+    })
+  );
   window.addEventListener("resize", fitHeight);
+  auth.querySelector('[data-action="forgot"]').addEventListener("click", () => showReset(true));
+  auth.querySelector('[data-action="back-to-login"]').addEventListener("click", () => showReset(false));
+  if (resetting) {
+    forms.login.hidden = true;
+    forms.reset.hidden = false;
+  }
   setMode(mode);
 
-  // Password reveal
-  auth.querySelectorAll(".field__reveal").forEach((button) => {
-    const input = button.parentElement.querySelector("input");
-    button.addEventListener("click", () => {
-      const show = input.type === "password";
-      input.type = show ? "text" : "password";
-      button.setAttribute("aria-pressed", String(show));
-      button.setAttribute("aria-label", show ? "Hide password" : "Show password");
-      input.focus();
-    });
-  });
-
-  // Submitting
   const say = (el, text, ok) => {
     el.textContent = text;
     el.classList.toggle("is-ok", Boolean(ok));
     fitHeight();
   };
 
-  const problem = (form) => {
-    for (const input of form.querySelectorAll("input")) {
-      if (input.validity.valid) continue;
-      const name = input.closest(".field").querySelector(".field__label").textContent;
-      input.focus();
-      if (input.validity.valueMissing) return `Enter your ${name.toLowerCase()}.`;
-      if (input.validity.typeMismatch) return "Enter an email address like name@example.com.";
-      if (input.validity.tooShort) return `Use at least ${input.minLength} characters for your password.`;
-      return `Check your ${name.toLowerCase()}.`;
-    }
-    return "";
-  };
-
-  const ERRORS = {
-    invalid_credentials: "That email and password don't match. Check them and try again.",
-    email_not_confirmed: "Confirm your email first: open the link we sent you, then log in.",
-    user_already_exists: "There's already an account with this email. Log in instead.",
-    weak_password: "Choose a stronger password, one that isn't easy to guess.",
-    over_request_rate_limit: "Too many tries. Wait a minute and try again.",
-    over_email_send_rate_limit: "Too many emails sent. Wait a while and try again.",
-  };
-  const explain = (error) =>
-    ERRORS[error.code] ||
-    (error.status ? error.message : "Couldn't reach the server. Check your connection and try again.");
-
-  const goHome = async (user, message, text) => {
-    local.set("hasAccount", "1");
-    say(message, text, true);
-    cacheProfile(await fetchProfile(user));
-    setTimeout(() => (location.href = "index.html"), 700);
-  };
-
-  Object.entries(forms).forEach(([key, form]) =>
+  // Login and sign up
+  ["login", "signup"].forEach((key) => {
+    const form = forms[key];
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const message = form.querySelector(".auth__message");
       const submit = form.querySelector(".auth__submit");
-      const invalid = problem(form);
+      const invalid = formProblem(form);
       if (invalid) return say(message, invalid);
       if (!account) return say(message, "Accounts aren't available right now. Try again later.");
 
@@ -857,11 +894,11 @@ const posterCard = (work) => {
       submit.disabled = false;
 
       const { data, error } = result;
-      if (error) return say(message, explain(error));
+      if (error) return say(message, explainAuthError(error));
       // With email confirmation on, signing up again with a taken email
       // returns a user with no identities instead of an error.
       if (key === "signup" && data.user && data.user.identities && !data.user.identities.length)
-        return say(message, ERRORS.user_already_exists);
+        return say(message, AUTH_ERRORS.user_already_exists);
       if (!data.session) {
         local.set("hasAccount", "1");
         setMode("login");
@@ -873,23 +910,122 @@ const posterCard = (work) => {
         );
       }
       submit.disabled = true;
-      goHome(data.user, message, key === "login" ? "Welcome back. Taking you home…" : "Account created. Taking you home…");
-    })
-  );
+      say(message, key === "login" ? "Welcome back. Taking you home…" : "Account created. Taking you home…", true);
+      signedInGoHome(data.user);
+    });
+  });
 
-  // Arriving from the confirmation email (or already signed in): go home.
+  // Forgot password: the email links to reset.html. The reply is the same
+  // whether or not there's an account, so the form can't be used to find
+  // out who has one.
+  forms.reset.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = forms.reset;
+    const message = form.querySelector(".auth__message");
+    const submit = form.querySelector(".auth__submit");
+    const invalid = formProblem(form);
+    if (invalid) return say(message, invalid);
+    if (!account) return say(message, "Accounts aren't available right now. Try again later.");
+
+    const email = form.querySelector("input").value.trim();
+    submit.disabled = true;
+    say(message, "Sending…", true);
+    let error;
+    try {
+      ({ error } = await account.auth.resetPasswordForEmail(email, {
+        redirectTo: new URL("reset.html", location.href).href,
+      }));
+    } catch (e) {
+      error = {};
+    }
+    submit.disabled = false;
+    if (error && (error.code || "").startsWith("over_")) return say(message, explainAuthError(error));
+    if (error && !error.status) return say(message, explainAuthError(error));
+    if (error && error.status >= 500) return say(message, "We couldn't send the email right now. Try again later, or contact us.");
+    say(message, `If there's an account for ${email}, a link to set a new password is on its way. Check your inbox and spam folder.`, true);
+  });
+
+  // Arriving from a confirmation email or Google (or already signed in):
+  // go home. A failed Google sign-in comes back with an error instead.
+  const socialMessage = auth.querySelector(".auth__message--social");
+  const returned = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
+  if (returned.get("error_description"))
+    say(socialMessage, "Signing in with Google didn't finish. Try again, or use your email.");
   if (account)
     account.auth.getSession().then(({ data }) => {
-      if (data.session)
-        goHome(data.session.user, forms.login.querySelector(".auth__message"), "You're signed in. Taking you home…");
+      if (!data.session) return;
+      say(forms.login.querySelector(".auth__message"), "You're signed in. Taking you home…", true);
+      signedInGoHome(data.session.user);
     });
 
-  const socialMessage = auth.querySelector(".auth__message--social");
+  // Google sign-in, once it's switched on in Supabase (Authentication →
+  // Sign In / Providers → Google). Until then the button says so.
+  const providers = fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_KEY }, signal: timeout(10000) })
+    .then((res) => (res.ok ? res.json() : {}))
+    .then((settings) => settings.external || {})
+    .catch(() => ({}));
+
   auth.querySelectorAll(".social").forEach((button) =>
-    button.addEventListener("click", () =>
-      say(socialMessage, `${button.dataset.provider} sign-in isn't connected yet. Use your email for now.`)
-    )
+    button.addEventListener("click", async () => {
+      const provider = button.dataset.provider;
+      const id = provider.toLowerCase();
+      if (!account || !(await providers)[id])
+        return say(socialMessage, `${provider} sign-in isn't connected yet. Use your email for now.`);
+      say(socialMessage, `Opening ${provider}…`, true);
+      const { error } = await account.auth.signInWithOAuth({
+        provider: id,
+        options: { redirectTo: new URL("login.html", location.href).href },
+      });
+      if (error) say(socialMessage, `${provider} sign-in didn't start. Try again, or use your email.`);
+    })
   );
+})();
+
+// New-password page (reset.html) — where the reset email lands. Supabase
+// signs the visitor in from the link; then they choose a new password.
+(async function resetPage() {
+  const form = document.querySelector("#form-new-password");
+  if (!form) return;
+
+  const checking = document.querySelector('[data-slot="checking"]');
+  const expired = document.querySelector(".auth__expired");
+  const message = form.querySelector(".auth__message");
+  const say = (text, ok) => {
+    message.textContent = text;
+    message.classList.toggle("is-ok", Boolean(ok));
+  };
+
+  const failed = new URLSearchParams(location.hash.slice(1)).get("error_code");
+  const session = account && !failed && (await account.auth.getSession()).data.session;
+  checking.hidden = true;
+  if (!session) {
+    expired.hidden = false;
+    return;
+  }
+  history.replaceState(null, "", location.pathname); // drop the tokens from the address
+  form.hidden = false;
+  form.querySelector("input").focus();
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const invalid = formProblem(form);
+    if (invalid) return say(invalid);
+    const submit = form.querySelector(".auth__submit");
+    submit.disabled = true;
+    say("Saving…", true);
+    let error;
+    try {
+      ({ error } = await account.auth.updateUser({ password: form.querySelector("input").value }));
+    } catch (e) {
+      error = {};
+    }
+    if (error) {
+      submit.disabled = false;
+      return say(explainAuthError(error));
+    }
+    say("Password changed. Taking you home…", true);
+    signedInGoHome(session.user);
+  });
 })();
 
 // Profile page — the member's name, email, join date and photo from their
