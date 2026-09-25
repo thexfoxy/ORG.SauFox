@@ -978,11 +978,36 @@ const AUTH_ERRORS = {
 };
 const explainAuthError = (error) =>
   // Passwords found in known data leaks (HaveIBeenPwned), when that check is on.
-  (error.code === "weak_password" && (error.reasons || []).includes("pwned")
-    ? "This password has shown up in a data leak elsewhere, so it isn't safe. Choose a different one."
-    : "") ||
+  (error.code === "weak_password" && (error.reasons || []).includes("pwned") ? LEAKED_PASSWORD : "") ||
   AUTH_ERRORS[error.code] ||
   (error.status ? error.message : "Couldn't reach the server. Check your connection and try again.");
+
+// Whether a password is in a known data leak, from HaveIBeenPwned's free
+// Pwned Passwords API (Supabase's own check needs its Pro plan). Only the
+// first 5 characters of the password's SHA-1 leave the browser; the match
+// happens here. If the check can't run, the password is let through.
+const LEAKED_PASSWORD = "This password has shown up in a data leak elsewhere, so it isn't safe. Choose a different one.";
+const leakedPassword = async (password) => {
+  try {
+    const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-1", new TextEncoder().encode(password))), (b) =>
+      b.toString(16).padStart(2, "0")
+    )
+      .join("")
+      .toUpperCase();
+    const res = await fetch(`https://api.pwnedpasswords.com/range/${hash.slice(0, 5)}`, {
+      headers: { "Add-Padding": "true" },
+      signal: timeout(5000),
+    });
+    if (!res.ok) return false;
+    const suffix = hash.slice(5);
+    return (await res.text()).split("\n").some((line) => {
+      const [rest, count] = line.trim().split(":");
+      return rest === suffix && Number(count) > 0;
+    });
+  } catch (e) {
+    return false;
+  }
+};
 
 // Checks a form's fields; returns what to fix, or "".
 const formProblem = (form) => {
@@ -1160,6 +1185,11 @@ const signedInGoHome = async (user) => {
     if (!pending) return showPanel("login");
 
     busy(form, true);
+    if (pending.purpose === "recovery" && (await leakedPassword(form.querySelector("#code-password").value))) {
+      busy(form, false);
+      form.querySelector("#code-password").focus();
+      return say(messageOf(form), LEAKED_PASSWORD);
+    }
     say(messageOf(form), pending.purpose === "recovery" ? "Saving…" : "Checking the code…", true);
     const token = codeInput.value;
     let result;
@@ -1243,6 +1273,11 @@ const signedInGoHome = async (user) => {
 
     const email = form.querySelector('input[name="email"]').value.trim();
     busy(form, true);
+    if (await leakedPassword(form.querySelector('input[name="password"]').value)) {
+      busy(form, false);
+      form.querySelector('input[name="password"]').focus();
+      return say(messageOf(form), LEAKED_PASSWORD);
+    }
     say(messageOf(form), "Creating your account…", true);
     let result;
     try {
