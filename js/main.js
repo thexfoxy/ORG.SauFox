@@ -2936,7 +2936,10 @@ const signedInGoHome = async (user) => {
       return say("Your order wasn't placed. Check your connection and try again.");
     }
     local.set("phone", phone);
-    if (!canPay) return finish("placed", { number: data.number });
+    if (!canPay) {
+      payment({ action: "placed", order_id: data.id }, session); // the "order received" email
+      return finish("placed", { number: data.number });
+    }
     say("Taking you to the bank…", true);
     const problem = await payOrder(data.id);
     if (problem) finish("placed", { number: data.number, note: problem });

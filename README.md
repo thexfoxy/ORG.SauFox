@@ -156,6 +156,13 @@ up. Signed-out visitors log in first and come back to the checkout.
   IP. The admin panel shows that IP (`public.server_ip()`); if it ever
   changes (after a project restore or upgrade), update it in Zarinpal.
 - Terms of purchase and refunds: `terms.html#purchases`.
+- Order emails (`supabase/functions/payment/mail.ts`), Persian and
+  English, from the studio's Gmail over SMTP: "order received" while online
+  payment is closed, and a payment receipt once paid; the studio address
+  gets a copy of each. They need the secret `SMTP_PASSWORD` (the same Gmail
+  app password as in Supabase Auth → SMTP settings) in Edge Functions →
+  Secrets; without it no order emails are sent. Each goes out once per
+  order (`placed_email_at`, `paid_email_at`).
 - Paid works appear in Profile → Library ("Pre-ordered · arrives on release
   day" until they're released), and their page's buy button becomes "In
   your library".

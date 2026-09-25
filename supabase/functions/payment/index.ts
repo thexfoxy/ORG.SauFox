@@ -4,6 +4,11 @@
 //   -> { url }  the bank page to send them to
 // POST { action: "verify", order_id, authority, status }
 //   -> { paid, number, ref_id? }  asks Zarinpal whether the payment went through
+// POST { action: "placed", order_id }           signed-in member, own order
+//   -> { ok }  emails "order received" (sent while online payment is closed)
+//
+// Emails (mail.ts): the buyer gets "order received" or a payment receipt,
+// and the studio a copy of each; every email goes out once per order.
 //
 // The amount always comes from the order in the database. site_settings
 // .payments switches it: "off", "test" (Zarinpal's sandbox; only admins can
@@ -15,6 +20,9 @@
 // from the database (public.zarinpal_call), whose IP stays the same; the
 // admin panel shows it.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { mailReady, paidEmail, placedEmail, send, studioEmail, type Order } from "./mail.ts";
+
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
 const SITE = "https://saufoxentertainment.ir";
 const SANDBOX_MERCHANT = "1344b5d4-0048-11e8-94db-005056a205be"; // any well-formed ID works there
@@ -62,6 +70,40 @@ const caller = async (req: Request) => {
   return data.user;
 };
 
+// Work that carries on after the reply (emails).
+const later = (work: Promise<unknown>) => {
+  if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(work);
+  else work.catch(() => {});
+};
+
+// Sends an order's "placed" or "paid" emails, once: the column marks them
+// sent before sending, and is cleared again if sending fails.
+const ORDER_FIELDS = "id, number, title, amount_irr, name, email, phone, ref_id, card_pan, paid_at, created_at, test, work_id";
+const emailOnce = async (orderId: string, kind: "placed" | "paid") => {
+  if (!mailReady()) return;
+  const column = kind === "placed" ? "placed_email_at" : "paid_email_at";
+  const { data } = await db
+    .from("orders")
+    .update({ [column]: new Date().toISOString() })
+    .eq("id", orderId)
+    .is(column, null)
+    .select(ORDER_FIELDS);
+  const order = data?.[0] as (Order & { work_id: string }) | undefined;
+  if (!order) return;
+  try {
+    if (kind === "placed") await send(placedEmail(order, false));
+    else {
+      const { data: work } = await db.from("works").select("status").eq("id", order.work_id).maybeSingle();
+      await send(paidEmail(order, work?.status === "released"));
+    }
+  } catch (e) {
+    console.error(`${kind} email`, (e as Error).message);
+    await db.from("orders").update({ [column]: null }).eq("id", orderId);
+    return;
+  }
+  await send(studioEmail(order, kind)).catch((e) => console.error("studio email", (e as Error).message));
+};
+
 const mobileOf = (phone: string) => {
   const digits = phone.replace(/\D/g, "");
   if (/^989\d{9}$/.test(digits)) return `0${digits.slice(2)}`;
@@ -82,6 +124,16 @@ Deno.serve(async (req) => {
 
   const { data: settings } = await db.from("site_settings").select("payments").eq("id", 1).single();
   const mode = settings?.payments || "off";
+
+  // ---------- Placed (online payment closed) ----------
+  if (body.action === "placed") {
+    const user = await caller(req);
+    if (!user) return reply({ error: "signed_out" }, 401);
+    const { data: order } = await db.from("orders").select("id, user_id, status").eq("id", orderId).maybeSingle();
+    if (!order || order.user_id !== user.id) return reply({ error: "not_found" }, 404);
+    if (order.status === "awaiting_payment") later(emailOnce(order.id, "placed"));
+    return reply({ ok: true });
+  }
 
   // ---------- Start ----------
   if (body.action === "start") {
@@ -151,6 +203,7 @@ Deno.serve(async (req) => {
       .update({ status: "paid", authority, ref_id: ref, card_pan: answer.data.card_pan || null, paid_at: new Date().toISOString() })
       .eq("id", order.id)
       .neq("status", "paid");
+    later(emailOnce(order.id, "paid"));
     return reply({ paid: true, number: order.number, ref_id: ref });
   }
 
