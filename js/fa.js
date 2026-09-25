@@ -324,4 +324,9 @@ const FA = {
   "Try paying again": "پرداخت دوباره",
   "Reference {ref}": "شماره‌ی پیگیری: {ref}",
   "Pay now": "پرداخت",
+  "Yours": "مال شما",
+  "Pre-ordered · arrives on release day": "پیش‌خرید · در روز انتشار در دسترس",
+  "Yours · test": "مال شما · آزمایشی",
+  "Pre-ordered · arrives on release day · test": "پیش‌خرید · در روز انتشار در دسترس · آزمایشی",
+  "In your library": "در کتابخانه‌ی شما",
 };

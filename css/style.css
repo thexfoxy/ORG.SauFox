@@ -2502,6 +2502,12 @@ a.hero__panel {
   color: var(--muted);
 }
 
+.poster-card__note {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 /* My List on the profile page. */
 .poster-grid {
   display: grid;

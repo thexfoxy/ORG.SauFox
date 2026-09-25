@@ -156,6 +156,9 @@ up. Signed-out visitors log in first and come back to the checkout.
   IP. The admin panel shows that IP (`public.server_ip()`); if it ever
   changes (after a project restore or upgrade), update it in Zarinpal.
 - Terms of purchase and refunds: `terms.html#purchases`.
+- Paid works appear in Profile → Library ("Pre-ordered · arrives on release
+  day" until they're released), and their page's buy button becomes "In
+  your library".
 - Subscription prices (Rials per month) are set in the same admin form;
   the home page shows them, in dollars and euros too once exchange rates
   are set. Subscriptions can't be bought yet: members see "Opens soon".

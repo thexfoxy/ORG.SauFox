@@ -1543,6 +1543,37 @@ const signedInGoHome = async (user) => {
     document.getElementById("panel-wishlist").replaceChildren(grid);
   };
 
+  // ---------- Library: every work the member has paid for ----------
+  // Released works are theirs now; pre-orders arrive on release day.
+  const showLibrary = async (userId) => {
+    const { data, error } = await account
+      .from("orders")
+      .select("work_id, test, paid_at")
+      .eq("user_id", userId)
+      .eq("status", "paid")
+      .order("paid_at", { ascending: false });
+    if (error || !data.length) return;
+    const works = await catalog;
+    const cards = data
+      .map((order) => {
+        const work = works.find((w) => w.id === order.work_id);
+        if (!work) return null;
+        const card = posterCard(work);
+        const note = document.createElement("span");
+        note.className = "poster-card__note";
+        note.textContent =
+          (work.status === "released" ? "Yours" : "Pre-ordered · arrives on release day") + (order.test ? " · test" : "");
+        card.append(note);
+        return card;
+      })
+      .filter(Boolean);
+    if (!cards.length) return;
+    const grid = document.createElement("div");
+    grid.className = "poster-grid";
+    grid.append(...cards);
+    document.getElementById("panel-library").replaceChildren(grid);
+  };
+
   // ---------- Orders ----------
   const ORDER_STATUS = { awaiting_payment: "Awaiting payment", paid: "Paid", cancelled: "Cancelled" };
   let canPay = false;
@@ -1684,6 +1715,7 @@ const signedInGoHome = async (user) => {
 
   showMyList(user.id);
   showOrders(user.id);
+  showLibrary(user.id);
   // Admins get a way into the admin panel.
   account
     .from("admins")
@@ -1889,9 +1921,10 @@ const signedInGoHome = async (user) => {
         .in("status", ["awaiting_payment", "paid"])
         .limit(1);
       if (!data || !data.length) return;
-      buy.href = "profile.html#orders";
+      const paid = data[0].status === "paid";
+      buy.href = paid ? "profile.html#library" : "profile.html#orders";
       buy.classList.add("is-ordered");
-      buyLabel.textContent = data[0].status === "paid" ? "Purchased" : "Ordered · awaiting payment";
+      buyLabel.textContent = paid ? "In your library" : "Ordered · awaiting payment";
     });
   } else page.querySelector('[data-slot="buy-soon"]').hidden = !prices.length;
 
