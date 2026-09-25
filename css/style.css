@@ -1470,6 +1470,15 @@ main {
 
 /* ---------- Or / social ---------- */
 
+.auth__captcha {
+  display: flex;
+  justify-content: center;
+}
+
+.auth__captcha:empty {
+  display: none;
+}
+
 .auth__or {
   display: flex;
   align-items: center;

@@ -147,6 +147,9 @@ if (!document.querySelector(".auth") && /(^#|&)(access_token|error_code)=/.test(
 // before first paint. Only pages that load js/vendor/supabase.js get a client.
 const SUPABASE_URL = "https://gwyqkzhhnspfadqefmix.supabase.co";
 const SUPABASE_KEY = "sb_publishable_IB06YrDhrsKJbVghWP-zzg_xDgB1mXN";
+// Cloudflare Turnstile site key (public) for the login page's bot check.
+// Empty: no captcha. Set it before turning CAPTCHA protection on in Supabase.
+const TURNSTILE_SITE_KEY = "";
 const timeout = (ms) => (AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
 
 const account = (() => {
@@ -1027,6 +1030,7 @@ const AUTH_ERRORS = {
   weak_password: "Choose a stronger password, one that isn't easy to guess.",
   same_password: "Choose a password different from your old one.",
   otp_expired: "That code is wrong or has expired. Check it, or send a new one.",
+  captcha_failed: "We couldn't check that you're not a robot. Reload the page and try again.",
   otp_disabled: "Codes aren't switched on yet. Try again later.",
   over_request_rate_limit: "Too many tries. Wait a minute and try again.",
   over_email_send_rate_limit: "Too many emails sent. Wait a while and try again.",
@@ -1161,6 +1165,59 @@ const signedInGoHome = async (user) => {
   const messageOf = (form) => form.querySelector(".auth__message");
   const busy = (form, on) => (form.querySelector(".auth__submit").disabled = on);
 
+  // Cloudflare Turnstile against bots, once TURNSTILE_SITE_KEY is set and
+  // Supabase has CAPTCHA protection on with the matching secret key (Auth →
+  // Attack Protection). Every sign-up, login, emailed code and reset asks
+  // for a fresh token; the widget stays invisible unless Cloudflare wants
+  // the visitor to tick a box. Rejects with Error("captcha") if it can't.
+  const captcha = (() => {
+    if (!TURNSTILE_SITE_KEY) return async () => undefined;
+    const box = auth.querySelector(".auth__captcha");
+    const ready = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = reject;
+      setTimeout(reject, 15000);
+      document.head.append(script);
+    });
+    let widget;
+    let waiting = null;
+    const settle = (ok, value) => {
+      if (!waiting) return;
+      const { resolve, reject } = waiting;
+      waiting = null;
+      if (ok) resolve(value);
+      else reject(new Error("captcha"));
+    };
+    return async () => {
+      try {
+        await ready;
+      } catch (e) {
+        throw new Error("captcha");
+      }
+      return new Promise((resolve, reject) => {
+        settle(false);
+        waiting = { resolve, reject };
+        if (widget === undefined)
+          widget = turnstile.render(box, {
+            sitekey: TURNSTILE_SITE_KEY,
+            execution: "execute",
+            appearance: "interaction-only",
+            theme: "dark",
+            language: LANG,
+            callback: (token) => settle(true, token),
+            "error-callback": () => settle(false),
+            "timeout-callback": () => settle(false),
+          });
+        else turnstile.reset(widget);
+        turnstile.execute(widget);
+        setTimeout(() => settle(false), 120000);
+      });
+    };
+  })();
+
   // ---------- The code step ----------
   // purpose: "signup" (confirming a new account), "login" (after the
   // password) or "recovery" (forgotten password, with a new one).
@@ -1202,10 +1259,16 @@ const signedInGoHome = async (user) => {
 
   // Sends (or re-sends) the code for the current purpose.
   const sendCode = async (purpose, email) => {
+    let captchaToken;
     try {
-      if (purpose === "signup") return await account.auth.resend({ type: "signup", email });
-      if (purpose === "recovery") return await account.auth.resetPasswordForEmail(email);
-      return await account.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+      captchaToken = await captcha();
+    } catch (e) {
+      return { error: { code: "captcha_failed" } };
+    }
+    try {
+      if (purpose === "signup") return await account.auth.resend({ type: "signup", email, options: { captchaToken } });
+      if (purpose === "recovery") return await account.auth.resetPasswordForEmail(email, { captchaToken });
+      return await account.auth.signInWithOtp({ email, options: { shouldCreateUser: false, captchaToken } });
     } catch (e) {
       return { error: {} };
     }
@@ -1291,9 +1354,9 @@ const signedInGoHome = async (user) => {
     say(messageOf(form), "Logging in…", true);
     let result;
     try {
-      result = await account.auth.signInWithPassword({ email, password });
+      result = await account.auth.signInWithPassword({ email, password, options: { captchaToken: await captcha() } });
     } catch (e) {
-      result = { error: {} };
+      result = { error: e && e.message === "captcha" ? { code: "captcha_failed" } : {} };
     }
 
     // A new account that never entered its code: send a fresh one.
@@ -1339,10 +1402,10 @@ const signedInGoHome = async (user) => {
       result = await account.auth.signUp({
         email,
         password: form.querySelector('input[name="password"]').value,
-        options: { data: { name: form.querySelector('input[name="name"]').value.trim() } },
+        options: { data: { name: form.querySelector('input[name="name"]').value.trim() }, captchaToken: await captcha() },
       });
     } catch (e) {
-      result = { error: {} };
+      result = { error: e && e.message === "captcha" ? { code: "captcha_failed" } : {} };
     }
     busy(form, false);
     const { data, error } = result;

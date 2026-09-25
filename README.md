@@ -170,6 +170,22 @@ up. Signed-out visitors log in first and come back to the checkout.
   the home page shows them, in dollars and euros too once exchange rates
   are set. Subscriptions can't be bought yet: members see "Opens soon".
 
+## Bot check (Cloudflare Turnstile)
+
+The login page can ask Cloudflare Turnstile for a token before every
+sign-up, password login, emailed code and password reset (Google sign-in
+and entering a code don't need one). It stays off until
+`TURNSTILE_SITE_KEY` in `js/main.js` is set. To turn it on:
+
+1. Cloudflare dashboard → Turnstile → Add widget, hostname
+   `saufoxentertainment.ir`, mode Managed. Put its site key in
+   `TURNSTILE_SITE_KEY` and publish.
+2. Then Supabase → Authentication → Attack Protection → Enable CAPTCHA
+   protection, provider Turnstile, with the widget's secret key.
+
+In that order: with CAPTCHA on in Supabase but no site key on the site,
+nobody can log in.
+
 ## Content protection
 
 Text can't be selected or copied (except contact details marked `.selectable`), and images can't be dragged out or saved

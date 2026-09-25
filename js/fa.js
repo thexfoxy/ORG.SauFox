@@ -329,4 +329,5 @@ const FA = {
   "Yours · test": "مال شما · آزمایشی",
   "Pre-ordered · arrives on release day · test": "پیش‌خرید · در روز انتشار در دسترس · آزمایشی",
   "In your library": "در کتابخانه‌ی شما",
+  "We couldn't check that you're not a robot. Reload the page and try again.": "نتوانستیم بررسی کنیم که ربات نیستید. صفحه را دوباره باز کنید و دوباره امتحان کنید.",
 };
