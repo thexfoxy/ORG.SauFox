@@ -14,7 +14,7 @@
 //   turns it into its own session with auth.verifyOtp({ token_hash, type:
 //   "magiclink" }). The browser's session is never handed over.
 //
-// Files live in a private Cloudflare R2 bucket (r2.ts); the builds table
+// Files live in a private S3-compatible bucket (r2.ts); the builds table
 // says which file belongs to which work.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { r2Link, r2Ready } from "./r2.ts";

@@ -218,9 +218,13 @@ nobody can log in.
   an owner a link to the file that works for an hour (10 a day per file);
   admins get `upload` (a link to PUT a file of up to 5 GB straight into the
   bucket) and `delete`. `r2.ts` signs the links (AWS Signature v4).
-  Secrets: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
-  `R2_BUCKET`. The bucket needs a CORS rule allowing `PUT` and `GET` from
-  `https://saufoxentertainment.ir` for uploads from the admin panel.
+  Secrets: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, and
+  `R2_ACCOUNT_ID` for Cloudflare R2, or for any other S3-compatible storage
+  (an Iranian cloud, say) `S3_HOST` (its endpoint's host name) and, if it
+  asks for one, `S3_REGION`. The bucket needs a CORS rule allowing `PUT` and
+  `GET` from `https://saufoxentertainment.ir` for uploads from the admin
+  panel. Until the secrets are set, downloads and uploads say so and
+  nothing else changes.
 - Admin panel → Files for buyers: upload, publish, delete. Profile →
   Library shows a download button for the newest file of each platform.
 - Launcher sign-in: the launcher listens on `http://127.0.0.1:<port>`, opens

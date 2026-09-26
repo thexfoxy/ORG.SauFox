@@ -3080,7 +3080,7 @@ const signedInGoHome = async (user) => {
     fileMessage.classList.toggle("is-ok", Boolean(ok));
   };
   const FILE_ERRORS = {
-    not_configured: "The R2 secrets aren't set in Supabase yet (Edge Functions → Secrets).",
+    not_configured: "The storage secrets (R2_… / S3_HOST) aren't set in Supabase yet (Edge Functions → Secrets).",
     signed_out: "Your session has ended. Log in again.",
     forbidden: "Only admins can do this.",
   };

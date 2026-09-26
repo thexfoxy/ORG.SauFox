@@ -1,9 +1,12 @@
-// Presigned links to a private Cloudflare R2 bucket (S3 API, AWS Signature
-// Version 4 in the query string): anyone holding the link can GET (or PUT,
-// or DELETE) that one object until it expires, and nothing else.
+// Presigned links to a private bucket (S3 API, AWS Signature Version 4 in
+// the query string): anyone holding the link can GET (or PUT, or DELETE)
+// that one object until it expires, and nothing else.
 //
-// Secrets (Edge Functions → Secrets): R2_ACCOUNT_ID, R2_ACCESS_KEY_ID,
-// R2_SECRET_ACCESS_KEY, R2_BUCKET.
+// Secrets (Edge Functions → Secrets): R2_ACCESS_KEY_ID,
+// R2_SECRET_ACCESS_KEY, R2_BUCKET, and either R2_ACCOUNT_ID (Cloudflare R2)
+// or, for any other S3-compatible storage (such as an Iranian cloud),
+// S3_HOST (its endpoint's host name, e.g. s3.example.ir) and optionally
+// S3_REGION (default "auto").
 
 const enc = new TextEncoder();
 const hex = (buf: ArrayBuffer) => Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
@@ -51,17 +54,23 @@ export const presign = async ({ method, host, path, accessKey, secretKey, region
   return `https://${host}${canonicalPath}?${canonicalQuery}&X-Amz-Signature=${signature}`;
 };
 
+const host = () =>
+  (Deno.env.get("S3_HOST") || "").replace(/^https?:\/\//, "").replace(/\/+$/, "") ||
+  `${Deno.env.get("R2_ACCOUNT_ID")}.r2.cloudflarestorage.com`;
+
 export const r2Ready = () =>
-  ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"].every((name) => Deno.env.get(name));
+  ["R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"].every((name) => Deno.env.get(name)) &&
+  Boolean(Deno.env.get("S3_HOST") || Deno.env.get("R2_ACCOUNT_ID"));
 
 // A link to one object in the bucket.
 export const r2Link = (method: "GET" | "PUT" | "DELETE", key: string, expires: number, query?: Record<string, string>) =>
   presign({
     method,
-    host: `${Deno.env.get("R2_ACCOUNT_ID")}.r2.cloudflarestorage.com`,
+    host: host(),
     path: `/${Deno.env.get("R2_BUCKET")}/${key}`,
     accessKey: Deno.env.get("R2_ACCESS_KEY_ID")!,
     secretKey: Deno.env.get("R2_SECRET_ACCESS_KEY")!,
+    region: Deno.env.get("S3_REGION") || "auto",
     expires,
     query,
   });
