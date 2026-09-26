@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=44">
+  <link rel="stylesheet" href="css/style.css?v=45">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -61,6 +61,14 @@
         <p class="admin-orders__mail" data-slot="mail-problems" role="status" hidden></p>
         <ol class="admin-orders__list"></ol>
         <p class="admin-orders__empty" hidden>No orders yet.</p>
+      </section>
+
+      <!-- Members' reviews and comments on works (newest first). -->
+      <section class="admin-reviews admin-group">
+        <h2 class="admin-rates__title">Reviews and comments</h2>
+        <p class="admin-group__hint">Newest first. Hide one to take it off the site (the member still sees it, marked hidden); a reply shows under it as SauFox Entertainment. Hidden reviews don&rsquo;t count towards a work&rsquo;s score.</p>
+        <ol class="admin-reviews__list"></ol>
+        <p class="admin-reviews__empty" hidden>No reviews yet.</p>
       </section>
 
       <!-- Files buyers download (games, and later films and novels), kept
@@ -373,7 +381,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=44" defer></script>
-  <script src="js/main.js?v=44" defer></script>
+  <script src="js/vendor/supabase.js?v=45" defer></script>
+  <script src="js/main.js?v=45" defer></script>
 </body>
 </html>

@@ -41,7 +41,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=44">
+  <link rel="stylesheet" href="css/style.css?v=45">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -137,6 +137,43 @@
       <dl class="title-credits__list"></dl>
     </section>
 
+    <!-- Ratings and reviews (comments only until the work is released).
+         js/main.js (reviews) fills it in; the database keeps one review
+         per member and works out who bought the work. -->
+    <section class="title-section title-reviews" id="reviews" aria-labelledby="reviews-title" hidden>
+      <h2 class="title-section__heading" id="reviews-title">Ratings &amp; reviews</h2>
+      <div class="reviews__summary" hidden>
+        <div class="reviews__score">
+          <b data-slot="score"></b>
+          <span class="stars" data-slot="stars" aria-hidden="true">★★★★★</span>
+          <small data-slot="count"></small>
+        </div>
+        <ol class="reviews__bars" aria-label="Ratings by stars"></ol>
+      </div>
+
+      <form class="review-form" novalidate hidden>
+        <h3 class="review-form__title">Your review</h3>
+        <div class="star-input" role="radiogroup" aria-label="Your rating">
+          <button type="button" data-star="1" aria-label="1 star">★</button>
+          <button type="button" data-star="2" aria-label="2 stars">★</button>
+          <button type="button" data-star="3" aria-label="3 stars">★</button>
+          <button type="button" data-star="4" aria-label="4 stars">★</button>
+          <button type="button" data-star="5" aria-label="5 stars">★</button>
+        </div>
+        <textarea name="body" rows="4" maxlength="2000" placeholder="What did you think? (optional)"></textarea>
+        <div class="review-form__foot">
+          <p class="auth__message" role="status" aria-live="polite"></p>
+          <button class="review-form__delete" type="button" hidden>Delete my review</button>
+          <button class="review-form__submit" type="submit">Post review</button>
+        </div>
+      </form>
+      <p class="reviews__login" hidden><a href="login.html">Log in</a> <span>to rate and review.</span></p>
+
+      <ol class="reviews__list"></ol>
+      <p class="reviews__empty" hidden>No reviews yet. Be the first.</p>
+      <button class="reviews__more" type="button" hidden>Show more</button>
+    </section>
+
     <section class="title-missing" hidden>
       <h1 class="title-head__name">We couldn&rsquo;t find that work</h1>
       <p>It may have moved or been renamed.</p>
@@ -207,8 +244,8 @@
     </button>
   </div>
 
-  <script src="js/vendor/supabase.js?v=44" defer></script>
-  <script src="js/fa.js?v=44" defer></script>
-  <script src="js/main.js?v=44" defer></script>
+  <script src="js/vendor/supabase.js?v=45" defer></script>
+  <script src="js/fa.js?v=45" defer></script>
+  <script src="js/main.js?v=45" defer></script>
 </body>
 </html>

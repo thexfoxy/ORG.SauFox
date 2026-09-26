@@ -208,6 +208,23 @@ sign-up, password login, Google sign-in, emailed code and password reset
 In that order: with CAPTCHA on in Supabase but no site key on the site,
 nobody can log in.
 
+## Ratings and reviews
+
+- `reviews` table: one per member per work, 1-5 stars and an optional
+  comment (up to 2000 characters). Before a work is released it takes
+  comments only; the database drops any stars. The trigger
+  `private.review_defaults` fills in the author's name and photo from their
+  profile and `owner` (they had paid for the work), and keeps members off
+  the `hidden` and `reply` fields; admins can only hide a review or reply
+  to it. `private.review_totals` keeps `works.review_count` and
+  `works.review_sum` (visible rated reviews) up to date.
+- Work page → Ratings & reviews (Comments before release): the average,
+  a bar per star, the member's own review (edit or delete), and the list,
+  10 at a time. Cards show the average; the home page gets a "Top rated"
+  row once two works have ratings (a work with few ratings is pulled
+  towards 3 stars).
+- Admin panel → Reviews and comments: hide or show, reply, delete.
+
 ## Library: files and the launcher
 
 - Files buyers download (game builds now; films and novels later) are in a

@@ -261,6 +261,9 @@ const toWork = (row, rates = {}) => ({
   platforms: row.platforms || [],
   rating: row.rating || "",
   credits: row.credits || [],
+  // Members' reviews: the average of their stars, and how many there are.
+  reviews: row.review_count || 0,
+  score: row.review_count ? row.review_sum / row.review_count : null,
 });
 
 // Loads the published works and the site settings (exchange rates,
@@ -926,6 +929,12 @@ const posterCard = (work) => {
   kind.className = "poster-card__kind";
   kind.textContent = work.kind;
   link.append(frame, title, kind);
+  if (work.reviews) {
+    const score = document.createElement("span");
+    score.className = "poster-card__score";
+    score.append(starsFor(work.score, "stars stars--small"), ` ${scoreText(work.score)}`);
+    link.append(score);
+  }
   return link;
 };
 
@@ -946,9 +955,18 @@ const posterCard = (work) => {
   const kindsInUse = KINDS.filter(([, test]) => CATALOG.some(test)).length;
   if (kindsInUse < 2) return;
 
-  const rows = [["Coming soon", (w) => ["coming", "preorder", "production"].includes(w.status)], ...KINDS];
-  rows.forEach(([name, test]) => {
+  // Top rated: by average stars, pulled towards 3 while a work has few
+  // ratings, so one 5-star review doesn't top the list.
+  const ranked = (w) => (w.score * w.reviews + 3 * 3) / (w.reviews + 3);
+  const rows = [
+    ["Top rated", (w) => w.reviews > 0, (a, b) => ranked(b) - ranked(a)],
+    ["Coming soon", (w) => ["coming", "preorder", "production"].includes(w.status)],
+    ...KINDS,
+  ];
+  rows.forEach(([name, test, order]) => {
     const works = CATALOG.filter(test);
+    if (order) works.sort(order);
+    if (name === "Top rated" && works.length < 2) return;
     if (!works.length) return;
     const shelf = document.createElement("section");
     shelf.className = "shelf";
@@ -2304,6 +2322,252 @@ const signedInGoHome = async (user) => {
   }
 })();
 
+// Stars for a score out of 5: "★★★★★" filled to the score (see .stars).
+const starsFor = (score, className = "stars") => {
+  const el = document.createElement("span");
+  el.className = className;
+  el.textContent = "★★★★★";
+  el.style.setProperty("--fill", `${Math.max(0, Math.min(5, score)) * 20}%`);
+  el.setAttribute("aria-hidden", "true");
+  return el;
+};
+const scoreText = (score) => num(score, 1);
+
+// Ratings and reviews on a work's page (work.html#reviews). Members write
+// one each: stars and a comment once the work is released, a comment
+// before. The database fills in their name, whether they bought it, and
+// the work's totals; the studio can hide a review or reply to it.
+(async function reviewsSection() {
+  const section = document.querySelector(".title-reviews");
+  if (!section || !account) return;
+  const id = new URLSearchParams(location.search).get("id");
+  const work = (await catalog).find((w) => w.id === id);
+  if (!work) return;
+  const released = work.status === "released";
+  const PAGE = 10;
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+
+  const form = section.querySelector(".review-form");
+  const starButtons = [...form.querySelectorAll("[data-star]")];
+  const bodyInput = form.querySelector("textarea");
+  const message = form.querySelector(".auth__message");
+  const submit = form.querySelector(".review-form__submit");
+  const remove = form.querySelector(".review-form__delete");
+  const REMOVE_LABEL = released ? "Delete my review" : "Delete my comment";
+  const list = section.querySelector(".reviews__list");
+  const empty = section.querySelector(".reviews__empty");
+  const more = section.querySelector(".reviews__more");
+  const say = (text, ok) => {
+    message.textContent = text;
+    message.classList.toggle("is-ok", Boolean(ok));
+  };
+
+  section.querySelector("#reviews-title").textContent = released ? "Ratings & reviews" : "Comments";
+  form.querySelector(".review-form__title").textContent = released ? "Your review" : "Your comment";
+  form.querySelector(".star-input").hidden = !released;
+  // (Text boxes are left out of the page translation, so this one's done here.)
+  bodyInput.placeholder = t(released ? "What did you think? (optional)" : "Your thoughts or questions about it…");
+  empty.textContent = released ? "No reviews yet. Be the first." : "No comments yet. Be the first.";
+  section.querySelector(".reviews__login span").textContent = released ? "to rate and review." : "to comment.";
+  section.hidden = false;
+
+  // ---------- Summary: average, count and a bar for each star ----------
+  const showSummary = async () => {
+    if (!released) return;
+    const { data: totals } = await account.from("works").select("review_count, review_sum").eq("id", work.id).maybeSingle();
+    const count = (totals && totals.review_count) || 0;
+    const summary = section.querySelector(".reviews__summary");
+    summary.hidden = !count;
+    // The score beside the title, linking down here.
+    let badge = document.querySelector(".title-score");
+    if (!count) return badge && badge.remove();
+    const score = totals.review_sum / count;
+    section.querySelector('[data-slot="score"]').textContent = scoreText(score);
+    section.querySelector('[data-slot="stars"]').style.setProperty("--fill", `${score * 20}%`);
+    section.querySelector('[data-slot="count"]').textContent =
+      count === 1 ? "1 rating" : `${num(count)} ratings`;
+    if (!badge) {
+      badge = make("a", "title-score");
+      badge.href = "#reviews";
+      document.querySelector(".title-head").append(badge);
+    }
+    badge.replaceChildren(starsFor(score), make("span", "", `${scoreText(score)} · ${count === 1 ? "1 rating" : `${num(count)} ratings`}`));
+    const counts = await Promise.all(
+      [5, 4, 3, 2, 1].map((star) =>
+        account
+          .from("reviews")
+          .select("id", { count: "exact", head: true })
+          .eq("work_id", work.id)
+          .eq("hidden", false)
+          .eq("rating", star)
+          .then(({ count: n }) => n || 0)
+      )
+    );
+    const bars = section.querySelector(".reviews__bars");
+    bars.replaceChildren(
+      ...counts.map((n, i) => {
+        const row = make("li", "reviews__bar");
+        const fill = make("span", "reviews__bar-fill");
+        fill.style.setProperty("--share", `${(n / count) * 100}%`);
+        const track = make("span", "reviews__bar-track");
+        track.append(fill);
+        row.append(make("span", "", `${digits(5 - i)} ★`), track, make("span", "reviews__bar-count", num(n)));
+        return row;
+      })
+    );
+  };
+
+  // ---------- The list, newest first ----------
+  const reviewItem = (review, mine) => {
+    const item = make("li", mine ? "review review--mine" : "review");
+    const avatar = make("img", "review__avatar");
+    avatar.src = review.author_avatar || "assets/avatar-default.svg";
+    avatar.alt = "";
+    avatar.loading = "lazy";
+    avatar.onerror = () => (avatar.src = "assets/avatar-default.svg");
+    const main = make("div", "review__main");
+    const head = make("div", "review__head");
+    const name = make("strong", "review__name", review.author_name || "Member");
+    name.translate = false;
+    head.append(name);
+    if (review.owner) head.append(make("span", "review__badge", "Bought it"));
+    if (review.rating) head.append(starsFor(review.rating, "stars stars--small"));
+    head.append(make("time", "review__date", dateText(review.created_at)));
+    main.append(head);
+    if (review.body) {
+      const text = make("p", "review__body", review.body);
+      text.dir = "auto";
+      main.append(text);
+    }
+    if (review.reply) {
+      const reply = make("div", "review__reply");
+      const replyText = make("p", "", review.reply);
+      replyText.dir = "auto";
+      reply.append(make("strong", "", "SauFox Entertainment"), replyText);
+      main.append(reply);
+    }
+    if (mine && review.hidden) main.append(make("p", "review__note", "The studio has hidden this from others."));
+    item.append(avatar, main);
+    return item;
+  };
+  const FIELDS = "id, user_id, rating, body, author_name, author_avatar, owner, hidden, reply, created_at";
+  let shown = 0;
+  let own = null;
+  let session = null;
+  const loadPage = async (reset) => {
+    if (reset) {
+      shown = 0;
+      list.replaceChildren();
+      if (own) list.append(reviewItem(own, true));
+    }
+    let query = account.from("reviews").select(FIELDS).eq("work_id", work.id).eq("hidden", false);
+    if (session) query = query.neq("user_id", session.user.id);
+    const { data, error } = await query.order("created_at", { ascending: false }).range(shown, shown + PAGE);
+    if (error) return;
+    const page = data.slice(0, PAGE);
+    list.append(...page.map((r) => reviewItem(r, false)));
+    shown += page.length;
+    more.hidden = data.length <= PAGE;
+    empty.hidden = list.children.length > 0;
+  };
+  more.addEventListener("click", () => loadPage(false));
+
+  // ---------- The member's own review ----------
+  let rating = 0;
+  const showRating = (value) =>
+    starButtons.forEach((b) => {
+      const on = Number(b.dataset.star) <= value;
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-checked", String(Number(b.dataset.star) === rating));
+    });
+  starButtons.forEach((button) => {
+    button.setAttribute("role", "radio");
+    button.addEventListener("click", () => {
+      rating = Number(button.dataset.star);
+      showRating(rating);
+    });
+    button.addEventListener("mouseenter", () => showRating(Number(button.dataset.star)));
+    button.addEventListener("mouseleave", () => showRating(rating));
+  });
+  const fillForm = () => {
+    rating = (own && own.rating) || 0;
+    showRating(rating);
+    bodyInput.value = (own && own.body) || "";
+    remove.hidden = !own;
+    remove.textContent = REMOVE_LABEL;
+    submit.textContent = own ? "Update" : released ? "Post review" : "Post comment";
+  };
+
+  session = await verifiedSession();
+  if (!session) {
+    const login = section.querySelector(".reviews__login");
+    login.hidden = false;
+    login.querySelector("a").addEventListener("click", (event) => {
+      event.preventDefault();
+      local.set("next", `work.html?id=${encodeURIComponent(work.id)}#reviews`);
+      location.href = "login.html";
+    });
+  } else {
+    const { data } = await account.from("reviews").select(FIELDS).eq("work_id", work.id).eq("user_id", session.user.id).maybeSingle();
+    own = data || null;
+    form.hidden = false;
+    fillForm();
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const body = bodyInput.value.trim();
+    if (released && !rating) return say("Choose from 1 to 5 stars.");
+    if (!released && !body) {
+      bodyInput.focus();
+      return say("Write your comment first.");
+    }
+    submit.disabled = true;
+    say("Saving…", true);
+    const row = { rating: released ? rating : null, body: body || null };
+    const { data, error } = own
+      ? await account.from("reviews").update(row).eq("id", own.id).select(FIELDS).single()
+      : await account.from("reviews").insert({ work_id: work.id, ...row }).select(FIELDS).single();
+    submit.disabled = false;
+    if (error) return say(error.code === "23505" ? "You've already reviewed this. Reload the page to edit it." : "Not saved. Check your connection and try again.");
+    own = data;
+    fillForm();
+    say(released ? "Thanks! Your review is up." : "Thanks! Your comment is up.", true);
+    loadPage(true);
+    showSummary();
+  });
+  remove.addEventListener("click", async () => {
+    // Press twice: the first press asks.
+    if (!remove.dataset.armed) {
+      remove.dataset.armed = "1";
+      remove.textContent = "Tap again to delete";
+      setTimeout(() => {
+        delete remove.dataset.armed;
+        remove.textContent = REMOVE_LABEL;
+      }, 4000);
+      return;
+    }
+    remove.disabled = true;
+    const { error } = await account.from("reviews").delete().eq("id", own.id);
+    remove.disabled = false;
+    if (error) return say("Not deleted. Try again.");
+    own = null;
+    fillForm();
+    say("Deleted.", true);
+    loadPage(true);
+    showSummary();
+  });
+
+  if (location.hash === "#reviews") section.scrollIntoView();
+  loadPage(true);
+  showSummary();
+})();
+
 // Admin panel (admin.html) — add, edit, order, publish and delete works in
 // the Supabase catalogue. Only accounts in the admins table get in, and the
 // database refuses changes from anyone else anyway.
@@ -3061,6 +3325,93 @@ const signedInGoHome = async (user) => {
         mailSummary.hidden = !stuck;
       });
   loadOrders();
+
+  // ---------- Reviews and comments ----------
+  const reviewList = page.querySelector(".admin-reviews__list");
+  const noReviews = page.querySelector(".admin-reviews__empty");
+  const reviewRow = (review, titles) => {
+    const row = make("li", review.hidden ? "admin-review is-hidden" : "admin-review");
+    const main = make("div", "admin-review__main");
+    main.append(
+      make(
+        "strong",
+        "",
+        `${titles[review.work_id] || review.work_id} · ${review.rating ? `${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)}` : "comment"}`
+      ),
+      make("span", "", `${review.author_name || "Member"}${review.owner ? " · bought it" : ""} · ${whenText(review.created_at)}`)
+    );
+    if (review.body) {
+      const text = make("p", "admin-review__body", review.body);
+      text.dir = "auto";
+      main.append(text);
+    }
+    const reply = make("textarea", "admin-review__reply");
+    reply.rows = 2;
+    reply.maxLength = 2000;
+    reply.dir = "auto";
+    reply.placeholder = "Reply as SauFox Entertainment (optional)";
+    reply.value = review.reply || "";
+    const note = make("span", "admin-order__note");
+    const save = make("button", "admin-button", "Save reply");
+    save.type = "button";
+    save.addEventListener("click", async () => {
+      save.disabled = true;
+      const { error } = await account.from("reviews").update({ reply: reply.value.trim() || null }).eq("id", review.id);
+      save.disabled = false;
+      note.textContent = error ? "Not saved. Try again." : reply.value.trim() ? "Reply saved." : "Reply removed.";
+    });
+    const hide = make("button", "admin-button", review.hidden ? "Show on site" : "Hide");
+    hide.type = "button";
+    hide.addEventListener("click", async () => {
+      hide.disabled = true;
+      const { error } = await account.from("reviews").update({ hidden: !review.hidden }).eq("id", review.id);
+      hide.disabled = false;
+      if (error) return (note.textContent = "Not changed. Try again.");
+      review.hidden = !review.hidden;
+      row.classList.toggle("is-hidden", review.hidden);
+      hide.textContent = review.hidden ? "Show on site" : "Hide";
+    });
+    const remove = make("button", "admin-button admin-button--danger", "Delete");
+    remove.type = "button";
+    remove.addEventListener("click", async () => {
+      if (!remove.dataset.armed) {
+        remove.dataset.armed = "1";
+        remove.textContent = "Delete it?";
+        setTimeout(() => {
+          delete remove.dataset.armed;
+          remove.textContent = "Delete";
+        }, 4000);
+        return;
+      }
+      remove.disabled = true;
+      const { error } = await account.from("reviews").delete().eq("id", review.id);
+      if (!error) return row.remove();
+      remove.disabled = false;
+      note.textContent = "Not deleted. Try again.";
+    });
+    const actions = make("div", "admin-review__actions");
+    actions.append(save, hide, remove, note);
+    main.append(reply, actions);
+    row.append(main);
+    return row;
+  };
+  Promise.all([
+    account.from("works").select("id, title"),
+    account
+      .from("reviews")
+      .select("id, work_id, rating, body, author_name, owner, hidden, reply, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100),
+  ]).then(([{ data: works }, { data: reviews, error }]) => {
+    if (error) {
+      noReviews.textContent = "Reviews couldn't be loaded. Reload the page to try again.";
+      noReviews.hidden = false;
+      return;
+    }
+    const titles = Object.fromEntries((works || []).map((w) => [w.id, w.title]));
+    reviewList.replaceChildren(...reviews.map((r) => reviewRow(r, titles)));
+    noReviews.hidden = reviews.length > 0;
+  });
 
   // ---------- Files for buyers ----------
   // The file goes straight from this browser into the R2 bucket, through a
