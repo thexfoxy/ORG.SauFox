@@ -335,10 +335,13 @@ nobody can log in.
   the `hidden` and `reply` fields; admins can only hide a review or reply
   to it. `private.review_totals` keeps `works.review_count` and
   `works.review_sum` (visible rated reviews) up to date.
-- Work page, under the title (released works): "SauFox rating ★ 8.4/10"
+- Work page, under the title: "SauFox rating ★ 8.4/10"
   with the number of ratings (1.2K), and "Your rating": ☆ Rate opens a box
   of ten stars; a rating needs no written review, can be changed, and
   "Remove rating" takes it off (a written review stays, without stars).
+  Before release "Your rating" reads "Opens at release". A last item,
+  Comments (User reviews once out), shows how many there are and scrolls
+  down to them.
 - Work page → Ratings & reviews (Comments before release): the average,
   a bar for each of the ten stars, the member's own review (edit or
   delete), and the list, 10 at a time. Scores show as ★ 8.4/10; cards show

@@ -3325,8 +3325,8 @@ a.hero__panel {
   color: var(--muted);
 }
 
-/* Trust seals (eNamad and the like), drawn on a light card since their
-   images are made for white pages. */
+/* Trust seals (eNamad and the like), straight on the footer: no card
+   behind them. */
 .site-footer__seals {
   display: flex;
   flex-wrap: wrap;
@@ -3340,10 +3340,8 @@ a.hero__panel {
 
 .site-footer__seals a {
   display: block;
-  padding: 6px;
-  border-radius: 12px;
-  background: #fff;
   line-height: 0;
+  background: transparent;
 }
 
 .site-footer__seals img {
@@ -5791,6 +5789,35 @@ a.hero__panel {
 .title-rating__mine .score b {
   font-size: 20px;
   color: var(--accent);
+}
+
+.title-rating__mine.is-waiting {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: default;
+}
+
+.title-rating__mine.is-waiting:hover {
+  background: none;
+}
+
+.title-rating__mine.is-waiting .stars {
+  color: var(--muted);
+}
+
+.title-rating__go {
+  padding: 4px 8px;
+  margin-inline-start: -8px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+  transition: background 0.15s ease;
+}
+
+.title-rating__talk:hover .title-rating__go {
+  background: rgba(255, 255, 255, 0.07);
 }
 
 /* The ten-star box. */

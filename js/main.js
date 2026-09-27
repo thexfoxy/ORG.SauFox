@@ -3129,6 +3129,7 @@ const scoreOf = (score, className = "score", whole = false) => {
   const showMine = () => {
     if (!box) return;
     const mine = box.querySelector(".title-rating__mine");
+    if (!released) return mine.replaceChildren(make("span", "stars stars--empty", "☆"), make("span", "", "Opens at release"));
     const value = own && own.rating;
     mine.classList.toggle("is-rated", Boolean(value));
     if (value) {
@@ -3224,8 +3225,9 @@ const scoreOf = (score, className = "score", whole = false) => {
     dialog.showModal();
     show(pick);
   };
+  // Before release the stars wait ("Opens at release"); comments are open
+  // either way, and the last item jumps down to them.
   const rateBox = () => {
-    if (!released) return;
     box = make("div", "title-rating");
     const average = make("a", "title-rating__item title-rating__average");
     average.href = "#reviews";
@@ -3235,14 +3237,37 @@ const scoreOf = (score, className = "score", whole = false) => {
     const mine = make("button", "title-rating__mine");
     mine.type = "button";
     mine.addEventListener("click", () => (session ? rateDialog() : needLogin()));
+    if (!released) {
+      mine.disabled = true;
+      mine.classList.add("is-waiting");
+    }
     yours.append(make("span", "title-rating__label", "Your rating"), mine);
-    box.append(average, yours);
+    const talk = make("a", "title-rating__item title-rating__talk");
+    talk.href = "#reviews";
+    talk.append(
+      make("span", "title-rating__label", released ? "User reviews" : "Comments"),
+      make("span", "title-rating__go", "Read and write")
+    );
+    talk.addEventListener("click", (event) => {
+      event.preventDefault();
+      section.scrollIntoView({ behavior: "smooth" });
+      history.replaceState(null, "", "#reviews");
+    });
+    box.append(average, yours, talk);
     document.querySelector(".title-head").append(box);
     showMine();
   };
 
   // ---------- Summary: average, count and a bar for each star ----------
   const showSummary = async () => {
+    // How many comments or reviews there are, beside the title.
+    const { count: talked } = await account
+      .from("reviews")
+      .select("id", { count: "exact", head: true })
+      .eq("work_id", work.id)
+      .eq("hidden", false);
+    const go = box && box.querySelector(".title-rating__go");
+    if (go) go.textContent = talked ? `${compact(talked)} · ${t("Read and write")}` : t("Be the first");
     if (!released) return;
     const { data: totals } = await account.from("works").select("review_count, review_sum").eq("id", work.id).maybeSingle();
     const count = (totals && totals.review_count) || 0;
