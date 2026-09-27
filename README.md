@@ -434,7 +434,10 @@ Home page:
       news post come first: their panel shows the work's art (or its cover),
       a "News" tag, and opens the post. With a mouse, the panel under the
       pointer widens to show its whole banner while the others narrow and
-      dim, and a glass card opens on it: the post's date, title, summary and
+      dim, and a glass card opens on it (in a layer after the hero, so it's
+      never cut off; its text is never shortened; in Chromium browsers the
+      view behind bends at its rounded rim through an SVG displacement
+      filter fitted to the card's size, elsewhere it's frosted glass): the post's date, title, summary and
       work (or the work's kind, status and synopsis), the YouTube video's
       thumbnail (opens YouTube in a new tab; the post's video, else the
       work's), and a link on. Phones show just the tag. While there is only one

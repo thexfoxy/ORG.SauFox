@@ -605,6 +605,96 @@ const youtubeCard = (url, thumb, label = "Watch on YouTube") => {
   return link;
 };
 
+// ---------- Liquid glass ----------
+// A glass panel that bends what's behind it at its rim, like a thick pane
+// with rounded edges. The bend is an SVG displacement filter used as the
+// element's backdrop filter; its map (red = sideways, green = up/down, 128
+// = no shift) is drawn for the element's size: flat in the middle, pulling
+// the view inward more and more toward the rounded edge. Chromium browsers
+// only; elsewhere the CSS keeps a plain frosted glass.
+const liquidGlass = (() => {
+  const ua = navigator.userAgent;
+  const able = /\bChrome\/\d+/.test(ua) && !/\bCriOS\b|Mobile/.test(ua) && !!window.CSS && CSS.supports("backdrop-filter", "blur(1px)");
+  let defs = null;
+  const made = new Map();
+  const NS = "http://www.w3.org/2000/svg";
+  const map = (w, h, radius, bezel) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    const image = ctx.createImageData(w, h);
+    const px = image.data;
+    const hw = w / 2;
+    const hh = h / 2;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const dx = x + 0.5 - hw;
+        const dy = y + 0.5 - hh;
+        const qx = Math.abs(dx) - (hw - radius);
+        const qy = Math.abs(dy) - (hh - radius);
+        let depth;
+        let nx = 0;
+        let ny = 0;
+        if (qx > 0 && qy > 0) {
+          const len = Math.hypot(qx, qy) || 1;
+          depth = radius - len;
+          nx = (qx / len) * Math.sign(dx);
+          ny = (qy / len) * Math.sign(dy);
+        } else if (hw - Math.abs(dx) < hh - Math.abs(dy)) {
+          depth = hw - Math.abs(dx);
+          nx = Math.sign(dx);
+        } else {
+          depth = hh - Math.abs(dy);
+          ny = Math.sign(dy);
+        }
+        // 0 at the rim's inner edge, 1 at the outer edge, eased like a lens.
+        const t = depth < bezel ? 1 - Math.max(depth, 0) / bezel : 0;
+        const pull = t * t * (3 - 2 * t);
+        const i = (y * w + x) * 4;
+        px[i] = 128 - nx * pull * 127;
+        px[i + 1] = 128 - ny * pull * 127;
+        px[i + 2] = 128;
+        px[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+    return canvas.toDataURL();
+  };
+  return (el, { radius = 22, bezel = 34, strength = 70 } = {}) => {
+    if (!able) return;
+    const w = Math.round(el.offsetWidth);
+    const h = Math.round(el.offsetHeight);
+    if (!w || !h) return;
+    const key = `${w}x${h}`;
+    if (!made.has(key)) {
+      if (!defs) {
+        const svg = document.createElementNS(NS, "svg");
+        svg.setAttribute("aria-hidden", "true");
+        svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
+        defs = document.createElementNS(NS, "defs");
+        svg.append(defs);
+        document.body.append(svg);
+      }
+      const id = `glass-${made.size + 1}`;
+      const filter = document.createElementNS(NS, "filter");
+      filter.id = id;
+      [["x", 0], ["y", 0], ["width", w], ["height", h], ["filterUnits", "userSpaceOnUse"], ["color-interpolation-filters", "sRGB"]].forEach(
+        ([k, v]) => filter.setAttribute(k, v)
+      );
+      filter.innerHTML =
+        `<feImage href="${map(w, h, radius, bezel)}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none" result="map"/>` +
+        `<feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="soft"/>` +
+        `<feDisplacementMap in="soft" in2="map" scale="${strength}" xChannelSelector="R" yChannelSelector="G" result="bent"/>` +
+        `<feColorMatrix in="bent" type="saturate" values="1.45"/>`;
+      defs.append(filter);
+      made.set(key, id);
+    }
+    el.style.setProperty("--glass", `url(#${made.get(key)})`);
+    el.classList.add("is-liquid");
+  };
+})();
+
 // The hero's bottom edge, shared by the hero and the work cards. Same shape
 // as the hero's mask in css/style.css, in its 1440 x 520 viewBox: flat at
 // y=370 up to x=460, a cubic down to (1200, 520), then flat. Takes x as a
@@ -725,6 +815,12 @@ const heroEdgeY = (() => {
     box.append(more);
     return box;
   };
+  // The cards live in a layer just after the hero, outside its clipped
+  // strips and curved mask, so a card is never cut off; each lines up with
+  // its panel.
+  const layer = make("div", "hero-cards");
+  hero.after(layer);
+  const cards = [];
   // Where a panel goes, and what it shows.
   const point = (panel, work) => {
     const post = newsFor.get(work.id);
@@ -733,8 +829,11 @@ const heroEdgeY = (() => {
     link.setAttribute("aria-label", post ? newsField(post, "title") : work.title);
     panel.classList.toggle("has-news", Boolean(post));
     panel.querySelector(".hero__tag").hidden = !post;
-    panel.querySelector(".hero__card")?.remove();
-    panel.append(card(work, post));
+    const i = Number(panel.dataset.index);
+    const next = card(work, post);
+    if (cards[i]) cards[i].replaceWith(next);
+    else layer.append(next);
+    cards[i] = next;
   };
 
   hero.style.setProperty("--n", count);
@@ -744,6 +843,7 @@ const heroEdgeY = (() => {
       const work = picks[k];
       const panel = make("div", "hero__panel");
       panel.style.setProperty("--i", i);
+      panel.dataset.index = i;
       const link = make("a", "hero__link");
       const tag = make("span", "hero__tag", t("News"));
       panel.append(art(work), link, tag);
@@ -809,9 +909,9 @@ const heroEdgeY = (() => {
       // The tag and card sit in the strip's top corner, clear of the slant.
       const start = Math.max(a, 0) + gap + 18;
       panel.querySelector(".hero__tag").style.left = `${start.toFixed(1)}px`;
-      const box = panel.querySelector(".hero__card");
-      box.style.left = `${start.toFixed(1)}px`;
-      box.style.maxWidth = `${Math.max(Math.min(b, W) - start - slant - 18, 0).toFixed(1)}px`;
+      const box = cards[i];
+      box.style.top = `${18 - H}px`;
+      box.style.left = `${Math.min(start, W - box.offsetWidth - 18).toFixed(1)}px`;
     });
   };
 
@@ -841,13 +941,23 @@ const heroEdgeY = (() => {
       return layout();
     }
     if (!frame) frame = requestAnimationFrame(step);
+    // The panel's card opens with it (the glass is fitted to its size first).
+    cards.forEach((box, i) => {
+      const open = i === index;
+      if (open && !box.classList.contains("is-open")) liquidGlass(box);
+      box.classList.toggle("is-open", open);
+    });
   };
+  const inside = (node) => node && (hero.contains(node) || layer.contains(node));
   panels.forEach((panel, i) => {
     panel.addEventListener("pointerenter", () => hover.matches && aim(i));
     panel.addEventListener("focusin", () => aim(i));
-    panel.addEventListener("focusout", (event) => !panel.contains(event.relatedTarget) && aim(-1));
   });
-  hero.addEventListener("pointerleave", () => aim(-1));
+  // Moving from a panel onto its card (or back) keeps it open.
+  hero.addEventListener("pointerleave", (event) => !inside(event.relatedTarget) && aim(-1));
+  layer.addEventListener("pointerleave", (event) => !inside(event.relatedTarget) && aim(-1));
+  layer.addEventListener("focusout", (event) => !inside(event.relatedTarget) && aim(-1));
+  hero.addEventListener("focusout", (event) => !inside(event.relatedTarget) && aim(-1));
 
   // With more works than panels, every few seconds one random panel that
   // isn't news or under the pointer crossfades to a work not on screen.
@@ -855,7 +965,7 @@ const heroEdgeY = (() => {
     if (document.hidden || calm.matches) return;
     const shown = new Set(panels.map((p) => [...p.querySelectorAll(".hero__art")].pop().dataset.work));
     const options = withArt.filter((work) => work.hero && !shown.has(work.id) && !newsFor.has(work.id));
-    const free = panels.filter((p) => !p.classList.contains("has-news") && !p.matches(":hover"));
+    const free = panels.filter((p) => !p.classList.contains("has-news") && !p.matches(":hover") && !cards[p.dataset.index].classList.contains("is-open"));
     if (!options.length || !free.length) return;
     const panel = free[Math.floor(Math.random() * free.length)];
     const work = options[Math.floor(Math.random() * options.length)];
