@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=56">
+  <link rel="stylesheet" href="css/style.css?v=57">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -532,6 +532,13 @@
               <small>Empty: as soon as you save. With a time: the work appears on the site by itself at that moment.</small>
             </label>
           </div>
+          <div class="admin-field admin-field--wide">
+            <label class="admin-check">
+              <input id="w-hero-featured" name="hero_featured" type="checkbox">
+              <span>Main work in the home page hero</span>
+            </label>
+            <small>Its banner takes most of the hero, with its latest news always open. Only one work at a time: choosing this one unchooses the other. With none chosen, the work with the newest news post leads.</small>
+          </div>
         </div>
       </fieldset>
 
@@ -660,7 +667,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=56" defer></script>
-  <script src="js/main.js?v=56" defer></script>
+  <script src="js/vendor/supabase.js?v=57" defer></script>
+  <script src="js/main.js?v=57" defer></script>
 </body>
 </html>

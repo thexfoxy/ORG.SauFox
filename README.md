@@ -433,12 +433,14 @@ Home page:
       place, and the text glows softly. Add `?demo=new|returning|member` to
       the URL to preview each state.
 - [x] 2. Hero: 16:9 key art in slanted panels whose bottom edge steps down
-      from left to right in a smooth S-curve. The featured work (the one
-      with the newest news post, else a random one) takes the left 58%,
+      from left to right in a smooth S-curve. The main work (chosen in the
+      admin panel with "Main work in the home page hero", `works.hero_featured`,
+      one at a time; else the one with the newest news post, else a random
+      one) takes the left 72%,
       its banner nearly whole, and its card stays open (details, YouTube
       thumbnail beside the text, link on); an eye button hides it and
       brings it back, remembered in the browser (`heroCard`). The other
-      works (up to six on wide screens, four on tablets, three on phones)
+      works (up to five on wide screens, four on tablets, three on phones)
       share the right side in equal strips, swapping at random every few
       seconds when there are more; on a mouse, the strip under the pointer
       widens within that side and its card opens (a plain see-through dark

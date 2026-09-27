@@ -253,6 +253,7 @@ const toWork = (row, rates = {}) => ({
   images: [row.cover_url || row.hero_url].filter(Boolean),
   hero: row.hero_url || "",
   heroFocus: row.hero_focus || "",
+  heroFeatured: Boolean(row.hero_featured),
   stills: row.stills || [],
   trailerDate: row.trailer_date,
   trailer: row.trailer || "",
@@ -645,8 +646,9 @@ const heroEdgeY = (() => {
 
 // Section 2 — Hero: key art from the studio's releases, one slanted panel per
 // work (up to five, seven on wide screens), or a single full-width image
-// while there is one work. The featured work (the one with the newest news
-// post, else a random one) takes the left 58% with its banner nearly whole,
+// while there is one work. The main work (chosen in the admin panel, else the
+// one with the newest news post, else a random one) takes the left 72% with
+// its banner nearly whole,
 // and its card stays open (an eye button hides it, remembered in this
 // browser); the rest share the right side in equal strips. Works with a news
 // post come first: their panel shows the work's art, a "News" tag, and links
@@ -661,7 +663,7 @@ const heroEdgeY = (() => {
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
   const hover = window.matchMedia("(hover: hover) and (pointer: fine)");
   const SWAP_EVERY = 4500;
-  const MAX_PANELS = window.innerWidth >= 1100 ? 7 : window.innerWidth >= 700 ? 5 : 4;
+  const MAX_PANELS = window.innerWidth >= 1100 ? 6 : window.innerWidth >= 700 ? 5 : 4;
 
   const withArt = CATALOG.filter((work) => work.hero || work.images[0]);
   const artOf = (work) => work.hero || work.images[0];
@@ -686,10 +688,12 @@ const heroEdgeY = (() => {
     return a;
   };
 
-  // Works with news (newest first), then the rest with key art, shuffled.
-  const newsWorks = [...newsFor.keys()].map((id) => withArt.find((w) => w.id === id));
-  const others = shuffle(withArt.filter((w) => !newsFor.has(w.id) && w.hero));
-  const picks = [...newsWorks, ...others].slice(0, MAX_PANELS);
+  // The main work chosen in the admin panel, then works with news (newest
+  // first), then the rest with key art, shuffled.
+  const chosen = withArt.find((w) => w.heroFeatured);
+  const newsWorks = [...newsFor.keys()].map((id) => withArt.find((w) => w.id === id)).filter((w) => w !== chosen);
+  const others = shuffle(withArt.filter((w) => w !== chosen && !newsFor.has(w.id) && w.hero));
+  const picks = [...(chosen ? [chosen] : []), ...newsWorks, ...others].slice(0, MAX_PANELS);
   const count = picks.length;
   if (!count) return;
   // The featured work first (on the left), the rest in a random order.
@@ -808,10 +812,10 @@ const heroEdgeY = (() => {
   const panels = [...hero.children];
 
   // ---------- Layout ----------
-  // Each panel's share of the width: the featured one 58%, the others an
-  // equal share of the rest; a hovered strip on the right takes 55% of that
-  // side while its neighbours narrow.
-  const FEATURED = 0.58;
+  // Each panel's share of the width: the main one 72%, the others an equal
+  // share of the rest; a hovered strip on the right takes 55% of that side
+  // while its neighbours narrow.
+  const FEATURED = 0.72;
   const shares = (index) => {
     const n = panels.length;
     if (n === 1) return [1];
@@ -903,6 +907,8 @@ const heroEdgeY = (() => {
       panels[i].classList.toggle("is-open", open);
     });
     peek.hidden = count < 2 || pinned;
+    // A hovered strip's card covers its neighbours' tags; they step aside.
+    hero.classList.toggle("is-hovering", hovered > 0);
   };
   const pin = (show) => {
     pinned = show;
@@ -3750,6 +3756,7 @@ const foldText = (text) =>
     statusText: $("w-status-text"),
     statusTextFa: $("w-status-text-fa"),
     published: $("w-published"),
+    heroFeatured: $("w-hero-featured"),
     publishAt: $("w-publish-at"),
     irr: $("w-price-irr"),
     usd: $("w-price-usd"),
@@ -3876,6 +3883,7 @@ const foldText = (text) =>
     fields.statusText.value = w.status_text || "";
     fields.statusTextFa.value = w.status_text_fa || "";
     fields.published.checked = Boolean(w.published);
+    fields.heroFeatured.checked = Boolean(w.hero_featured);
     fields.publishAt.value = toLocalInput(w.publish_at);
     fields.irr.value = w.price_irr ?? "";
     fields.usd.value = w.price_usd ?? "";
@@ -4012,6 +4020,7 @@ const foldText = (text) =>
       status_text: fields.statusText.value.trim() || null,
       status_text_fa: fields.statusTextFa.value.trim() || null,
       published: fields.published.checked,
+      hero_featured: fields.heroFeatured.checked,
       publish_at: fromLocalInput(fields.publishAt.value),
       price_irr: number(fields.irr),
       price_usd: number(fields.usd),
