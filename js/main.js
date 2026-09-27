@@ -3831,7 +3831,11 @@ const foldText = (text) =>
     const main = make("div", "admin-order__main");
     main.append(
       make("strong", "", `#${order.number} · ${order.title}${order.test ? " (test)" : ""}`),
-      make("span", "", `${money.IRR(order.amount_irr)} · ${whenText(order.created_at)}`)
+      make(
+        "span",
+        "",
+        `${money.IRR(order.amount_irr)}${order.coupon_code ? ` (code ${order.coupon_code}, −${money.IRR(order.discount_irr)})` : ""} · ${whenText(order.created_at)}`
+      )
     );
     if (order.ref_id)
       main.append(make("span", "selectable", `Zarinpal ref ${order.ref_id}${order.card_pan ? ` · card ${order.card_pan}` : ""}`));
@@ -3911,7 +3915,7 @@ const foldText = (text) =>
   const loadOrders = () =>
     account
       .from("orders")
-      .select("id, number, title, amount_irr, name, email, phone, status, created_at, ref_id, card_pan, test, email_pending, email_error, email_tries")
+      .select("id, number, title, amount_irr, name, email, phone, status, created_at, ref_id, card_pan, test, email_pending, email_error, email_tries, coupon_code, discount_irr")
       .order("created_at", { ascending: false })
       .limit(200)
       .then(({ data, error }) => {
@@ -3929,6 +3933,112 @@ const foldText = (text) =>
         mailSummary.hidden = !stuck;
       });
   loadOrders();
+
+  // ---------- Discount codes ----------
+  const couponForm = page.querySelector(".admin-coupons__form");
+  const couponList = page.querySelector(".admin-coupons__list");
+  const cf = (name) => couponForm.elements[name];
+  const couponSay = (text, ok) => {
+    const note = couponForm.querySelector(".admin-message");
+    note.textContent = text;
+    note.classList.toggle("is-ok", Boolean(ok));
+  };
+  // Letters and digits that can't be mistaken for each other.
+  couponForm.querySelector('[data-action="random-code"]').addEventListener("click", () => {
+    const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const pick = crypto.getRandomValues(new Uint8Array(8));
+    cf("code").value = Array.from(pick, (n) => letters[n % letters.length]).join("");
+  });
+  const couponRow = (c, uses, titles) => {
+    const row = make("li", c.active ? "admin-coupon" : "admin-coupon is-off");
+    const main = make("div", "admin-coupon__main");
+    const off = c.kind === "percent" ? `${c.value}% off` : `${money.IRR(c.value)} off`;
+    const limits = [
+      c.work_id ? titles[c.work_id] || c.work_id : "every work",
+      `used ${uses}${c.max_uses ? ` of ${c.max_uses}` : ""}`,
+      c.per_user > 1 ? `${c.per_user} per member` : "once per member",
+      c.starts_at ? `from ${whenText(c.starts_at)}` : "",
+      c.ends_at ? `until ${whenText(c.ends_at)}` : "",
+      c.note || "",
+    ].filter(Boolean);
+    const code = make("strong", "selectable", c.code);
+    code.dir = "ltr";
+    main.append(code, make("span", "", `${off} · ${limits.join(" · ")}`));
+    const side = make("div", "admin-file__side");
+    const toggle = make("label", "admin-check");
+    const box = make("input");
+    box.type = "checkbox";
+    box.checked = c.active;
+    toggle.append(box, make("span", "", "On"));
+    box.addEventListener("change", async () => {
+      box.disabled = true;
+      const { error } = await account.from("coupons").update({ active: box.checked }).eq("code", c.code);
+      box.disabled = false;
+      if (error) box.checked = !box.checked;
+      row.classList.toggle("is-off", !box.checked);
+    });
+    const remove = make("button", "admin-button admin-button--danger", "Delete");
+    remove.type = "button";
+    remove.hidden = uses > 0;
+    remove.addEventListener("click", async () => {
+      remove.disabled = true;
+      const { error } = await account.from("coupons").delete().eq("code", c.code);
+      if (!error) return row.remove();
+      remove.disabled = false;
+      couponSay("That code has been used, so it can't be deleted. Turn it off instead.");
+    });
+    side.append(toggle, remove);
+    row.append(main, side);
+    return row;
+  };
+  const loadCoupons = async () => {
+    const [{ data: coupons }, { data: used }, { data: works }] = await Promise.all([
+      account.from("coupons").select("*").order("created_at", { ascending: false }),
+      account.from("orders").select("coupon_code").not("coupon_code", "is", null).neq("status", "cancelled"),
+      account.from("works").select("id, title").order("sort"),
+    ]);
+    const titles = Object.fromEntries((works || []).map((w) => [w.id, w.title]));
+    const workPick = cf("work_id");
+    if (workPick.options.length === 1)
+      (works || []).forEach((w) => {
+        const option = make("option", "", w.title);
+        option.value = w.id;
+        workPick.append(option);
+      });
+    const counts = {};
+    (used || []).forEach((o) => (counts[o.coupon_code] = (counts[o.coupon_code] || 0) + 1));
+    couponList.replaceChildren(...(coupons || []).map((c) => couponRow(c, counts[c.code] || 0, titles)));
+  };
+  couponForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const code = cf("code").value.trim().toUpperCase();
+    if (!/^[A-Z0-9-]{3,32}$/.test(code)) return couponSay("Codes use 3 to 32 letters, digits or dashes, like LAUNCH20.");
+    const kind = cf("kind").value;
+    const value = Number(cf("value").value);
+    if (!(value > 0) || !Number.isInteger(value) || (kind === "percent" && value > 100))
+      return couponSay(kind === "percent" ? "Enter a percentage from 1 to 100." : "Enter the Rials to take off, as a whole number.");
+    const optionalNumber = (name) => (cf(name).value.trim() ? Number(cf(name).value) : null);
+    const row = {
+      code,
+      kind,
+      value,
+      work_id: cf("work_id").value || null,
+      max_uses: optionalNumber("max_uses"),
+      per_user: optionalNumber("per_user") || 1,
+      starts_at: fromLocalInput(cf("starts_at").value),
+      ends_at: fromLocalInput(cf("ends_at").value),
+      note: cf("note").value.trim() || null,
+    };
+    if (row.starts_at && row.ends_at && new Date(row.ends_at) <= new Date(row.starts_at))
+      return couponSay("The end has to come after the start.");
+    couponSay("Saving…", true);
+    const { error } = await account.from("coupons").insert(row);
+    if (error) return couponSay(error.code === "23505" ? "That code already exists." : "Not saved. Check the values and try again.");
+    couponForm.reset();
+    couponSay(`Added ${code}.`, true);
+    loadCoupons();
+  });
+  loadCoupons();
 
   // ---------- News ----------
   const newsBox = page.querySelector(".admin-news");
@@ -4471,10 +4581,67 @@ const foldText = (text) =>
   const rials = work.prices.IRR;
   form.querySelector('[data-slot="price"]').textContent = money.IRR(rials);
   const total = form.querySelector('[data-slot="total"]');
-  total.textContent = money.IRR(rials);
-  const tomans = document.createElement("small");
-  tomans.textContent = LANG === "fa" ? `${num(Math.round(rials / 10))} تومان` : `${num(Math.round(rials / 10))} Tomans`;
-  total.append(tomans);
+  const showTotal = (amount) => {
+    total.textContent = money.IRR(amount);
+    const tomans = document.createElement("small");
+    tomans.textContent = LANG === "fa" ? `${num(Math.round(amount / 10))} تومان` : `${num(Math.round(amount / 10))} Tomans`;
+    total.append(tomans);
+  };
+  showTotal(rials);
+
+  // Discount code: checked here to show the new total; the database checks
+  // it again, and works out the price itself, when the order is saved.
+  const couponInput = form.querySelector("#coupon-code");
+  const couponApply = form.querySelector('[data-action="apply-coupon"]');
+  const couponNote = form.querySelector(".checkout-coupon__note");
+  const discountRow = form.querySelector(".checkout-summary__discount");
+  const COUPON_REASONS = {
+    unknown: "That code isn't valid.",
+    expired: "That code has expired.",
+    not_started: "That code isn't active yet.",
+    used_up: "That code has been used up.",
+    already_used: "You've already used that code.",
+    other_work: "That code is for a different work.",
+    signed_out: "Log in again to use a code.",
+  };
+  let coupon = null;
+  const setCoupon = (quote) => {
+    coupon = quote;
+    discountRow.hidden = !quote;
+    if (quote) {
+      form.querySelector('[data-slot="discount-label"]').textContent = t(`Discount (${quote.code})`);
+      form.querySelector('[data-slot="discount"]').textContent = `− ${money.IRR(quote.discount)}`;
+    }
+    showTotal(quote ? quote.total : rials);
+    couponApply.textContent = t(quote ? "Remove" : "Apply");
+  };
+  couponApply.addEventListener("click", async () => {
+    if (coupon) {
+      setCoupon(null);
+      couponInput.value = "";
+      couponInput.disabled = false;
+      couponNote.textContent = "";
+      return;
+    }
+    const code = couponInput.value.trim().toUpperCase();
+    if (!code) return couponInput.focus();
+    couponApply.disabled = true;
+    const { data, error } = await account.rpc("check_coupon", { code, work: work.id });
+    couponApply.disabled = false;
+    couponNote.classList.toggle("is-ok", Boolean(data && data.ok));
+    if (error || !data) return (couponNote.textContent = t("Couldn't check the code. Check your connection and try again."));
+    if (!data.ok) return (couponNote.textContent = t(COUPON_REASONS[data.reason] || COUPON_REASONS.unknown));
+    couponInput.value = data.code;
+    couponInput.disabled = true;
+    couponNote.textContent = t(`Code applied: you save ${money.IRR(data.discount)}.`);
+    setCoupon(data);
+  });
+  couponInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      couponApply.click();
+    }
+  });
   const others = ["USD", "EUR"].filter((code) => work.prices[code] != null).map((code) => `≈ ${money[code](work.prices[code])}`);
   if (others.length) {
     const approx = form.querySelector('[data-slot="approx"]');
@@ -4526,12 +4693,21 @@ const foldText = (text) =>
     say("Placing your order…", true);
     const { data, error } = await account
       .from("orders")
-      .insert({ work_id: work.id, name, phone })
+      .insert({ work_id: work.id, name, phone, ...(coupon ? { coupon_code: coupon.code } : {}) })
       .select("id, number")
       .single();
     if (error) {
       submit.disabled = false;
       if (error.code === "23505") return location.replace("profile.html#orders");
+      if (error.code === "SF002") {
+        // The code stopped working meanwhile (used up, expired…).
+        const reason = (error.message.match(/coupon: (\w+)/) || [])[1];
+        setCoupon(null);
+        couponInput.disabled = false;
+        couponNote.classList.remove("is-ok");
+        couponNote.textContent = t(COUPON_REASONS[reason] || COUPON_REASONS.unknown);
+        return say("The discount code no longer works, so the price is back to full. Check it and place the order again.");
+      }
       if (error.code === "SF001") {
         submit.disabled = true;
         return say(SALES_PAUSED);

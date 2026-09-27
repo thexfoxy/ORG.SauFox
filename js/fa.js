@@ -362,6 +362,22 @@ const FA = {
   "Your session has ended. Log in again, then try once more.": "نشست شما تمام شده است. دوباره وارد شوید و بعد امتحان کنید.",
   "Your account wasn't deleted. Try again in a moment.": "حساب شما حذف نشد. کمی بعد دوباره امتحان کنید.",
 
+  // ---------- Discount codes ----------
+  "Discount code": "کد تخفیف",
+  "Apply": "اعمال",
+  "Discount": "تخفیف",
+  "Discount ({code})": "تخفیف ({code})",
+  "Code applied: you save {amount}.": "کد اعمال شد: {amount} صرفه‌جویی کردید.",
+  "That code isn't valid.": "این کد معتبر نیست.",
+  "That code has expired.": "مهلت این کد تمام شده است.",
+  "That code isn't active yet.": "این کد هنوز فعال نشده است.",
+  "That code has been used up.": "ظرفیت این کد تمام شده است.",
+  "You've already used that code.": "قبلاً از این کد استفاده کرده‌اید.",
+  "That code is for a different work.": "این کد برای اثر دیگری است.",
+  "Log in again to use a code.": "برای استفاده از کد دوباره وارد شوید.",
+  "Couldn't check the code. Check your connection and try again.": "بررسی کد انجام نشد. اینترنت را بررسی کنید و دوباره امتحان کنید.",
+  "The discount code no longer works, so the price is back to full. Check it and place the order again.": "کد تخفیف دیگر معتبر نیست و قیمت به حالت کامل برگشت. بررسی کنید و دوباره سفارش را ثبت کنید.",
+
   // ---------- News ----------
   "News · SauFox Entertainment": "اخبار · ساوفاکس اینترتینمنت",
   "News from SauFox Entertainment: announcements, release dates and behind the scenes.": "اخبار ساوفاکس اینترتینمنت: اطلاعیه‌ها، تاریخ انتشار آثار و پشت صحنه.",

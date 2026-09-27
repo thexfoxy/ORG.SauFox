@@ -208,6 +208,25 @@ sign-up, password login, Google sign-in, emailed code and password reset
 In that order: with CAPTCHA on in Supabase but no site key on the site,
 nobody can log in.
 
+## Discount codes
+
+- `coupons` table (admins only): code (A-Z, 0-9, dashes), percent or Rials
+  off, optionally one work, total uses, uses per member (default 1), start
+  and end, on/off, a private note. Codes can't be renamed, and a used code
+  can't be deleted (turn it off).
+- Checkout: the buyer types a code and presses Apply; `public.check_coupon`
+  (signed-in members) says what it takes off or why it can't be used, and
+  the new total shows. The order carries `coupon_code`; the order trigger
+  checks the code again (locking it, so the last use can't be taken twice)
+  and sets `list_amount_irr`, `discount_irr` and `amount_irr` itself, so the
+  browser never decides the price. A code that stopped working meanwhile
+  fails the order with SF002, and the checkout drops it and says why.
+- A use is an order with the code that isn't cancelled. The price never
+  goes below 10,000 Rials (Zarinpal's smallest payment); for a free copy,
+  mark the order paid in the admin panel.
+- Admin panel → Discount codes: add (with a Random button), turn on/off,
+  delete unused; orders show the code and what it took off.
+
 ## News
 
 - `news` table: a post in Persian and/or English (title, summary, text),

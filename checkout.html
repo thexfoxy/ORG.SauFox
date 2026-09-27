@@ -32,7 +32,7 @@
   <meta name="robots" content="noindex">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=49">
+  <link rel="stylesheet" href="css/style.css?v=50">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -130,8 +130,19 @@
               <p class="checkout-summary__edition"></p>
             </div>
           </div>
+          <!-- Discount code: checked with public.check_coupon; the database
+               applies it again when the order is saved. -->
+          <div class="checkout-coupon">
+            <label class="checkout-coupon__label" for="coupon-code">Discount code</label>
+            <div class="checkout-coupon__row">
+              <input id="coupon-code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="32" dir="ltr">
+              <button class="checkout-coupon__apply" type="button" data-action="apply-coupon">Apply</button>
+            </div>
+            <p class="checkout-coupon__note" role="status" aria-live="polite"></p>
+          </div>
           <dl class="checkout-summary__lines">
             <div><dt>Price</dt><dd data-slot="price"></dd></div>
+            <div class="checkout-summary__discount" hidden><dt data-slot="discount-label">Discount</dt><dd data-slot="discount"></dd></div>
             <div class="checkout-summary__total"><dt>Total</dt><dd data-slot="total"></dd></div>
           </dl>
           <p class="checkout-summary__approx" data-slot="approx" hidden></p>
@@ -217,8 +228,8 @@
     </div>
   </footer>
 
-  <script src="js/vendor/supabase.js?v=49" defer></script>
-  <script src="js/fa.js?v=49" defer></script>
-  <script src="js/main.js?v=49" defer></script>
+  <script src="js/vendor/supabase.js?v=50" defer></script>
+  <script src="js/fa.js?v=50" defer></script>
+  <script src="js/main.js?v=50" defer></script>
 </body>
 </html>

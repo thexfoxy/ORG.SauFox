@@ -5699,3 +5699,132 @@ a.hero__panel {
   border-radius: 8px;
   object-fit: cover;
 }
+
+/* Checkout: discount code. */
+.checkout-coupon {
+  display: grid;
+  gap: 8px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.checkout-coupon__label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.checkout-coupon__row {
+  display: flex;
+  gap: 8px;
+}
+
+.checkout-coupon__row input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: 600 15px var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.checkout-coupon__row input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.checkout-coupon__row input:disabled {
+  color: #2bb3a3;
+  border-color: rgba(43, 179, 163, 0.4);
+}
+
+.checkout-coupon__apply {
+  height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: 600 14px var(--font-body);
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.checkout-coupon__apply:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.checkout-coupon__note {
+  margin: 0;
+  font-size: 13px;
+  color: #ff8a7a;
+}
+
+.checkout-coupon__note:empty {
+  display: none;
+}
+
+.checkout-coupon__note.is-ok {
+  color: #2bb3a3;
+}
+
+.checkout-summary__discount dd {
+  color: #2bb3a3;
+}
+
+/* Admin: discount codes. */
+.admin-coupons__code {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-coupons__code input {
+  flex: 1;
+  min-width: 0;
+  text-transform: uppercase;
+}
+
+.admin-coupons__list {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-coupons__list:empty {
+  display: none;
+}
+
+.admin-coupon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.admin-coupon.is-off {
+  opacity: 0.55;
+}
+
+.admin-coupon__main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.admin-coupon__main strong {
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
