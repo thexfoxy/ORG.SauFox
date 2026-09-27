@@ -2858,7 +2858,10 @@ const signedInGoHome = async (user) => {
       name.translate = false;
       name.dir = "auto";
       // Each role in this page's language when it's a known one.
-      const role = make("span", "credit__role", credit.roles.map((r) => t(r)).join(" · "));
+      const ai = !lead && creditPlace(credit.roles) === "ai";
+      // An AI assistant's card says so on a gold label; the rest are its roles.
+      const shownRoles = ai ? credit.roles.filter((r) => !AI.test(r)) : credit.roles;
+      const role = make("span", "credit__role", shownRoles.map((r) => t(r)).join(" · "));
       role.translate = false;
       role.dir = "auto";
       // A lead's job reads first, as a label. The cast show the character
@@ -2872,6 +2875,10 @@ const signedInGoHome = async (user) => {
         character.dir = "auto";
         name.className = "credit__player";
         text.append(character, name);
+      } else if (ai) {
+        item.classList.add("credit--ai");
+        text.append(make("span", "credit__badge", "AI Assistant"), name);
+        if (shownRoles.length) text.append(role);
       } else text.append(name, role);
       item.append(face, text);
       return item;
@@ -2883,25 +2890,17 @@ const signedInGoHome = async (user) => {
       box.append(list);
     }
     const assistants = work.credits.filter((c) => creditPlace(c.roles) === "ai");
+    // AI assistants close the crew, in the same grid, in a gold frame.
     const groups = [
-      ["Crew", work.credits.filter((c) => creditPlace(c.roles) === "crew")],
+      ["Crew", work.credits.filter((c) => creditPlace(c.roles) === "crew").concat(assistants)],
       ["Cast", work.credits.filter((c) => creditPlace(c.roles) === "cast")],
-    ].filter(([label, people]) => people.length || (label === "Crew" && assistants.length));
+    ].filter(([, people]) => people.length);
     groups.forEach(([label, people]) => {
       const group = make("div", "title-credits__group");
       if (groups.length > 1 || leads.length) group.append(make("h3", "title-credits__heading", label));
       const list = make("ul", label === "Cast" ? "title-credits__list title-credits__list--cast" : "title-credits__list");
       list.append(...people.map((credit) => person(credit)));
-      if (people.length) group.append(list);
-      // AI assistants close the crew, under a small heading of their own.
-      if (label === "Crew" && assistants.length) {
-        const ai = make("div", "title-credits__ai");
-        ai.append(make("h4", "title-credits__subheading", "AI Assistant"));
-        const aiList = make("ul", "title-credits__list");
-        aiList.append(...assistants.map((credit) => person(credit)));
-        ai.append(aiList);
-        group.append(ai);
-      }
+      group.append(list);
       if (people.length > SHOWN) {
         list.classList.add("is-folded");
         const more = make("button", "title-credits__more", `Show all ${people.length}`);

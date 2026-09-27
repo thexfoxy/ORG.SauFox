@@ -490,7 +490,7 @@ Title page (`work.html?id=<id>`):
       Persian site. In the admin panel each person has a photo upload (a crop window opens first: drag, zoom, rotate; saved as a 400×400 WebP), a
       name, a roles box (Enter or comma adds one, with suggestions; &times;
       removes) and a move-up arrow that moves them up within their section
-      (leads, crew, AI or cast); every section on the page keeps that order. Anyone with the role "AI assistant" (such as Claude) closes the Crew group under its own small "AI Assistant" heading. Older credits (one role, a group) turn
+      (leads, crew, AI or cast); every section on the page keeps that order. Anyone with the role "AI assistant" (such as Claude) comes last in the Crew row, in a gold frame with an "AI Assistant" label. Older credits (one role, a group) turn
       into roles by themselves.
 - [x] Category rows (Coming soon, Games, Films, Animation, Novels) under
       the main row, built from the catalogue. They stay hidden until the
