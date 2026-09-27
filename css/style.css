@@ -3307,14 +3307,23 @@ a.hero__panel {
   }
 }
 
+/* The studio's mark (assets/logo.webp: silver on a see-through
+   background), sized by height so its tall shape stays whole. */
 .site-footer__logo {
-  font: 400 34px/1 var(--font-logo);
-  color: var(--text);
-  text-decoration: none;
+  display: inline-block;
+  line-height: 0;
 }
 
-.site-footer__logo span {
-  color: var(--muted);
+.site-footer__logo img {
+  display: block;
+  width: auto;
+  height: 150px;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
+  transition: transform 0.3s var(--ease-out);
+}
+
+.site-footer__logo:hover img {
+  transform: scale(1.03);
 }
 
 .site-footer__brand p {
