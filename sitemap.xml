@@ -98,4 +98,20 @@
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/browse.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/browse.html"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/browse.html?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/browse.html"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://saufoxentertainment.ir/browse.html?lang=fa</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/browse.html"/>
+    <xhtml:link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/browse.html?lang=fa"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/browse.html"/>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>

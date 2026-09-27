@@ -72,7 +72,7 @@
   </script>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=47">
+  <link rel="stylesheet" href="css/style.css?v=48">
   <script>
     // Set the auth state before first paint so the header never flickers.
     // member    = signed in              -> profile chip, no CTA
@@ -144,6 +144,12 @@
             <button type="button" data-currency="IRR" aria-pressed="false">Rials</button>
           </div>
         </div>
+        <!-- Opens browse.html with the search (and every work, if empty). -->
+        <form class="works__search" action="browse.html" role="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input type="search" name="q" placeholder="Search works" aria-label="Search works" enterkeyhint="search">
+          <a class="works__all" href="browse.html">All works</a>
+        </form>
       </div>
     </section>
 
@@ -203,6 +209,7 @@
 
       <nav class="site-footer__col" aria-label="Studio">
         <h2>Studio</h2>
+        <a href="browse.html">All works</a>
         <a href="about.html">About us</a>
         <a href="about.html#contact">Contact</a>
         <a href="faq.html">Help &amp; FAQ</a>
@@ -239,7 +246,7 @@
     </div>
   </footer>
 
-  <script src="js/fa.js?v=47" defer></script>
-  <script src="js/main.js?v=47" defer></script>
+  <script src="js/fa.js?v=48" defer></script>
+  <script src="js/main.js?v=48" defer></script>
 </body>
 </html>

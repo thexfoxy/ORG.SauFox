@@ -24,20 +24,20 @@
       setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
     })();
   </script>
-  <title>About · SauFox Entertainment</title>
-  <meta name="description" content="About SauFox Entertainment, a studio making games, animation, films and novels, and how to contact us.">
+  <title>All works · SauFox Entertainment</title>
+  <meta name="description" content="Search and browse every game, animation, film and novel from SauFox Entertainment.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <meta name="theme-color" content="#0f0f11">
-  <link rel="canonical" href="https://saufoxentertainment.ir/about.html">
-  <link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/about.html">
-  <link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/about.html?lang=fa">
-  <link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/about.html">
+  <link rel="canonical" href="https://saufoxentertainment.ir/browse.html">
+  <link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/browse.html">
+  <link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/browse.html?lang=fa">
+  <link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/browse.html">
   <meta property="og:site_name" content="SauFox Entertainment">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="About · SauFox Entertainment">
-  <meta property="og:description" content="About SauFox Entertainment, a studio making games, animation, films and novels, and how to contact us.">
-  <meta property="og:url" content="https://saufoxentertainment.ir/about.html">
+  <meta property="og:title" content="All works · SauFox Entertainment">
+  <meta property="og:description" content="Search and browse every game, animation, film and novel from SauFox Entertainment.">
+  <meta property="og:url" content="https://saufoxentertainment.ir/browse.html">
   <meta property="og:image" content="https://saufoxentertainment.ir/assets/og.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -79,85 +79,60 @@
     </div>
   </header>
 
-  <main class="doc">
-    <div data-only="en" translate="no">
-      <p class="doc__kicker">About us</p>
-      <h1 class="doc__title">Stories that stay with you</h1>
-      <p class="doc__lead">SauFox Entertainment is an entertainment studio working across games, animation, short films, feature films and novels, released in physical and digital editions.</p>
-      <p>In everything we make, we set out to build powerful, realistic media: stories that take their audience seriously and help teenagers work toward their own goals.</p>
+  <!-- Help & FAQ. Each answer opens in place (<details>). -->
+  <!-- Every published work, with search, filters and sorting. The address
+       keeps them (browse.html?q=…&kind=…&status=…&genre=…&platform=…&sort=…),
+       so a link opens the same results. js/main.js (browsePage) fills it. -->
+  <main class="browse">
+    <header class="browse__head">
+      <h1 class="browse__title">All works</h1>
+      <form class="browse__search" role="search" novalidate>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input type="search" name="q" placeholder="Search by title, genre or story" aria-label="Search works" autocomplete="off" enterkeyhint="search">
+      </form>
+    </header>
 
-      <h2 id="contact">Contact</h2>
-      <p>For business, press or anything else, reach us here.</p>
-      <dl class="doc__contact">
-        <div>
-          <dt>Email</dt>
-          <dd><a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a></dd>
-        </div>
-        <div>
-          <dt>Phone</dt>
-          <dd><a class="selectable" href="tel:+985133409142" dir="ltr">+98 51 3340 9142</a></dd>
-        </div>
-        <div>
-          <dt>Mobile</dt>
-          <dd><a class="selectable" href="tel:+989301053524" dir="ltr">+98 930 105 3524</a></dd>
-        </div>
-        <div>
-          <dt>Instagram</dt>
-          <dd><a href="https://www.instagram.com/saufox.entertainment" target="_blank" rel="noopener">@saufox.entertainment</a></dd>
-        </div>
-        <div>
-          <dt>Telegram</dt>
-          <dd><a href="https://t.me/saufoxentertainment" target="_blank" rel="noopener">t.me/saufoxentertainment</a></dd>
-        </div>
-        <div>
-          <dt>X</dt>
-          <dd><a href="https://x.com/saufoxent" target="_blank" rel="noopener">@saufoxent</a></dd>
-        </div>
-        <div class="doc__contact-wide">
-          <dt>Address</dt>
-          <dd class="selectable">Khorasan Razavi Agricultural and Natural Resources Research and Education Center, opposite the Mashhad&ndash;Neyshabur highway police, Mashhad, Razavi Khorasan, Iran<br>Postal code 9165966416</dd>
-        </div>
-      </dl>
+    <div class="browse__filters">
+      <label class="browse__filter">
+        <span>Type</span>
+        <select name="kind"><option value="">All</option></select>
+      </label>
+      <label class="browse__filter">
+        <span>Status</span>
+        <select name="status">
+          <option value="">All</option>
+          <option value="released">Released</option>
+          <option value="preorder">Pre-order</option>
+          <option value="coming">Coming soon</option>
+          <option value="production">In production</option>
+        </select>
+      </label>
+      <label class="browse__filter">
+        <span>Genre</span>
+        <select name="genre"><option value="">All</option></select>
+      </label>
+      <label class="browse__filter">
+        <span>Platform</span>
+        <select name="platform"><option value="">All</option></select>
+      </label>
+      <label class="browse__filter">
+        <span>Sort by</span>
+        <select name="sort">
+          <option value="featured">Featured</option>
+          <option value="newest">Newest</option>
+          <option value="rating">Top rated</option>
+          <option value="price-low">Price: low to high</option>
+          <option value="price-high">Price: high to low</option>
+        </select>
+      </label>
+      <button class="browse__clear" type="button" hidden>Clear all</button>
     </div>
 
-    <div data-only="fa">
-      <p class="doc__kicker">درباره‌ی ما</p>
-      <h1 class="doc__title">قصه‌هایی که با شما می‌مانند</h1>
-      <p class="doc__lead">ساوفاکس اینترتینمنت یک استودیوی سرگرمی است که در زمینه‌ی بازی، انیمیشن، فیلم کوتاه، فیلم سینمایی و رمان کار می‌کند و آثارش را در نسخه‌های فیزیکی و دیجیتال منتشر می‌کند.</p>
-      <p>هدف ما در همه‌ی کارهایمان ساختن رسانه‌ای قدرتمند و واقع‌گرایانه است: قصه‌هایی که مخاطبشان را جدی می‌گیرند و به نوجوانان کمک می‌کنند به اهداف خودشان برسند.</p>
-
-      <h2 id="contact-fa">تماس با ما</h2>
-      <p>برای همکاری، رسانه یا هر موضوع دیگری از این راه‌ها با ما در ارتباط باشید.</p>
-      <dl class="doc__contact">
-        <div>
-          <dt>ایمیل</dt>
-          <dd><a class="selectable" href="mailto:saufoxentertainment@gmail.com" dir="ltr">saufoxentertainment@gmail.com</a></dd>
-        </div>
-        <div>
-          <dt>تلفن ثابت</dt>
-          <dd><a class="selectable" href="tel:+985133409142" dir="ltr">۰۵۱-۳۳۴۰۹۱۴۲</a></dd>
-        </div>
-        <div>
-          <dt>موبایل</dt>
-          <dd><a class="selectable" href="tel:+989301053524" dir="ltr">۰۹۳۰ ۱۰۵ ۳۵۲۴</a></dd>
-        </div>
-        <div>
-          <dt>اینستاگرام</dt>
-          <dd><a href="https://www.instagram.com/saufox.entertainment" target="_blank" rel="noopener" dir="ltr">@saufox.entertainment</a></dd>
-        </div>
-        <div>
-          <dt>تلگرام</dt>
-          <dd><a href="https://t.me/saufoxentertainment" target="_blank" rel="noopener" dir="ltr">t.me/saufoxentertainment</a></dd>
-        </div>
-        <div>
-          <dt>ایکس</dt>
-          <dd><a href="https://x.com/saufoxent" target="_blank" rel="noopener" dir="ltr">@saufoxent</a></dd>
-        </div>
-        <div class="doc__contact-wide">
-          <dt>نشانی</dt>
-          <dd class="selectable">مشهد، مقابل پلیس راه مشهد&ndash;نیشابور، مرکز تحقیقات و آموزش جهاد کشاورزی و منابع طبیعی خراسان رضوی<br>کد پستی ۹۱۶۵۹۶۶۴۱۶</dd>
-        </div>
-      </dl>
+    <p class="browse__count" role="status" aria-live="polite"></p>
+    <div class="poster-grid browse__grid"></div>
+    <div class="empty browse__empty" hidden>
+      <p class="empty__title">Nothing matches</p>
+      <p class="empty__text">Try another word, or clear the filters.</p>
     </div>
   </main>
 

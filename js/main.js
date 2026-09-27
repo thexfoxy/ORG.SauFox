@@ -261,6 +261,9 @@ const toWork = (row, rates = {}) => ({
   platforms: row.platforms || [],
   rating: row.rating || "",
   credits: row.credits || [],
+  created: row.created_at || "",
+  // Both languages' texts, for search (browse.html).
+  text: [row.synopsis, row.synopsis_fa, row.status_text, row.status_text_fa].filter(Boolean).join(" "),
   // Members' reviews: the average of their stars, and how many there are.
   reviews: row.review_count || 0,
   score: row.review_count ? row.review_sum / row.review_count : null,
@@ -298,7 +301,7 @@ const loadSite = async () => {
 };
 
 // Started once, on the pages that show works.
-const site = document.querySelector(".hero, .works, .plans, .title-page, .login-bg, .profile-page, .checkout")
+const site = document.querySelector(".hero, .works, .plans, .title-page, .login-bg, .profile-page, .checkout, .browse")
   ? loadSite()
   : Promise.resolve({ works: [], settings: {}, offline: false });
 const catalog = site.then((data) => data.works);
@@ -307,7 +310,7 @@ const catalog = site.then((data) => data.works);
 // go to the status page (which comes back here when the site is up).
 // Admins see the site as usual, with a reminder bar.
 (async function siteStatus() {
-  if (!document.querySelector(".hero, .works, .title-page, .profile-page, .checkout")) return;
+  if (!document.querySelector(".hero, .works, .title-page, .profile-page, .checkout, .browse")) return;
   const { settings, offline } = await site;
   const from = encodeURIComponent(location.pathname + location.search + location.hash);
   if (offline) return location.replace(`status.html?reason=offline&from=${from}`);
@@ -843,7 +846,8 @@ const dragScroll = (track) => {
   // row goes. A member who picked a currency in Settings sees prices in it
   // and no buttons (they change it in Settings).
   const available = CURRENCIES.filter((code) => CATALOG.some((w) => w.prices[code] != null));
-  const controls = section.querySelector(".works__controls");
+  // (Only the currency group hides; the search box beside it stays.)
+  const controls = section.querySelector(".works__controls .works__group");
   const choose = (next, remember) => {
     mode = next;
     currencyButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.currency === mode)));
@@ -2830,6 +2834,137 @@ const scoreText = (score) => num(score, 1);
   if (location.hash === "#reviews") section.scrollIntoView();
   loadPage(true);
   showSummary();
+})();
+
+// Search text in either language: lower case, Arabic letters as their Persian
+// forms (ي→ی, ك→ک …), no diacritics, zero-width non-joiners as spaces, and
+// Persian or Arabic digits as 0-9.
+const foldText = (text) =>
+  String(text || "")
+    .toLowerCase()
+    .replace(/[يى]/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/[ۀة]/g, "ه")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ؤ/g, "و")
+    .replace(/[ً-ٰٟـ]/g, "")
+    .replace(/‌/g, " ")
+    .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+    .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    .replace(/\s+/g, " ")
+    .trim();
+
+// Browse (browse.html) — every published work, searched by title, type,
+// genre, platform and story (in both languages), filtered and sorted. The
+// choices live in the address, so links and the back button keep them.
+(async function browsePage() {
+  const page = document.querySelector(".browse");
+  if (!page) return;
+  const CATALOG = await catalog;
+  const STATUS = { released: "Released", preorder: "Pre-order", coming: "Coming soon", production: "In production" };
+  const input = page.querySelector('input[name="q"]');
+  const picks = Object.fromEntries([...page.querySelectorAll(".browse__filters select")].map((s) => [s.name, s]));
+  const grid = page.querySelector(".browse__grid");
+  const count = page.querySelector(".browse__count");
+  const empty = page.querySelector(".browse__empty");
+  const clear = page.querySelector(".browse__clear");
+
+  // Options from what the catalogue actually has; a filter with nothing to
+  // choose from stays out of the way.
+  const fill = (select, values) => {
+    [...new Set(values.filter(Boolean))]
+      .sort((a, b) => t(a).localeCompare(t(b), LANG))
+      .forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.append(option);
+      });
+    select.closest("label").hidden = select.options.length <= 2;
+  };
+  fill(picks.kind, CATALOG.map((w) => w.kind));
+  fill(picks.genre, CATALOG.flatMap((w) => w.genres));
+  fill(picks.platform, CATALOG.flatMap((w) => w.platforms));
+  [...picks.status.options].forEach((o) => {
+    if (o.value && !CATALOG.some((w) => w.status === o.value)) o.remove();
+  });
+  picks.status.closest("label").hidden = picks.status.options.length <= 2;
+  if (!CATALOG.some((w) => w.reviews)) picks.sort.querySelector('[value="rating"]').remove();
+  if (!CATALOG.some((w) => w.prices && w.prices.IRR != null))
+    picks.sort.querySelectorAll('[value^="price"]').forEach((o) => o.remove());
+
+  // Everything a search can match, in both languages.
+  const haystack = new Map(
+    CATALOG.map((w) => [
+      w.id,
+      foldText(
+        [w.title, w.kind, t(w.kind), STATUS[w.status], t(STATUS[w.status] || ""), ...w.genres, ...w.genres.map(t), ...w.platforms, w.text].join(" ")
+      ),
+    ])
+  );
+  const ranked = (w) => (w.score * w.reviews + 3 * 3) / (w.reviews + 3);
+  const price = (w) => (w.prices && w.prices.IRR != null ? w.prices.IRR : null);
+  const SORTS = {
+    featured: () => 0,
+    newest: (a, b) => String(b.created).localeCompare(String(a.created)),
+    rating: (a, b) => (b.reviews ? ranked(b) : -1) - (a.reviews ? ranked(a) : -1),
+    "price-low": (a, b) => (price(a) ?? Infinity) - (price(b) ?? Infinity),
+    "price-high": (a, b) => (price(b) ?? -Infinity) - (price(a) ?? -Infinity),
+  };
+
+  // Start from the address.
+  const params = new URLSearchParams(location.search);
+  input.value = params.get("q") || "";
+  Object.entries(picks).forEach(([name, select]) => {
+    const value = params.get(name);
+    if (value && [...select.options].some((o) => o.value === value)) select.value = value;
+  });
+
+  const show = () => {
+    const words = foldText(input.value).split(" ").filter(Boolean);
+    const { kind, status, genre, platform, sort } = Object.fromEntries(Object.entries(picks).map(([k, s]) => [k, s.value]));
+    const works = CATALOG.filter(
+      (w) =>
+        (!kind || w.kind === kind) &&
+        (!status || w.status === status) &&
+        (!genre || w.genres.includes(genre)) &&
+        (!platform || w.platforms.includes(platform)) &&
+        words.every((word) => haystack.get(w.id).includes(word))
+    ).sort(SORTS[sort] || SORTS.featured);
+    grid.replaceChildren(...works.map(posterCard));
+    count.textContent = works.length === 1 ? "1 work" : `${num(works.length)} works`;
+    empty.hidden = works.length > 0;
+    const filtered = words.length || kind || status || genre || platform;
+    clear.hidden = !filtered;
+    // Keep the address in step, without a history entry per keystroke.
+    const next = new URLSearchParams();
+    if (params.get("lang")) next.set("lang", params.get("lang"));
+    if (input.value.trim()) next.set("q", input.value.trim());
+    Object.entries(picks).forEach(([name, select]) => {
+      if (select.value && !(name === "sort" && select.value === "featured")) next.set(name, select.value);
+    });
+    const query = next.toString();
+    history.replaceState(null, "", query ? `browse.html?${query}` : "browse.html");
+  };
+
+  let typing;
+  input.addEventListener("input", () => {
+    clearTimeout(typing);
+    typing = setTimeout(show, 150);
+  });
+  page.querySelector(".browse__search").addEventListener("submit", (event) => {
+    event.preventDefault();
+    show();
+    input.blur();
+  });
+  Object.values(picks).forEach((select) => select.addEventListener("change", show));
+  clear.addEventListener("click", () => {
+    input.value = "";
+    Object.values(picks).forEach((select) => (select.value = select.options[0].value));
+    show();
+    input.focus();
+  });
+  show();
 })();
 
 // Admin panel (admin.html) — add, edit, order, publish and delete works in

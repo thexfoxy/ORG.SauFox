@@ -208,6 +208,20 @@ sign-up, password login, Google sign-in, emailed code and password reset
 In that order: with CAPTCHA on in Supabase but no site key on the site,
 nobody can log in.
 
+## Browse and search
+
+- `browse.html`: every published work, with a search box and filters for
+  type, status, genre and platform (each shows only the choices the
+  catalogue has, and goes when there's nothing to choose), and sorting
+  (featured, newest, top rated, price). The address keeps the choices
+  (`browse.html?q=…&kind=…&status=…&genre=…&platform=…&sort=…`).
+- Search matches every word against the title, type, status, genres,
+  platforms and the synopsis and status text in both languages, after
+  `foldText` evens out Persian and Arabic letters, digits, diacritics and
+  zero-width non-joiners.
+- The home page has a search box beside the currency switch (it opens
+  `browse.html?q=…`), and every footer links to All works.
+
 ## Account settings
 
 - Profile → Settings also has Email (Supabase emails a confirmation link),
