@@ -208,6 +208,29 @@ sign-up, password login, Google sign-in, emailed code and password reset
 In that order: with CAPTCHA on in Supabase but no site key on the site,
 nobody can log in.
 
+## Account settings
+
+- Profile → Settings also has Email (Supabase emails a confirmation link),
+  Password (same rules as sign-up; if Supabase asks to reauthenticate, a
+  code is emailed and the form asks for it) and Delete account.
+- Edge Function `account` (`supabase/functions/account/`): `delete` removes
+  the member's photo files and their auth user, after they type their
+  email; admins can't delete themselves there. The profile, list, reviews,
+  alerts and download log go with the user (cascade); orders are kept as
+  payment records with `user_id` set to null (the order trigger lets only
+  that database-side unlinking through).
+
+## Notify me
+
+- Work page → Notify me (works not out yet): a row in `work_alerts` (the
+  trigger fills in the member and their email). When a work's status
+  becomes released, or its trailer is first set, `private.work_alert_events`
+  marks its alerts `pending` and asks the payment function to send them;
+  the 15-minute database job asks again while any are due. Each member gets
+  the release email once (and the trailer email once, only before release).
+- Sending lives in the payment function (`retry-emails` from the database)
+  with the `alertEmail` template in `mail.ts`.
+
 ## Ratings and reviews
 
 - `reviews` table: one per member per work, 1-5 stars and an optional

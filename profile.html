@@ -32,7 +32,7 @@
   <meta name="robots" content="noindex">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=45">
+  <link rel="stylesheet" href="css/style.css?v=46">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -152,6 +152,70 @@
             <button class="settings__logout" type="button" data-action="logout">Log out</button>
           </div>
         </form>
+
+        <!-- Account: email, password and deleting the account. -->
+        <section class="account-box" aria-labelledby="account-email-title">
+          <h2 class="account-box__title" id="account-email-title">Email</h2>
+          <form class="settings" data-form="email" novalidate>
+            <p class="settings__note">Your email now: <b class="selectable" data-slot="current-email"></b></p>
+            <label class="settings__row field" for="new-email">
+              <span class="settings__label">New email</span>
+              <span class="field__box">
+                <input id="new-email" type="email" autocomplete="email" dir="ltr" required>
+              </span>
+            </label>
+            <p class="auth__message" role="status" aria-live="polite"></p>
+            <div class="settings__actions">
+              <button class="auth__submit" type="submit">Change email</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="account-box" aria-labelledby="account-password-title">
+          <h2 class="account-box__title" id="account-password-title">Password</h2>
+          <form class="settings" data-form="password" novalidate>
+            <p class="settings__note">Signed up with Google? Set a password here to log in with your email too.</p>
+            <label class="settings__row field" for="new-password">
+              <span class="settings__label">New password</span>
+              <span class="field__box">
+                <input id="new-password" type="password" autocomplete="new-password" minlength="8" required>
+              </span>
+            </label>
+            <label class="settings__row field" for="new-password-again">
+              <span class="settings__label">New password again</span>
+              <span class="field__box">
+                <input id="new-password-again" type="password" autocomplete="new-password" minlength="8" required>
+              </span>
+            </label>
+            <label class="settings__row field" for="password-code" hidden>
+              <span class="settings__label">The code we just emailed you</span>
+              <span class="field__box">
+                <input id="password-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" dir="ltr">
+              </span>
+            </label>
+            <p class="auth__message" role="status" aria-live="polite"></p>
+            <div class="settings__actions">
+              <button class="auth__submit" type="submit">Change password</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="account-box account-box--danger" aria-labelledby="account-delete-title">
+          <h2 class="account-box__title" id="account-delete-title">Delete account</h2>
+          <form class="settings" data-form="delete" novalidate>
+            <p class="settings__note">This removes your account, profile, list, reviews and alerts for good, and you lose access to your Library. Your orders are kept as payment records, without your account. To confirm, type your email.</p>
+            <label class="settings__row field" for="delete-confirm">
+              <span class="settings__label">Your email</span>
+              <span class="field__box">
+                <input id="delete-confirm" type="email" autocomplete="off" dir="ltr" required>
+              </span>
+            </label>
+            <p class="auth__message" role="status" aria-live="polite"></p>
+            <div class="settings__actions">
+              <button class="settings__logout" type="submit">Delete my account</button>
+            </div>
+          </form>
+        </section>
       </div>
     </section>
   </main>
@@ -205,8 +269,8 @@
     </div>
   </footer>
 
-  <script src="js/vendor/supabase.js?v=45" defer></script>
-  <script src="js/fa.js?v=45" defer></script>
-  <script src="js/main.js?v=45" defer></script>
+  <script src="js/vendor/supabase.js?v=46" defer></script>
+  <script src="js/fa.js?v=46" defer></script>
+  <script src="js/main.js?v=46" defer></script>
 </body>
 </html>

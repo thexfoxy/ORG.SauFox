@@ -2058,6 +2058,110 @@ const signedInGoHome = async (user) => {
     ["session", "name", "avatar", "admin", "email", "since"].forEach((key) => local.set(key, null));
     location.href = "index.html";
   });
+
+  // ---------- Account: email, password, deleting it ----------
+  const accountForm = (name) => {
+    const f = page.querySelector(`[data-form="${name}"]`);
+    const note = f.querySelector(".auth__message");
+    return {
+      form: f,
+      button: f.querySelector('[type="submit"]'),
+      say: (text, ok) => {
+        note.textContent = text;
+        note.classList.toggle("is-ok", Boolean(ok));
+      },
+    };
+  };
+
+  // Email: Supabase sends a confirmation link (to the new address, and to
+  // the old one too when secure email change is on); it changes once
+  // they're followed.
+  const email = accountForm("email");
+  email.form.querySelector('[data-slot="current-email"]').textContent = user.email;
+  email.form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const next = email.form.querySelector("#new-email").value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) return email.say("Enter a valid email address.");
+    if (next.toLowerCase() === (user.email || "").toLowerCase()) return email.say("That's already your email.");
+    email.button.disabled = true;
+    email.say("Sending…", true);
+    const { error } = await account.auth.updateUser({ email: next });
+    email.button.disabled = false;
+    if (error)
+      return email.say(
+        /already|exists|registered/i.test(error.message)
+          ? "Another account already uses that email."
+          : "Your email wasn't changed. Check your connection and try again."
+      );
+    email.form.reset();
+    email.say("We've emailed a confirmation link. Your email changes once you follow it (check both inboxes).", true);
+  });
+
+  // Password: same rules as sign-up. If Supabase asks to confirm it's
+  // really them, a code is emailed and the form asks for it.
+  const password = accountForm("password");
+  const codeRow = password.form.querySelector('[for="password-code"]');
+  const codeInput = password.form.querySelector("#password-code");
+  password.form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const first = password.form.querySelector("#new-password").value;
+    const again = password.form.querySelector("#new-password-again").value;
+    if (first.length < 8) return password.say("Use at least 8 characters.");
+    if (first !== again) return password.say("The two passwords don't match.");
+    password.button.disabled = true;
+    password.say("Checking…", true);
+    if (await leakedPassword(first)) {
+      password.button.disabled = false;
+      return password.say(LEAKED_PASSWORD);
+    }
+    const nonce = codeRow.hidden ? undefined : codeInput.value.trim();
+    const { error } = await account.auth.updateUser(nonce ? { password: first, nonce } : { password: first });
+    if (error && !nonce && /reauthenticat/i.test(`${error.code} ${error.message}`)) {
+      await account.auth.reauthenticate();
+      codeRow.hidden = false;
+      codeInput.focus();
+      password.button.disabled = false;
+      return password.say("For your security, we've emailed you a code. Enter it and press Change password again.", true);
+    }
+    password.button.disabled = false;
+    if (error)
+      return password.say(
+        /same|different/i.test(error.message)
+          ? "That's your current password. Choose a new one."
+          : nonce
+            ? "That code didn't work. Check it and try again."
+            : "Your password wasn't changed. Check your connection and try again."
+      );
+    password.form.reset();
+    codeRow.hidden = true;
+    password.say("Password changed.", true);
+  });
+
+  // Deleting the account (Edge Function "account"): type the email to confirm.
+  const remove = accountForm("delete");
+  remove.form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const typed = remove.form.querySelector("#delete-confirm").value.trim();
+    if (typed.toLowerCase() !== (user.email || "").toLowerCase()) return remove.say("Type your account's email exactly to confirm.");
+    remove.button.disabled = true;
+    remove.say("Deleting your account…", true);
+    const answer = await callFunction("account", { action: "delete", confirm: typed }, await verifiedSession());
+    if (!answer.ok) {
+      remove.button.disabled = false;
+      return remove.say(
+        answer.error === "admin"
+          ? "Admin accounts can't be deleted here."
+          : answer.error === "signed_out"
+            ? "Your session has ended. Log in again, then try once more."
+            : "Your account wasn't deleted. Try again in a moment."
+      );
+    }
+    try {
+      await account.auth.signOut({ scope: "local" });
+    } catch (e) {}
+    ["session", "name", "avatar", "admin", "email", "since", "hasAccount", "phone", "currency"].forEach((key) => local.set(key, null));
+    location.replace("index.html");
+  });
 })();
 
 // Title page (work.html?id=<id>) — one page per work in the catalogue: key art,
@@ -2320,6 +2424,52 @@ const signedInGoHome = async (user) => {
     });
     page.querySelector(".title-gallery").hidden = false;
   }
+})();
+
+// "Notify me" on a work that isn't out yet: the member gets an email when
+// it's released (and when its trailer arrives, if that comes first). The
+// database queues the emails; the payment function sends them.
+(async function notifyButton() {
+  const button = document.querySelector('[data-action="notify"]');
+  if (!button || !account) return;
+  const id = new URLSearchParams(location.search).get("id");
+  const work = (await catalog).find((w) => w.id === id);
+  if (!work || work.status === "released") return;
+  const label = button.querySelector("span");
+  const show = (on) => {
+    button.setAttribute("aria-pressed", String(on));
+    label.textContent = on ? "We'll email you" : "Notify me";
+    button.title = on
+      ? "You'll get an email when it's out. Press again to stop."
+      : "Get an email when it's out, and when the trailer arrives.";
+  };
+  show(false);
+  button.hidden = false;
+  const session = await verifiedSession();
+  if (session) {
+    const { data } = await account
+      .from("work_alerts")
+      .select("work_id")
+      .eq("user_id", session.user.id)
+      .eq("work_id", work.id)
+      .maybeSingle();
+    show(Boolean(data));
+  }
+  button.addEventListener("click", async () => {
+    const now = await verifiedSession();
+    if (!now) {
+      local.set("next", `work.html?id=${encodeURIComponent(work.id)}`);
+      location.href = "login.html";
+      return;
+    }
+    const on = button.getAttribute("aria-pressed") === "true";
+    button.disabled = true;
+    const { error } = on
+      ? await account.from("work_alerts").delete().eq("user_id", now.user.id).eq("work_id", work.id)
+      : await account.from("work_alerts").insert({ work_id: work.id, lang: LANG });
+    button.disabled = false;
+    if (!error || error.code === "23505") show(!on);
+  });
 })();
 
 // Stars for a score out of 5: "★★★★★" filled to the score (see .stars).

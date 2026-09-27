@@ -2559,6 +2559,29 @@ a.hero__panel {
   cursor: progress;
 }
 
+/* "Notify me": like My List, with the bell lit once it's on. */
+.title-button--notify {
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.title-button--notify:hover {
+  background: #2a2a2f;
+}
+
+.title-button--notify:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+.title-button--notify[aria-pressed="true"] svg {
+  color: var(--accent);
+}
+
+.title-button--notify:disabled {
+  cursor: progress;
+}
+
 .doc__contact .doc__contact-wide {
   grid-column: 1 / -1;
 }
@@ -5105,4 +5128,37 @@ a.hero__panel {
 .admin-review__actions .admin-order__note {
   max-width: none;
   text-align: start;
+}
+
+/* Profile → Settings: email, password and deleting the account. */
+.account-box {
+  max-width: 560px;
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.account-box__title {
+  margin: 0 0 16px;
+  font-size: 17px;
+}
+
+.account-box--danger .account-box__title {
+  color: #ff8a7a;
+}
+
+.settings__note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.settings__note b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.account-box .settings {
+  gap: 16px;
 }
