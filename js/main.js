@@ -2778,16 +2778,65 @@ const signedInGoHome = async (user) => {
     synopsis.hidden = false;
   }
 
-  // Credits
+  // Cast & crew: the cast first, then the crew, in the admin panel's order;
+  // each group shows a dozen people and opens up to all of them. Without a
+  // photo, the person's initials stand in.
   if (work.credits && work.credits.length) {
-    const list = page.querySelector(".title-credits__list");
-    work.credits.forEach(({ role, name }) => {
-      const row = make("div");
-      const who = make("dd", "", name);
-      who.translate = false;
-      row.append(make("dt", "", role), who);
-      list.append(row);
+    const box = page.querySelector(".title-credits__groups");
+    const SHOWN = 12;
+    const person = (credit) => {
+      const item = make("li", "credit");
+      const face = make("span", "credit__face");
+      if (credit.photo) {
+        const img = make("img");
+        img.src = credit.photo;
+        img.alt = "";
+        img.loading = "lazy";
+        face.append(img);
+      } else {
+        const initials = credit.name
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((word) => word[0])
+          .join("");
+        face.append(make("span", "credit__initials", initials.toUpperCase()));
+        face.translate = false;
+      }
+      const text = make("span", "credit__text");
+      const name = make("strong", "credit__name", credit.name);
+      name.translate = false;
+      name.dir = "auto";
+      const role = make("span", "credit__role", LANG === "fa" && credit.role_fa ? credit.role_fa : credit.role);
+      if (LANG === "fa" && credit.role_fa) role.translate = false;
+      role.dir = "auto";
+      text.append(name, role);
+      item.append(face, text);
+      return item;
+    };
+    const groups = [
+      ["Cast", work.credits.filter((c) => c.group === "cast")],
+      ["Crew", work.credits.filter((c) => c.group !== "cast")],
+    ].filter(([, people]) => people.length);
+    groups.forEach(([label, people]) => {
+      const group = make("div", "title-credits__group");
+      if (groups.length > 1) group.append(make("h3", "title-credits__heading", label));
+      const list = make("ul", "title-credits__list");
+      list.append(...people.map(person));
+      group.append(list);
+      if (people.length > SHOWN) {
+        list.classList.add("is-folded");
+        const more = make("button", "title-credits__more", `Show all ${people.length}`);
+        more.type = "button";
+        more.addEventListener("click", () => {
+          list.classList.remove("is-folded");
+          more.remove();
+        });
+        group.append(more);
+      }
+      box.append(group);
     });
+    page.querySelector('[data-slot="credits-count"]').textContent = digits(work.credits.length);
     page.querySelector(".title-credits").hidden = false;
   }
 
@@ -3886,25 +3935,65 @@ const foldText = (text) =>
     );
   };
 
-  const addCredit = (role = "", name = "") => {
+  // One person in the cast & crew: photo (click to upload), Cast or Crew,
+  // role (and in Persian), name; moved up with the arrow.
+  const addCredit = (credit = {}) => {
     const item = make("li", "admin-credit");
-    const roleInput = make("input");
-    roleInput.type = "text";
-    roleInput.placeholder = "Role, e.g. Director";
-    roleInput.value = role;
-    roleInput.maxLength = 60;
-    roleInput.setAttribute("aria-label", "Role");
-    const nameInput = make("input");
-    nameInput.type = "text";
-    nameInput.placeholder = "Name";
-    nameInput.value = name;
-    nameInput.maxLength = 80;
-    nameInput.setAttribute("aria-label", "Name");
+    item.dataset.photo = credit.photo || "";
+    const photo = make("label", "admin-credit__photo");
+    photo.title = "Photo";
+    const img = make("img");
+    img.alt = "";
+    const file = make("input");
+    file.type = "file";
+    file.accept = "image/jpeg,image/png,image/webp";
+    file.hidden = true;
+    const showPhoto = () => {
+      img.hidden = !item.dataset.photo;
+      if (item.dataset.photo) img.src = item.dataset.photo;
+      photo.classList.toggle("is-empty", !item.dataset.photo);
+    };
+    file.addEventListener("change", async () => {
+      const chosen = file.files[0];
+      file.value = "";
+      if (!chosen) return;
+      say("Uploading…", true);
+      try {
+        item.dataset.photo = await upload(chosen, "person");
+        showPhoto();
+        say("Photo added. Save to keep it.", true);
+      } catch (e) {
+        say(e.message);
+      }
+    });
+    photo.append(img, file);
+    showPhoto();
+    const group = make("select");
+    group.setAttribute("aria-label", "Cast or crew");
+    [["crew", "Crew"], ["cast", "Cast"]].forEach(([value, label]) => group.append(new Option(label, value)));
+    group.value = credit.group === "cast" ? "cast" : "crew";
+    const field = (value, placeholder, label, max, rtl) => {
+      const input = make("input");
+      input.type = "text";
+      input.placeholder = placeholder;
+      input.value = value || "";
+      input.maxLength = max;
+      input.setAttribute("aria-label", label);
+      if (rtl) input.dir = "rtl";
+      return input;
+    };
+    const roleInput = field(credit.role, "Role, e.g. Director", "Role", 60);
+    const roleFa = field(credit.role_fa, "نقش به فارسی (اختیاری)", "Role in Persian", 60, true);
+    const nameInput = field(credit.name, "Name", "Name", 80);
+    const up = make("button", "admin-icon", "↑");
+    up.type = "button";
+    up.setAttribute("aria-label", "Move up");
+    up.addEventListener("click", () => item.previousElementSibling && item.previousElementSibling.before(item));
     const remove = make("button", "admin-icon", "✕");
     remove.type = "button";
-    remove.setAttribute("aria-label", "Remove this credit");
+    remove.setAttribute("aria-label", "Remove this person");
     remove.addEventListener("click", () => item.remove());
-    item.append(roleInput, nameInput, remove);
+    item.append(photo, group, roleInput, roleFa, nameInput, up, remove);
     creditsEl.append(item);
     return roleInput;
   };
@@ -3943,7 +4032,7 @@ const foldText = (text) =>
     fields.youtube.value = w.youtube_url || "";
     stills = (w.stills || []).slice();
     creditsEl.replaceChildren();
-    (w.credits || []).forEach((c) => addCredit(c.role, c.name));
+    (w.credits || []).forEach((c) => addCredit(c));
     renderImages();
     renderStills();
     deleteButton.hidden = !row;
@@ -3965,7 +4054,7 @@ const foldText = (text) =>
 
   // Images are shrunk in the browser and saved as WebP, then uploaded at
   // once to works/<id>/…; the work itself changes on Save.
-  const MAX_WIDTH = { cover: 900, hero: 1920, still: 1600, thumb: 1280 };
+  const MAX_WIDTH = { cover: 900, hero: 1920, still: 1600, thumb: 1280, person: 400 };
   const toWebp = async (file, maxWidth) => {
     if (!file.type.startsWith("image/")) throw new Error("Choose an image file: JPG, PNG or WebP.");
     const bitmap = await new Promise((resolve, reject) => {
@@ -4081,8 +4170,11 @@ const foldText = (text) =>
       rating: fields.rating.value.trim() || null,
       credits: [...creditsEl.children]
         .map((item) => {
-          const [role, name] = item.querySelectorAll("input");
-          return { role: role.value.trim(), name: name.value.trim() };
+          const [role, roleFa, name] = item.querySelectorAll('input[type="text"]');
+          const credit = { group: item.querySelector("select").value, role: role.value.trim(), name: name.value.trim() };
+          if (roleFa.value.trim()) credit.role_fa = roleFa.value.trim();
+          if (item.dataset.photo) credit.photo = item.dataset.photo;
+          return credit;
         })
         .filter((c) => c.role && c.name),
       updated_at: new Date().toISOString(),

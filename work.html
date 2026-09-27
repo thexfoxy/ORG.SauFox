@@ -41,7 +41,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=59">
+  <link rel="stylesheet" href="css/style.css?v=60">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -136,9 +136,11 @@
       <div class="title-gallery__grid"></div>
     </section>
 
+    <!-- Cast & crew: everyone who made the work, with a photo, in two groups
+         (works.credits, set in the admin panel). js/main.js fills it in. -->
     <section class="title-section title-credits" aria-labelledby="credits-title" hidden>
-      <h2 class="title-section__heading" id="credits-title">Credits</h2>
-      <dl class="title-credits__list"></dl>
+      <h2 class="title-section__heading" id="credits-title">Cast &amp; crew <span class="title-credits__count" data-slot="credits-count"></span></h2>
+      <div class="title-credits__groups"></div>
     </section>
 
     <!-- Ratings and reviews (comments only until the work is released).
@@ -257,8 +259,8 @@
     </button>
   </div>
 
-  <script src="js/vendor/supabase.js?v=59" defer></script>
-  <script src="js/fa.js?v=59" defer></script>
-  <script src="js/main.js?v=59" defer></script>
+  <script src="js/vendor/supabase.js?v=60" defer></script>
+  <script src="js/fa.js?v=60" defer></script>
+  <script src="js/main.js?v=60" defer></script>
 </body>
 </html>
