@@ -483,7 +483,10 @@ Title page (`work.html?id=<id>`):
       shows first in a row of their own (bigger photos with an accent ring,
       all their roles as a label over the name; both, then directors, then
       writers); then the crew; then the cast (people whose roles are all
-      acting or voice: Actor, Voice actor, Narrator, "as <character>"). A
+      acting or voice: Actor, Voice actor, Narrator), as standing cards: the
+      photo, the character they play (`character`; the admin panel asks for
+      it once someone has an acting or voice role), and their own name
+      smaller under it. A
       dozen per group until "Show all"; common roles show in Persian on the
       Persian site. In the admin panel each person has a photo upload, a
       name, a roles box (Enter or comma adds one, with suggestions; &times;

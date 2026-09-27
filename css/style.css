@@ -2839,6 +2839,58 @@ main.profile-page {
   color: var(--muted);
 }
 
+/* The cast: standing cards, the photo on top, then the character they
+   play, then their own name, smaller. */
+.title-credits__list--cast {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 28px 20px;
+}
+
+.credit--cast {
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.credit--cast .credit__face {
+  flex-basis: auto;
+  width: 120px;
+  height: 120px;
+}
+
+.credit--cast .credit__initials {
+  font-size: 32px;
+}
+
+.credit--cast .credit__text {
+  justify-items: center;
+  gap: 3px;
+}
+
+.credit__character {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.credit__player {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .title-credits__list--cast {
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  }
+
+  .credit--cast .credit__face {
+    width: 96px;
+    height: 96px;
+  }
+}
+
 .title-credits__more {
   margin-top: 20px;
   height: 40px;
@@ -3974,6 +4026,43 @@ a.hero__panel {
   grid-template-columns: 44px minmax(0, 1fr) minmax(0, 2fr) auto auto;
   gap: 8px;
   align-items: center;
+}
+
+/* The character an actor or voice plays: a line under the row. */
+.admin-credit__character {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 6px;
+}
+
+.admin-credit__character[hidden] {
+  display: none;
+}
+
+.admin-credit__character span {
+  flex: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.admin-credit__character input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.admin-credit__character input:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 /* Roles: chips, then a box to type the next one. */

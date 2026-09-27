@@ -244,10 +244,12 @@ const pricesOf = (row, rates) => {
 };
 
 // ---------- Cast & crew ----------
-// Each person has a name, a photo and any number of roles (works.credits:
-// { name, photo, roles }). Where they show follows from the roles: anyone
-// who directs or writes leads, actors and voices are the cast, the rest the
-// crew. Credits from before (one role, perhaps a group) become roles.
+// Each person has a name, a photo, any number of roles and, for actors and
+// voices, the character(s) they play (works.credits: { name, photo, roles,
+// character }). Where they show follows from the roles: anyone who directs
+// or writes leads, actors and voices are the cast, the rest the crew.
+// Credits from before (one role, perhaps a group, "as <character>") are
+// read the same way.
 const DIRECTOR = /^(director|co-director|کارگردان)$/i;
 const WRITER = /^(writer|co-writer|screenplay|screenwriter|story|author|نویسنده|فیلم‌نامه|فیلمنامه|فیلم‌نامه‌نویس)$/i;
 const CAST = /^(actor|actress|cast|voice|voice actor|voice actress|narrator|as .+|voice of .+|بازیگر|صداپیشه|گوینده|راوی|در نقش .+)$/i;
@@ -259,6 +261,18 @@ const creditRoles = (credit) => {
   // An old cast entry's role was the character played.
   if (credit.group === "cast" && !CAST.test(role)) return [`as ${role}`];
   return role.split(/\s*(?:,|&|\/|\band\b)\s*/i).filter(Boolean);
+};
+// Roles that play a character, so the admin panel asks which one.
+const PLAYS = /^(actor|actress|voice|voice actor|voice actress|بازیگر|صداپیشه)$/i;
+// A credit as { name, photo, roles, character }: "as Anna" roles become
+// the character (with an Actor role if nothing else says so).
+const readCredit = (credit) => {
+  let roles = creditRoles(credit);
+  const played = roles.filter((r) => /^(as|در نقش)\s+/i.test(r)).map((r) => r.replace(/^(as|در نقش)\s+/i, ""));
+  roles = roles.filter((r) => !/^(as|در نقش)\s+/i.test(r));
+  if (played.length && !roles.some((r) => PLAYS.test(r))) roles.unshift("Actor");
+  const character = [credit.character, ...played].filter(Boolean).join(", ");
+  return { name: credit.name || "", photo: credit.photo || "", roles, character };
 };
 // "lead" (directs or writes), "cast" (only acts or voices) or "crew".
 const creditPlace = (roles) =>
@@ -284,9 +298,7 @@ const toWork = (row, rates = {}) => ({
   genres: row.genres || [],
   platforms: row.platforms || [],
   rating: row.rating || "",
-  credits: (row.credits || [])
-    .map((credit) => ({ name: credit.name || "", photo: credit.photo || "", roles: creditRoles(credit) }))
-    .filter((credit) => credit.name),
+  credits: (row.credits || []).map(readCredit).filter((credit) => credit.name),
   created: row.created_at || "",
   // Both languages' texts, for search (browse.html).
   text: [row.synopsis, row.synopsis_fa, row.status_text, row.status_text_fa].filter(Boolean).join(" "),
@@ -2810,7 +2822,8 @@ const signedInGoHome = async (user) => {
     const box = page.querySelector(".title-credits__groups");
     const SHOWN = 12;
     const person = (credit, lead) => {
-      const item = make("li", lead ? "credit credit--lead" : "credit");
+      const cast = !lead && creditPlace(credit.roles) === "cast";
+      const item = make("li", lead ? "credit credit--lead" : cast ? "credit credit--cast" : "credit");
       const face = make("span", "credit__face");
       if (credit.photo) {
         const img = make("img");
@@ -2836,10 +2849,17 @@ const signedInGoHome = async (user) => {
       const role = make("span", "credit__role", credit.roles.map((r) => t(r)).join(" · "));
       role.translate = false;
       role.dir = "auto";
-      // A lead's job reads first, as a label.
+      // A lead's job reads first, as a label. The cast show the character
+      // they play, with their own name smaller under it.
       if (lead) {
         role.className = "credit__label";
         text.append(role, name);
+      } else if (cast && credit.character) {
+        const character = make("strong", "credit__character", credit.character);
+        character.translate = false;
+        character.dir = "auto";
+        name.className = "credit__player";
+        text.append(character, name);
       } else text.append(name, role);
       item.append(face, text);
       return item;
@@ -2863,7 +2883,7 @@ const signedInGoHome = async (user) => {
     groups.forEach(([label, people]) => {
       const group = make("div", "title-credits__group");
       if (groups.length > 1 || leads.length) group.append(make("h3", "title-credits__heading", label));
-      const list = make("ul", "title-credits__list");
+      const list = make("ul", label === "Cast" ? "title-credits__list title-credits__list--cast" : "title-credits__list");
       list.append(...people.map((credit) => person(credit)));
       group.append(list);
       if (people.length > SHOWN) {
@@ -4037,8 +4057,12 @@ const foldText = (text) =>
       hint();
     };
     // The long example only while there are no roles yet.
-    const hint = () =>
-      (typing.placeholder = roles.querySelector(".admin-roles__chip") ? "Add a role" : "Roles: Director, Composer, as Anna…");
+    const hint = () => {
+      typing.placeholder = roles.querySelector(".admin-roles__chip") ? "Add a role" : "Roles: Director, Composer, Voice actor…";
+      // An actor or voice gets a box for the character they play.
+      if (character) character.hidden = ![...roles.querySelectorAll(".admin-roles__chip")].some((c) => PLAYS.test(c.dataset.role));
+    };
+    let character = null;
     const commit = () => {
       typing.value
         .split(",")
@@ -4065,7 +4089,18 @@ const foldText = (text) =>
     typing.addEventListener("blur", commit);
     roles.addEventListener("click", (event) => event.target === roles && typing.focus());
     roles.append(typing);
-    creditRoles(credit).forEach(chip);
+    const read = readCredit(credit);
+    character = make("label", "admin-credit__character");
+    const characterInput = make("input");
+    characterInput.type = "text";
+    characterInput.maxLength = 120;
+    characterInput.placeholder = "e.g. Anna (several: Anna, The Friar)";
+    characterInput.value = read.character;
+    characterInput.setAttribute("aria-label", "Character");
+    character.append(make("span", "", "Character"), characterInput);
+    character.hidden = true;
+    read.roles.forEach(chip);
+    hint();
 
     const nameInput = make("input");
     nameInput.type = "text";
@@ -4081,7 +4116,7 @@ const foldText = (text) =>
     remove.type = "button";
     remove.setAttribute("aria-label", "Remove this person");
     remove.addEventListener("click", () => item.remove());
-    item.append(photo, nameInput, roles, up, remove);
+    item.append(photo, nameInput, roles, up, remove, character);
     creditsEl.append(item);
     return nameInput;
   };
@@ -4262,6 +4297,8 @@ const foldText = (text) =>
           const pending = item.querySelector(".admin-roles input").value.split(",").map((r) => r.trim());
           const roles = [...item.querySelectorAll(".admin-roles__chip")].map((chip) => chip.dataset.role).concat(pending).filter(Boolean);
           const credit = { name: item.querySelector('input[aria-label="Name"]').value.trim(), roles };
+          const character = item.querySelector(".admin-credit__character");
+          if (!character.hidden && character.querySelector("input").value.trim()) credit.character = character.querySelector("input").value.trim();
           if (item.dataset.photo) credit.photo = item.dataset.photo;
           return credit;
         })
