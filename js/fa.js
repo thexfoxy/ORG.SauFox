@@ -362,6 +362,27 @@ const FA = {
   "Your session has ended. Log in again, then try once more.": "نشست شما تمام شده است. دوباره وارد شوید و بعد امتحان کنید.",
   "Your account wasn't deleted. Try again in a moment.": "حساب شما حذف نشد. کمی بعد دوباره امتحان کنید.",
 
+  // ---------- Helpful and reports ----------
+  "Helpful": "مفید بود",
+  "Helpful · {n}": "مفید بود · {n}",
+  "1 person found this helpful": "۱ نفر این نظر را مفید دانست",
+  "{n} people found this helpful": "{n} نفر این نظر را مفید دانستند",
+  "Report": "گزارش",
+  "Reported": "گزارش شد",
+  "Reported. Thanks, we'll take a look.": "گزارش شد. ممنون، بررسی می‌کنیم.",
+  "Report this review": "گزارش این نظر",
+  "Why are you reporting this?": "چرا این نظر را گزارش می‌کنید؟",
+  "Spam or ads": "اسپم یا تبلیغ",
+  "Offensive or abusive": "توهین‌آمیز یا آزاردهنده",
+  "Spoilers": "لو دادن داستان",
+  "Something else": "دلیل دیگر",
+  "Anything else we should know? (optional)": "توضیح بیشتری لازم است؟ (اختیاری)",
+  "Send report": "ارسال گزارش",
+  "Not sent. Check your connection and try again.": "ارسال نشد. اینترنت را بررسی کنید و دوباره امتحان کنید.",
+  "Sort by": "مرتب‌سازی",
+  "Newest": "جدیدترین",
+  "Most helpful": "مفیدترین",
+
   // ---------- Ratings and reviews ----------
   "Ratings & reviews": "امتیازها و نظرها",
   "Comments": "نظرها",

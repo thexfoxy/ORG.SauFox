@@ -250,6 +250,15 @@ nobody can log in.
   row once two works have ratings (a work with few ratings is pulled
   towards 3 stars).
 - Admin panel → Reviews and comments: hide or show, reply, delete.
+- Helpful: `review_votes`, one per member per review (not their own);
+  `reviews.helpful_count` is kept by a trigger, and reviews can be sorted
+  by it. Report: `review_reports` with a reason (spam, offensive, spoiler,
+  other) and an optional note, one per member per review; three open
+  reports hide the review (`reviews.report_count`). In the admin panel
+  reported reviews come first with their reasons; "Dismiss reports" closes
+  them, and showing a hidden review again closes them too. The review
+  trigger skips its own nested updates (`pg_trigger_depth() > 1`) so these
+  counts can't reassign or unhide a review.
 
 ## Library: files and the launcher
 

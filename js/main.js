@@ -2602,13 +2602,118 @@ const scoreText = (score) => num(score, 1);
       main.append(reply);
     }
     if (mine && review.hidden) main.append(make("p", "review__note", "The studio has hidden this from others."));
+    if (mine && review.helpful_count)
+      main.append(make("p", "review__helped", review.helpful_count === 1 ? "1 person found this helpful" : `${num(review.helpful_count)} people found this helpful`));
+    if (!mine) main.append(reviewActions(review));
     item.append(avatar, main);
     return item;
   };
-  const FIELDS = "id, user_id, rating, body, author_name, author_avatar, owner, hidden, reply, created_at";
+
+  // ---------- "Helpful" and "Report" under others' reviews ----------
+  const voted = new Set();
+  const reported = new Set();
+  const needLogin = () => {
+    local.set("next", `work.html?id=${encodeURIComponent(work.id)}#reviews`);
+    location.href = "login.html";
+  };
+  const REASONS = [
+    ["spam", "Spam or ads"],
+    ["offensive", "Offensive or abusive"],
+    ["spoiler", "Spoilers"],
+    ["other", "Something else"],
+  ];
+  const reviewActions = (review) => {
+    const box = make("div", "review__actions");
+    const helpful = make("button", "review__action review__action--helpful");
+    helpful.type = "button";
+    const showHelpful = () => {
+      const on = voted.has(review.id);
+      helpful.setAttribute("aria-pressed", String(on));
+      helpful.textContent = review.helpful_count ? `Helpful · ${num(review.helpful_count)}` : "Helpful";
+    };
+    showHelpful();
+    helpful.addEventListener("click", async () => {
+      if (!session) return needLogin();
+      const on = voted.has(review.id);
+      helpful.disabled = true;
+      const { error } = on
+        ? await account.from("review_votes").delete().eq("review_id", review.id).eq("user_id", session.user.id)
+        : await account.from("review_votes").insert({ review_id: review.id });
+      helpful.disabled = false;
+      if (error && error.code !== "23505") return;
+      if (on) voted.delete(review.id);
+      else voted.add(review.id);
+      review.helpful_count = Math.max(0, (review.helpful_count || 0) + (on ? -1 : 1));
+      showHelpful();
+    });
+
+    const report = make("button", "review__action", reported.has(review.id) ? "Reported" : "Report");
+    report.type = "button";
+    report.disabled = reported.has(review.id);
+    report.addEventListener("click", () => {
+      if (!session) return needLogin();
+      if (box.querySelector(".report-form")) return;
+      const form = make("form", "report-form");
+      form.noValidate = true;
+      const choices = make("div", "report-form__reasons");
+      choices.setAttribute("role", "radiogroup");
+      choices.setAttribute("aria-label", "Why are you reporting this?");
+      REASONS.forEach(([value, label], i) => {
+        const option = make("label", "report-form__reason");
+        const radio = make("input");
+        radio.type = "radio";
+        radio.name = `reason-${review.id}`;
+        radio.value = value;
+        radio.checked = i === 0;
+        option.append(radio, make("span", "", label));
+        choices.append(option);
+      });
+      const note = make("textarea");
+      note.rows = 2;
+      note.maxLength = 500;
+      note.dir = "auto";
+      note.placeholder = t("Anything else we should know? (optional)");
+      const say = make("p", "auth__message");
+      say.setAttribute("role", "status");
+      const send = make("button", "review-form__submit", "Send report");
+      send.type = "submit";
+      const cancel = make("button", "review-form__delete", "Cancel");
+      cancel.type = "button";
+      cancel.addEventListener("click", () => form.remove());
+      const foot = make("div", "review-form__foot");
+      foot.append(say, cancel, send);
+      form.append(make("strong", "report-form__title", "Report this review"), choices, note, foot);
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        send.disabled = true;
+        const reason = form.querySelector("input:checked").value;
+        const { error } = await account
+          .from("review_reports")
+          .insert({ review_id: review.id, reason, note: note.value.trim() || null });
+        send.disabled = false;
+        if (error && error.code !== "23505") {
+          say.textContent = "Not sent. Check your connection and try again.";
+          return;
+        }
+        reported.add(review.id);
+        form.remove();
+        report.textContent = "Reported. Thanks, we'll take a look.";
+        report.disabled = true;
+      });
+      box.append(form);
+      form.querySelector("input").focus();
+    });
+    box.prepend(helpful, report);
+    return box;
+  };
+
+  const FIELDS = "id, user_id, rating, body, author_name, author_avatar, owner, hidden, reply, created_at, helpful_count";
   let shown = 0;
   let own = null;
   let session = null;
+  // Newest first, or most helpful first.
+  const sortPick = section.querySelector('[data-slot="sort"]');
+  sortPick.addEventListener("change", () => loadPage(true));
   const loadPage = async (reset) => {
     if (reset) {
       shown = 0;
@@ -2617,6 +2722,7 @@ const scoreText = (score) => num(score, 1);
     }
     let query = account.from("reviews").select(FIELDS).eq("work_id", work.id).eq("hidden", false);
     if (session) query = query.neq("user_id", session.user.id);
+    if (sortPick.value === "helpful") query = query.order("helpful_count", { ascending: false });
     const { data, error } = await query.order("created_at", { ascending: false }).range(shown, shown + PAGE);
     if (error) return;
     const page = data.slice(0, PAGE);
@@ -2624,6 +2730,7 @@ const scoreText = (score) => num(score, 1);
     shown += page.length;
     more.hidden = data.length <= PAGE;
     empty.hidden = list.children.length > 0;
+    sortPick.closest("label").hidden = !reset ? false : list.children.length < 2;
   };
   more.addEventListener("click", () => loadPage(false));
 
@@ -2665,6 +2772,13 @@ const scoreText = (score) => num(score, 1);
   } else {
     const { data } = await account.from("reviews").select(FIELDS).eq("work_id", work.id).eq("user_id", session.user.id).maybeSingle();
     own = data || null;
+    // Which reviews they've already marked helpful or reported.
+    const [{ data: votes }, { data: reports }] = await Promise.all([
+      account.from("review_votes").select("review_id").eq("user_id", session.user.id),
+      account.from("review_reports").select("review_id").eq("user_id", session.user.id),
+    ]);
+    (votes || []).forEach((v) => voted.add(v.review_id));
+    (reports || []).forEach((r) => reported.add(r.review_id));
     form.hidden = false;
     fillForm();
   }
@@ -3478,6 +3592,8 @@ const scoreText = (score) => num(score, 1);
 
   // ---------- Reviews and comments ----------
   const reviewList = page.querySelector(".admin-reviews__list");
+  const REPORT_REASONS = { spam: "Spam or ads", offensive: "Offensive or abusive", spoiler: "Spoilers", other: "Something else" };
+  let reportsFor = {};
   const noReviews = page.querySelector(".admin-reviews__empty");
   const reviewRow = (review, titles) => {
     const row = make("li", review.hidden ? "admin-review is-hidden" : "admin-review");
@@ -3494,6 +3610,40 @@ const scoreText = (score) => num(score, 1);
       const text = make("p", "admin-review__body", review.body);
       text.dir = "auto";
       main.append(text);
+    }
+    if (review.helpful_count) main.append(make("span", "", `👍 ${review.helpful_count} found it helpful`));
+    // Open reports: each reason and note, and a way to close them.
+    const open = reportsFor[review.id] || [];
+    let dismiss = null;
+    if (open.length) {
+      row.classList.add("is-reported");
+      const box = make("div", "admin-review__reports");
+      box.append(
+        make(
+          "strong",
+          "",
+          `⚑ ${open.length} report${open.length === 1 ? "" : "s"}${review.hidden ? " · hidden automatically until you look at it" : ""}`
+        )
+      );
+      open.forEach((report) => {
+        const line = make("span", "", `${REPORT_REASONS[report.reason] || report.reason}${report.note ? `: ${report.note}` : ""}`);
+        line.dir = "auto";
+        box.append(line);
+      });
+      main.append(box);
+      dismiss = make("button", "admin-button", "Dismiss reports");
+      dismiss.type = "button";
+      dismiss.addEventListener("click", async () => {
+        dismiss.disabled = true;
+        const { error } = await account.from("review_reports").update({ resolved: true }).eq("review_id", review.id).eq("resolved", false);
+        if (error) {
+          dismiss.disabled = false;
+          return;
+        }
+        box.remove();
+        dismiss.remove();
+        row.classList.remove("is-reported");
+      });
     }
     const reply = make("textarea", "admin-review__reply");
     reply.rows = 2;
@@ -3540,7 +3690,7 @@ const scoreText = (score) => num(score, 1);
       note.textContent = "Not deleted. Try again.";
     });
     const actions = make("div", "admin-review__actions");
-    actions.append(save, hide, remove, note);
+    actions.append(save, hide, ...(dismiss ? [dismiss] : []), remove, note);
     main.append(reply, actions);
     row.append(main);
     return row;
@@ -3549,16 +3699,20 @@ const scoreText = (score) => num(score, 1);
     account.from("works").select("id, title"),
     account
       .from("reviews")
-      .select("id, work_id, rating, body, author_name, owner, hidden, reply, created_at")
+      .select("id, work_id, rating, body, author_name, owner, hidden, reply, created_at, helpful_count, report_count")
+      .order("report_count", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(100),
-  ]).then(([{ data: works }, { data: reviews, error }]) => {
+    account.from("review_reports").select("review_id, reason, note, created_at").eq("resolved", false).order("created_at"),
+  ]).then(([{ data: works }, { data: reviews, error }, { data: reports }]) => {
     if (error) {
       noReviews.textContent = "Reviews couldn't be loaded. Reload the page to try again.";
       noReviews.hidden = false;
       return;
     }
     const titles = Object.fromEntries((works || []).map((w) => [w.id, w.title]));
+    reportsFor = {};
+    (reports || []).forEach((r) => (reportsFor[r.review_id] ||= []).push(r));
     reviewList.replaceChildren(...reviews.map((r) => reviewRow(r, titles)));
     noReviews.hidden = reviews.length > 0;
   });
