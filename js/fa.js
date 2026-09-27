@@ -154,6 +154,7 @@ const FA = {
   "Crew": "عوامل سازنده",
   "Show all {n}": "نمایش هر {n} نفر",
   "Director": "کارگردان",
+  "Director & Writer": "کارگردان و نویسنده",
   "Writer": "نویسنده",
   "Screenplay": "فیلم‌نامه",
   "Story": "داستان",

@@ -246,7 +246,14 @@ const pricesOf = (row, rates) => {
 // A credit's group; credits from before groups existed count as crew, or as
 // director / writer when that's their role.
 const creditGroup = (credit) =>
-  credit.group || (/^director$/i.test(credit.role) ? "director" : /^(writer|screenplay|author)$/i.test(credit.role) ? "writer" : "crew");
+  credit.group ||
+  (/^(director|writer)\s*(&|and|\/)\s*(writer|director)$/i.test(credit.role)
+    ? "director_writer"
+    : /^director$/i.test(credit.role)
+      ? "director"
+      : /^(writer|screenplay|author)$/i.test(credit.role)
+        ? "writer"
+        : "crew");
 
 const toWork = (row, rates = {}) => ({
   ...pricesOf(row, rates),
@@ -2783,8 +2790,8 @@ const signedInGoHome = async (user) => {
     synopsis.hidden = false;
   }
 
-  // Cast & crew: the director(s) and writer(s) first, larger and set apart;
-  // then the cast, then the crew, in the admin panel's order, each group
+  // Cast & crew: the director(s) and writer(s) first (anyone who's both
+  // leading), larger and set apart; then the crew, then the cast, in the admin panel's order, each group
   // showing a dozen people until it's opened. Without a photo, the
   // person's initials stand in.
   if (work.credits && work.credits.length) {
@@ -2824,15 +2831,15 @@ const signedInGoHome = async (user) => {
       item.append(face, text);
       return item;
     };
-    const leads = work.credits.filter((c) => c.group === "director").concat(work.credits.filter((c) => c.group === "writer"));
+    const leads = ["director_writer", "director", "writer"].flatMap((g) => work.credits.filter((c) => c.group === g));
     if (leads.length) {
       const list = make("ul", "title-credits__leads");
       list.append(...leads.map((credit) => person(credit, true)));
       box.append(list);
     }
     const groups = [
+      ["Crew", work.credits.filter((c) => !["cast", "director", "writer", "director_writer"].includes(c.group))],
       ["Cast", work.credits.filter((c) => c.group === "cast")],
-      ["Crew", work.credits.filter((c) => !["cast", "director", "writer"].includes(c.group))],
     ].filter(([, people]) => people.length);
     groups.forEach(([label, people]) => {
       const group = make("div", "title-credits__group");
@@ -3952,7 +3959,7 @@ const foldText = (text) =>
   };
 
   // One person in the cast & crew: photo (click to upload), Director,
-  // Writer, Cast or Crew, role (and in Persian), name; moved up with the
+  // Writer, Director & Writer, Crew or Cast, role (and in Persian), name; moved up with the
   // arrow.
   const addCredit = (credit = {}) => {
     const item = make("li", "admin-credit");
@@ -3987,7 +3994,7 @@ const foldText = (text) =>
     showPhoto();
     const group = make("select");
     group.setAttribute("aria-label", "Director, writer, cast or crew");
-    [["director", "Director"], ["writer", "Writer"], ["cast", "Cast"], ["crew", "Crew"]].forEach(([value, label]) =>
+    [["director", "Director"], ["writer", "Writer"], ["director_writer", "Director & Writer"], ["crew", "Crew"], ["cast", "Cast"]].forEach(([value, label]) =>
       group.append(new Option(label, value))
     );
     group.value = credit.role || credit.name ? creditGroup(credit) : "crew";
@@ -4192,7 +4199,11 @@ const foldText = (text) =>
           const [role, roleFa, name] = item.querySelectorAll('input[type="text"]');
           const group = item.querySelector("select").value;
           // A director or writer needs no role; it says so.
-          const credit = { group, role: role.value.trim() || { director: "Director", writer: "Writer" }[group] || "", name: name.value.trim() };
+          const credit = {
+            group,
+            role: role.value.trim() || { director: "Director", writer: "Writer", director_writer: "Director & Writer" }[group] || "",
+            name: name.value.trim(),
+          };
           if (roleFa.value.trim()) credit.role_fa = roleFa.value.trim();
           if (item.dataset.photo) credit.photo = item.dataset.photo;
           return credit;

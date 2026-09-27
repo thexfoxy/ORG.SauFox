@@ -3971,7 +3971,7 @@ a.hero__panel {
 
 .admin-credit {
   display: grid;
-  grid-template-columns: 44px 104px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
+  grid-template-columns: 44px 150px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
   gap: 8px;
   align-items: center;
 }
