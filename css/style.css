@@ -2719,6 +2719,26 @@ main.profile-page {
   line-height: 1.2;
 }
 
+/* AI assistants: the end of the crew, set apart by space and a quiet
+   heading. */
+.title-credits__ai {
+  margin-top: 34px;
+}
+
+.title-credits__list + .title-credits__ai {
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
+}
+
+.title-credits__subheading {
+  margin: 0 0 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .title-credits__list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));

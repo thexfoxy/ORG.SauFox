@@ -274,9 +274,18 @@ const readCredit = (credit) => {
   const character = [credit.character, ...played].filter(Boolean).join(", ");
   return { name: credit.name || "", photo: credit.photo || "", roles, character };
 };
-// "lead" (directs or writes), "cast" (only acts or voices) or "crew".
+// AI tools that helped make the work: listed inside the crew, apart.
+const AI = /^(ai|ai assistant|ai model|دستیار هوش مصنوعی|هوش مصنوعی)$/i;
+// "lead" (directs or writes), "ai" (an AI assistant), "cast" (only acts or
+// voices) or "crew".
 const creditPlace = (roles) =>
-  roles.some((r) => DIRECTOR.test(r) || WRITER.test(r)) ? "lead" : roles.length && roles.every((r) => CAST.test(r)) ? "cast" : "crew";
+  roles.some((r) => DIRECTOR.test(r) || WRITER.test(r))
+    ? "lead"
+    : roles.some((r) => AI.test(r))
+      ? "ai"
+      : roles.length && roles.every((r) => CAST.test(r))
+        ? "cast"
+        : "crew";
 
 const toWork = (row, rates = {}) => ({
   ...pricesOf(row, rates),
@@ -2873,16 +2882,26 @@ const signedInGoHome = async (user) => {
       list.append(...leads.map((credit) => person(credit, true)));
       box.append(list);
     }
+    const assistants = work.credits.filter((c) => creditPlace(c.roles) === "ai");
     const groups = [
       ["Crew", work.credits.filter((c) => creditPlace(c.roles) === "crew")],
       ["Cast", work.credits.filter((c) => creditPlace(c.roles) === "cast")],
-    ].filter(([, people]) => people.length);
+    ].filter(([label, people]) => people.length || (label === "Crew" && assistants.length));
     groups.forEach(([label, people]) => {
       const group = make("div", "title-credits__group");
       if (groups.length > 1 || leads.length) group.append(make("h3", "title-credits__heading", label));
       const list = make("ul", label === "Cast" ? "title-credits__list title-credits__list--cast" : "title-credits__list");
       list.append(...people.map((credit) => person(credit)));
-      group.append(list);
+      if (people.length) group.append(list);
+      // AI assistants close the crew, under a small heading of their own.
+      if (label === "Crew" && assistants.length) {
+        const ai = make("div", "title-credits__ai");
+        ai.append(make("h4", "title-credits__subheading", "AI Assistant"));
+        const aiList = make("ul", "title-credits__list");
+        aiList.append(...assistants.map((credit) => person(credit)));
+        ai.append(aiList);
+        group.append(ai);
+      }
       if (people.length > SHOWN) {
         list.classList.add("is-folded");
         const more = make("button", "title-credits__more", `Show all ${people.length}`);
@@ -4113,7 +4132,7 @@ const foldText = (text) =>
     nameInput.value = credit.name || "";
     nameInput.maxLength = 80;
     nameInput.setAttribute("aria-label", "Name");
-    // Up past the previous person in the same section (leads, crew or cast),
+    // Up past the previous person in the same section (leads, crew, AI or cast),
     // since that's the order the work's page shows.
     const up = make("button", "admin-icon", "↑");
     up.type = "button";

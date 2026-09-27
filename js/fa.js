@@ -168,6 +168,8 @@ const FA = {
   "Producer": "تهیه‌کننده",
   "Executive producer": "تهیه‌کننده‌ی اجرایی",
   "Composer": "آهنگساز",
+  "AI assistant": "دستیار هوش مصنوعی",
+  "AI Assistant": "دستیار هوش مصنوعی",
   "Music": "موسیقی",
   "Sound design": "طراحی صدا",
   "Cinematographer": "مدیر فیلم‌برداری",
