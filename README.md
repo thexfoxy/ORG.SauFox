@@ -384,8 +384,9 @@ nobody can log in.
 
 ## Trust seals (eNamad)
 
-Every footer has an empty `<div class="site-footer__seals">` (hidden while
-empty). Paste the snippet eNamad gives inside it on each page, unchanged,
+Every footer has a `<div class="site-footer__seals">` (hidden while
+empty). The eNamad seal (id 7933711) is in it on every page with a footer.
+A new or changed snippet goes inside it on each page, unchanged,
 keeping `referrerpolicy='origin'`: eNamad checks where its image is loaded
 from, and its bot reads the page source, so the snippet goes in the HTML
 rather than being added by script. The image comes from eNamad's server,
