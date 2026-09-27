@@ -243,6 +243,11 @@ const pricesOf = (row, rates) => {
   return { prices, approx };
 };
 
+// A credit's group; credits from before groups existed count as crew, or as
+// director / writer when that's their role.
+const creditGroup = (credit) =>
+  credit.group || (/^director$/i.test(credit.role) ? "director" : /^(writer|screenplay|author)$/i.test(credit.role) ? "writer" : "crew");
+
 const toWork = (row, rates = {}) => ({
   ...pricesOf(row, rates),
   id: row.id,
@@ -263,7 +268,7 @@ const toWork = (row, rates = {}) => ({
   genres: row.genres || [],
   platforms: row.platforms || [],
   rating: row.rating || "",
-  credits: row.credits || [],
+  credits: (row.credits || []).map((credit) => ({ ...credit, group: creditGroup(credit) })),
   created: row.created_at || "",
   // Both languages' texts, for search (browse.html).
   text: [row.synopsis, row.synopsis_fa, row.status_text, row.status_text_fa].filter(Boolean).join(" "),
@@ -2778,14 +2783,15 @@ const signedInGoHome = async (user) => {
     synopsis.hidden = false;
   }
 
-  // Cast & crew: the cast first, then the crew, in the admin panel's order;
-  // each group shows a dozen people and opens up to all of them. Without a
-  // photo, the person's initials stand in.
+  // Cast & crew: the director(s) and writer(s) first, larger and set apart;
+  // then the cast, then the crew, in the admin panel's order, each group
+  // showing a dozen people until it's opened. Without a photo, the
+  // person's initials stand in.
   if (work.credits && work.credits.length) {
     const box = page.querySelector(".title-credits__groups");
     const SHOWN = 12;
-    const person = (credit) => {
-      const item = make("li", "credit");
+    const person = (credit, lead) => {
+      const item = make("li", lead ? "credit credit--lead" : "credit");
       const face = make("span", "credit__face");
       if (credit.photo) {
         const img = make("img");
@@ -2810,19 +2816,29 @@ const signedInGoHome = async (user) => {
       const role = make("span", "credit__role", LANG === "fa" && credit.role_fa ? credit.role_fa : credit.role);
       if (LANG === "fa" && credit.role_fa) role.translate = false;
       role.dir = "auto";
-      text.append(name, role);
+      // A lead's job reads first, as a label.
+      if (lead) {
+        role.className = "credit__label";
+        text.append(role, name);
+      } else text.append(name, role);
       item.append(face, text);
       return item;
     };
+    const leads = work.credits.filter((c) => c.group === "director").concat(work.credits.filter((c) => c.group === "writer"));
+    if (leads.length) {
+      const list = make("ul", "title-credits__leads");
+      list.append(...leads.map((credit) => person(credit, true)));
+      box.append(list);
+    }
     const groups = [
       ["Cast", work.credits.filter((c) => c.group === "cast")],
-      ["Crew", work.credits.filter((c) => c.group !== "cast")],
+      ["Crew", work.credits.filter((c) => !["cast", "director", "writer"].includes(c.group))],
     ].filter(([, people]) => people.length);
     groups.forEach(([label, people]) => {
       const group = make("div", "title-credits__group");
-      if (groups.length > 1) group.append(make("h3", "title-credits__heading", label));
+      if (groups.length > 1 || leads.length) group.append(make("h3", "title-credits__heading", label));
       const list = make("ul", "title-credits__list");
-      list.append(...people.map(person));
+      list.append(...people.map((credit) => person(credit)));
       group.append(list);
       if (people.length > SHOWN) {
         list.classList.add("is-folded");
@@ -3935,8 +3951,9 @@ const foldText = (text) =>
     );
   };
 
-  // One person in the cast & crew: photo (click to upload), Cast or Crew,
-  // role (and in Persian), name; moved up with the arrow.
+  // One person in the cast & crew: photo (click to upload), Director,
+  // Writer, Cast or Crew, role (and in Persian), name; moved up with the
+  // arrow.
   const addCredit = (credit = {}) => {
     const item = make("li", "admin-credit");
     item.dataset.photo = credit.photo || "";
@@ -3969,9 +3986,11 @@ const foldText = (text) =>
     photo.append(img, file);
     showPhoto();
     const group = make("select");
-    group.setAttribute("aria-label", "Cast or crew");
-    [["crew", "Crew"], ["cast", "Cast"]].forEach(([value, label]) => group.append(new Option(label, value)));
-    group.value = credit.group === "cast" ? "cast" : "crew";
+    group.setAttribute("aria-label", "Director, writer, cast or crew");
+    [["director", "Director"], ["writer", "Writer"], ["cast", "Cast"], ["crew", "Crew"]].forEach(([value, label]) =>
+      group.append(new Option(label, value))
+    );
+    group.value = credit.role || credit.name ? creditGroup(credit) : "crew";
     const field = (value, placeholder, label, max, rtl) => {
       const input = make("input");
       input.type = "text";
@@ -3982,7 +4001,7 @@ const foldText = (text) =>
       if (rtl) input.dir = "rtl";
       return input;
     };
-    const roleInput = field(credit.role, "Role, e.g. Director", "Role", 60);
+    const roleInput = field(credit.role, "Role, e.g. Composer", "Role", 60);
     const roleFa = field(credit.role_fa, "نقش به فارسی (اختیاری)", "Role in Persian", 60, true);
     const nameInput = field(credit.name, "Name", "Name", 80);
     const up = make("button", "admin-icon", "↑");
@@ -4171,7 +4190,9 @@ const foldText = (text) =>
       credits: [...creditsEl.children]
         .map((item) => {
           const [role, roleFa, name] = item.querySelectorAll('input[type="text"]');
-          const credit = { group: item.querySelector("select").value, role: role.value.trim(), name: name.value.trim() };
+          const group = item.querySelector("select").value;
+          // A director or writer needs no role; it says so.
+          const credit = { group, role: role.value.trim() || { director: "Director", writer: "Writer" }[group] || "", name: name.value.trim() };
           if (roleFa.value.trim()) credit.role_fa = roleFa.value.trim();
           if (item.dataset.photo) credit.photo = item.dataset.photo;
           return credit;

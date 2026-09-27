@@ -2728,6 +2728,58 @@ main.profile-page {
   list-style: none;
 }
 
+/* The director(s) and writer(s): a row of their own above the rest, with
+   bigger photos, the job as an accent label over the name, and a line
+   under the row. */
+.title-credits__leads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 56px;
+  margin: 0;
+  padding: 0 0 32px;
+  border-bottom: 1px solid var(--line);
+  list-style: none;
+}
+
+.credit--lead {
+  gap: 22px;
+}
+
+.credit--lead .credit__face {
+  flex-basis: 124px;
+  width: 124px;
+  height: 124px;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+
+.credit--lead .credit__initials {
+  font-size: 34px;
+}
+
+.credit--lead .credit__name {
+  font-size: 21px;
+}
+
+.credit__label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .credit--lead .credit__face {
+    flex-basis: 88px;
+    width: 88px;
+    height: 88px;
+  }
+
+  .credit--lead .credit__name {
+    font-size: 18px;
+  }
+}
+
 .title-credits__list.is-folded .credit:nth-child(n + 13) {
   display: none;
 }
@@ -3919,7 +3971,7 @@ a.hero__panel {
 
 .admin-credit {
   display: grid;
-  grid-template-columns: 44px 92px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
+  grid-template-columns: 44px 104px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
   gap: 8px;
   align-items: center;
 }

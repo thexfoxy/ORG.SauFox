@@ -477,12 +477,15 @@ Title page (`work.html?id=<id>`):
       name in the corner under the curve, the poster, price, a "Watch
       trailer" button (Aparat, which plays in Iran) or the trailer date,
       a live countdown to the trailer, synopsis, a gallery of stills that
-      open full size (arrow keys and Esc work), and Cast & crew: a round
-      photo (or initials), name and role for everyone, the cast first and
-      then the crew, a dozen each until "Show all" (`works.credits`: group,
-      role, role_fa, name, photo; set in the admin panel, where each person
-      has a photo upload, Cast/Crew, the role in both languages and a move-up
-      arrow). Sections with
+      open full size (arrow keys and Esc work), and Cast & crew: the
+      director(s) and writer(s) first in a row of their own (bigger photos
+      with an accent ring, the job as a label over the name), then the cast,
+      then the crew, a round photo (or initials), name and role each, a
+      dozen per group until "Show all" (`works.credits`: group = director,
+      writer, cast or crew, role, role_fa, name, photo; set in the admin
+      panel, where each person has a photo upload, the group, the role in
+      both languages and a move-up arrow; credits without a group count as
+      crew, or director / writer when that's their role). Sections with
       no data stay hidden. Home-page cards and hero panels link here.
 
 Home page, later additions:
