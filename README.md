@@ -228,9 +228,11 @@ nobody can log in.
   marks its alerts `pending` and asks the payment function to send them;
   the 15-minute database job asks again while any are due. Each member gets
   the release email once (and the trailer email once, only before release).
-- Not sent yet: the payment function's `retry-emails` still needs the part
-  that sends due alerts (and an `alertEmail` template in `mail.ts`). Until
-  then alerts stay queued and nothing is lost.
+- Sending: the payment function's `retry-emails` (from the database) sends
+  due alerts, 40 a run, with the `alertEmail` template in `mail.ts`; one
+  that fails stays pending and is tried again every 15 minutes for about 3
+  days (after 3 failures in a run, usually the day's sending limit, the
+  rest wait for the next run).
 
 ## Ratings and reviews
 

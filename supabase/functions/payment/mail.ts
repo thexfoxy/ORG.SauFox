@@ -262,6 +262,39 @@ export const studioEmail = (order: Order, event: "placed" | "paid") => {
   };
 };
 
+// ---------- To a member who asked to be told: out now / trailer ----------
+export const alertEmail = (email: string, work: { id: string; title: string }, event: "released" | "trailer") => {
+  const out = event === "released";
+  const link = `${SITE}/work.html?id=${encodeURIComponent(work.id)}`;
+  const fa =
+    `<p style="margin:0 0 8px;color:#f5f3ef;font-size:18px;font-weight:700;">${
+      out ? `<span dir="ltr">${esc(work.title)}</span> منتشر شد!` : `تریلر <span dir="ltr">${esc(work.title)}</span> آمد!`
+    }</p>` +
+    `<p style="margin:0;">${
+      out
+        ? "اثری که خواسته بودید از انتشارش باخبرتان کنیم، حالا در دسترس است."
+        : "تریلر اثری که دنبالش می‌کنید منتشر شد. همین حالا در صفحه‌ی اثر ببینیدش."
+    }</p>`;
+  const en =
+    `<p style="margin:0 0 8px;color:#f5f3ef;font-size:18px;font-weight:700;">${
+      out ? `${esc(work.title)} is out now!` : `The ${esc(work.title)} trailer is here!`
+    }</p>` +
+    `<p style="margin:0;">${
+      out ? "The work you asked us to tell you about has been released." : "The trailer for a work you follow is out. Watch it on its page."
+    }</p>`;
+  return {
+    to: email,
+    subject: out ? `${work.title} منتشر شد | ${work.title} is out now` : `تریلر ${work.title} آمد | The ${work.title} trailer is here`,
+    html: page(
+      fa,
+      en,
+      button(link, out ? "دیدن اثر" : "دیدن تریلر", out ? "See it" : "Watch the trailer"),
+      "این ایمیل را چون در صفحه‌ی این اثر «خبرم کن» را زده بودید دریافت می‌کنید. برای لغو، همان دکمه را دوباره بزنید.",
+      "You're getting this because you chose Notify me on this work's page. Press it again there to stop."
+    ),
+  };
+};
+
 // A plain-text copy of each email, sent alongside the HTML: spam filters
 // trust HTML-only mail less.
 const plain = (html: string) =>

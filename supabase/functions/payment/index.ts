@@ -13,7 +13,8 @@
 //   -> { ok } or { error }  sends a sample receipt to the studio address
 // POST { action: "retry-emails", order_id? }     admins (one order), or the
 //   database every 15 minutes with the x-retry-key header (all orders)
-//   -> { sent, failed }  sends the emails that didn't go out before
+//   -> { sent, failed }  sends the emails that didn't go out before, and
+//   (from the database) the "Notify me" emails that are due
 //
 // Emails (mail.ts): the buyer gets "order received" or a payment receipt,
 // and the studio a copy of each; every email goes out once per order. One
@@ -33,7 +34,7 @@
 // from the database (public.zarinpal_call), whose IP stays the same; the
 // admin panel shows it.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { mailReady, paidEmail, placedEmail, send, stageEmail, STUDIO, studioEmail, type Order } from "./mail.ts";
+import { alertEmail, mailReady, paidEmail, placedEmail, send, stageEmail, STUDIO, studioEmail, type Order } from "./mail.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
@@ -156,6 +157,40 @@ const retryOrder = async (order: { id: string; status: string; email_pending: st
   return { sent, failed: due.length - sent };
 };
 
+// "Notify me" emails that are due (work_alerts.pending), a batch at a
+// time; one that fails is tried again on the next run, for about 3 days.
+const sendAlerts = async () => {
+  const { data: alerts } = await db
+    .from("work_alerts")
+    .select("user_id, work_id, email, pending, tries, works(id, title)")
+    .not("pending", "is", null)
+    .lt("tries", 300)
+    .limit(40);
+  let sent = 0;
+  let failed = 0;
+  for (const alert of alerts || []) {
+    const work = alert.works as unknown as { id: string; title: string } | null;
+    const key = { user_id: alert.user_id, work_id: alert.work_id };
+    if (!work || !alert.email) {
+      await db.from("work_alerts").update({ pending: null }).match(key);
+      continue;
+    }
+    const event = alert.pending as "released" | "trailer";
+    try {
+      await send(alertEmail(alert.email, work, event));
+      await db.from("work_alerts").update({ pending: null, [`${event}_sent_at`]: new Date().toISOString() }).match(key);
+      sent++;
+    } catch (e) {
+      console.error("alert email", (e as Error).message);
+      await db.from("work_alerts").update({ tries: alert.tries + 1 }).match(key);
+      // Most likely the day's sending limit: leave the rest for later.
+      if (++failed >= 3) break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 600)); // Resend takes 2 a second
+  }
+  return { sent, failed };
+};
+
 const salesOpen = async () => {
   const { data } = await db.from("site_settings").select("sales_open").eq("id", 1).maybeSingle();
   return data?.sales_open !== false;
@@ -219,6 +254,11 @@ Deno.serve(async (req) => {
       const result = await retryOrder(order);
       sent += result.sent;
       failed += result.failed;
+    }
+    if (fromCron) {
+      const alerts = await sendAlerts();
+      sent += alerts.sent;
+      failed += alerts.failed;
     }
     return reply({ sent, failed });
   }
