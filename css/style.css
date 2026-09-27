@@ -1265,21 +1265,21 @@ main {
 /* Each plan is its metal: --metal (a gradient for the name and button),
    --metal-solid (ticks), --light (hover light, as r, g, b) and --metal-ink
    (text on the button). A faint brushed sheen of it lies on the box. */
-.plan--iron {
+.plan.plan--iron {
   --metal: var(--iron-metal);
   --metal-solid: var(--iron);
   --light: 160, 168, 178;
   --metal-ink: #0f1113;
 }
 
-.plan--gold {
+.plan.plan--gold {
   --metal: var(--gold-metal);
   --metal-solid: var(--gold);
   --light: 230, 184, 74;
   --metal-ink: #231703;
 }
 
-.plan--titanium {
+.plan.plan--titanium {
   --metal: var(--titanium-metal);
   --metal-solid: var(--titanium);
   --light: 205, 215, 226;
@@ -1307,10 +1307,15 @@ main {
   font: 400 clamp(44px, 4.4vw, 64px)/1 var(--font-logo);
 }
 
+/* The script's swashes reach past the letters' box, and a text-clipped
+   gradient only paints inside it: padding gives them room, and the
+   negative margin keeps the name where it was. */
 .plan--iron .plan__name,
 .plan--gold .plan__name,
 .plan--titanium .plan__name {
   width: fit-content;
+  padding: 0.14em 0.3em 0.22em;
+  margin: -0.14em -0.3em -0.22em;
   background: var(--metal);
   -webkit-background-clip: text;
   background-clip: text;
@@ -1360,13 +1365,14 @@ main {
   inset-inline-end: auto;
   white-space: nowrap;
   text-align: start;
-  font: 600 clamp(28px, 2.6vw, 36px)/44px var(--font-body);
+  font: 600 clamp(24px, 2.2vw, 32px)/44px var(--font-body);
   letter-spacing: -0.02em;
 }
 
 .plan__per {
   color: var(--muted);
   font-size: 15px;
+  white-space: nowrap;
 }
 
 .plan__list {
@@ -5941,6 +5947,7 @@ a.hero__panel {
 .news-card__text {
   display: grid;
   align-content: start;
+  min-width: 0;
   gap: 8px;
   padding: 4px 4px 4px 0;
 }
@@ -5950,12 +5957,21 @@ a.hero__panel {
   color: var(--muted);
 }
 
+/* The title on one line (the rest is on the post); the summary under it,
+   up to three lines. */
 .news-card__title {
+  overflow: hidden;
   font-size: 19px;
   line-height: 1.4;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .news-card__summary {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   font-size: 14px;
   line-height: 1.7;
   color: #c9c6cf;

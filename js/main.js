@@ -725,7 +725,7 @@ const heroEdgeY = (() => {
     title.dir = "auto";
     title.translate = false;
     box.append(top, title);
-    const about = post ? newsField(post, "summary") : work.statusText || work.synopsis;
+    const about = post ? newsBlurb(post) : work.statusText || work.synopsis;
     if (about) {
       const text = make("p", "hero__card-text", about);
       text.dir = "auto";
@@ -3258,7 +3258,21 @@ const getNews = async (query) => {
   return res.json();
 };
 const NEWS_LIST =
-  "select=slug,title,title_fa,summary,summary_fa,cover_url,work_id,youtube_url,youtube_thumb_url,published_at&published=eq.true&order=published_at.desc";
+  "select=slug,title,title_fa,summary,summary_fa,body,body_fa,cover_url,work_id,youtube_url,youtube_thumb_url,published_at&published=eq.true&order=published_at.desc";
+// A post's short description: its summary, or else the start of its text
+// as plain words (headings left out; list marks, bold and links unwrapped).
+const newsBlurb = (post) => {
+  const summary = newsField(post, "summary");
+  if (summary) return summary;
+  const text = newsField(post, "body")
+    .replace(/^\s*##\s.*$/gm, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\*\*/g, "")
+    .replace(/^\s*-\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length > 240 ? `${text.slice(0, 240).replace(/\s+\S*$/, "")}…` : text;
+};
 // A post's picture: its own cover, or else the art of the work it's about.
 const newsCover = (post, works = []) => {
   if (post.cover_url) return post.cover_url;
@@ -3353,7 +3367,7 @@ const newsCard = (post, works) => {
   title.dir = "auto";
   title.translate = false;
   text.append(date, title);
-  const summary = newsField(post, "summary");
+  const summary = newsBlurb(post);
   if (summary) {
     const p = document.createElement("span");
     p.className = "news-card__summary";
