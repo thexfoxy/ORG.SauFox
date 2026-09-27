@@ -584,22 +584,34 @@ const heroEdgeY = (() => {
 })();
 
 // Section 2 — Hero: key art from the studio's releases, one slanted panel per
-// work (up to five), or a single full-width image while there is one work.
-// Works come from the catalogue (see loadCatalog).
-
+// work (up to five, seven on wide screens), or a single full-width image
+// while there is one work. Works with a news post come first: their panel
+// shows the work's art, links to the latest post about it, and carries the
+// post's title. On a mouse, the panel under the pointer widens to show its
+// whole banner while the others make room.
 (async function heroCollage() {
   const hero = document.querySelector(".hero");
   if (!hero) return;
   const CATALOG = await catalog;
 
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const hover = window.matchMedia("(hover: hover) and (pointer: fine)");
   const SWAP_EVERY = 4500;
-  const MAX_PANELS = 5;
+  const MAX_PANELS = window.innerWidth >= 1100 ? 7 : window.innerWidth >= 700 ? 5 : 4;
 
-  // One panel per work with a hero image, up to MAX_PANELS.
-  const heroes = CATALOG.filter((work) => work.hero);
-  const count = Math.min(heroes.length, MAX_PANELS);
-  if (!count) return;
+  const withArt = CATALOG.filter((work) => work.hero || work.images[0]);
+  const artOf = (work) => work.hero || work.images[0];
+  if (!withArt.length) return;
+
+  // The latest post about each work, newest first.
+  let posts = [];
+  try {
+    posts = await getNews(`${NEWS_LIST}&work_id=not.is.null&limit=20`);
+  } catch (e) {}
+  const newsFor = new Map();
+  posts.forEach((post) => {
+    if (!newsFor.has(post.work_id) && withArt.some((w) => w.id === post.work_id)) newsFor.set(post.work_id, post);
+  });
 
   const shuffle = (list) => {
     const a = list.slice();
@@ -610,63 +622,81 @@ const heroEdgeY = (() => {
     return a;
   };
 
+  // Works with news (newest first), then the rest with key art, shuffled.
+  const newsWorks = [...newsFor.keys()].map((id) => withArt.find((w) => w.id === id));
+  const others = shuffle(withArt.filter((w) => !newsFor.has(w.id) && w.hero));
+  const picks = [...newsWorks, ...others].slice(0, MAX_PANELS);
+  const count = picks.length;
+  if (!count) return;
+  // Spread the news panels among the others rather than all on the left.
+  const order = shuffle(picks.map((_, i) => i));
+
   const art = (work) => {
     const el = document.createElement("span");
     el.className = "hero__art";
-    el.style.backgroundImage = `url("${work.hero}")`;
+    el.style.backgroundImage = `url("${artOf(work)}")`;
     if (work.heroFocus) el.style.backgroundPosition = work.heroFocus;
-    el.dataset.src = work.hero;
+    el.dataset.work = work.id;
     return el;
+  };
+  // Where a panel goes, and what it says.
+  const point = (panel, work) => {
+    const post = newsFor.get(work.id);
+    panel.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : `work.html?id=${encodeURIComponent(work.id)}`;
+    panel.setAttribute("aria-label", post ? newsField(post, "title") : work.title);
+    panel.classList.toggle("has-news", Boolean(post));
+    const caption = panel.querySelector(".hero__caption");
+    if (post) {
+      caption.querySelector(".hero__kicker").textContent = t("News");
+      caption.querySelector(".hero__title").textContent = newsField(post, "title");
+    }
+    caption.hidden = !post;
   };
 
   hero.style.setProperty("--n", count);
   hero.dataset.count = count;
   hero.replaceChildren(
-    ...shuffle(heroes)
-      .slice(0, count)
-      .map((work, i) => {
-        const panel = document.createElement("a");
-        panel.className = "hero__panel";
-        panel.href = `work.html?id=${encodeURIComponent(work.id)}`;
-        panel.setAttribute("aria-label", work.title);
-        panel.style.setProperty("--i", i);
-        panel.append(art(work));
-        return panel;
-      })
+    ...order.map((k, i) => {
+      const work = picks[k];
+      const panel = document.createElement("a");
+      panel.className = "hero__panel";
+      panel.style.setProperty("--i", i);
+      const caption = document.createElement("span");
+      caption.className = "hero__caption";
+      const kicker = document.createElement("span");
+      kicker.className = "hero__kicker";
+      const title = document.createElement("strong");
+      title.className = "hero__title";
+      title.dir = "auto";
+      title.translate = false;
+      caption.append(kicker, title);
+      panel.append(art(work), caption);
+      point(panel, work);
+      return panel;
+    })
   );
+  const panels = [...hero.children];
 
-  // With more works than panels, every few seconds one random panel
-  // crossfades to a work not on screen.
-  const swap = () => {
-    if (document.hidden || calm.matches) return;
-    const panels = [...hero.children];
-    const shown = new Set(panels.map((p) => p.lastElementChild.dataset.src));
-    const options = heroes.filter((work) => !shown.has(work.hero));
-    if (!options.length) return;
-
-    const panel = panels[Math.floor(Math.random() * panels.length)];
-    const next = art(options[Math.floor(Math.random() * options.length)]);
-    next.classList.add("is-entering");
-    panel.append(next);
-    requestAnimationFrame(() => requestAnimationFrame(() => next.classList.remove("is-entering")));
-    setTimeout(() => {
-      while (panel.children.length > 1) panel.firstElementChild.remove();
-    }, 1600);
-  };
+  // ---------- Layout ----------
+  // Each panel's share of the width. All equal at rest; the hovered one
+  // grows to about a 16:9 banner (at most 55% of the hero).
+  const weights = panels.map(() => 1);
+  let targets = weights.slice();
+  let frame = 0;
 
   // Clip each panel to exactly what shows: its slanted strip, cut off along
-  // the curved bottom edge. Besides looking the same as the mask, this keeps
-  // the hero from catching clicks and drags meant for the cards that slide
-  // in underneath its curve.
-  const clipPanels = () => {
+  // the curved bottom edge, with its artwork box under the strip. Besides
+  // looking the same as the mask, the clip keeps the hero from catching
+  // clicks and drags meant for the cards that slide in underneath its curve.
+  const layout = () => {
     const W = hero.clientWidth;
     const H = hero.clientHeight;
     if (!W || !H) return;
     const css = getComputedStyle(hero);
     const slant = (parseFloat(css.getPropertyValue("--slant")) / 100) * W;
     const gap = parseFloat(css.getPropertyValue("--gap"));
-    const panels = [...hero.children];
-    const w = (W + slant) / panels.length;
+    const total = W + slant;
+    const sum = weights.reduce((a, b) => a + b, 0);
     const curve = (x) => (heroEdgeY(x / W) * H) / 520;
 
     // Where a slanted edge (top x -> bottom x) meets the curve.
@@ -682,21 +712,88 @@ const heroEdgeY = (() => {
       return [edge(hi), hi];
     };
 
+    let left = 0;
     panels.forEach((panel, i) => {
-      const x0 = i === 0 ? -0.3 * W : i * w;
-      const x1 = i === panels.length - 1 ? 1.3 * W : (i + 1) * w;
+      const width = (total * weights[i]) / sum;
+      const a = left;
+      const b = left + width;
+      left = b;
+      const x0 = i === 0 ? -0.3 * W : a;
+      const x1 = i === panels.length - 1 ? 1.3 * W : b;
       const [rx, ry] = meet(x1 - gap, x1 - slant - gap);
       const [lx, ly] = meet(x0 + gap, x0 - slant + gap);
       const points = [[x0 + gap, 0], [x1 - gap, 0], [rx, ry]];
       for (let x = rx - 8; x > lx; x -= 8) points.push([x, curve(x)]);
       points.push([lx, ly]);
       panel.style.clipPath = `polygon(${points.map(([x, y]) => `${x.toFixed(1)}px ${y.toFixed(1)}px`).join(", ")})`;
+      [...panel.querySelectorAll(".hero__art")].forEach((el) => {
+        el.style.left = `${(a - slant).toFixed(1)}px`;
+        el.style.width = `${(width + slant).toFixed(1)}px`;
+      });
+      const caption = panel.querySelector(".hero__caption");
+      caption.style.left = `${(Math.max(a, 0) + gap + 18).toFixed(1)}px`;
+      caption.style.width = `${Math.max(width - 2 * gap - 36 - (a < 0 ? -a : 0), 120).toFixed(1)}px`;
     });
   };
 
-  clipPanels();
-  new ResizeObserver(clipPanels).observe(hero);
-  if (heroes.length > count) setInterval(swap, SWAP_EVERY);
+  // Eases the widths toward their targets, one frame at a time.
+  const step = () => {
+    let moving = false;
+    weights.forEach((w, i) => {
+      const next = w + (targets[i] - w) * 0.16;
+      weights[i] = Math.abs(targets[i] - next) < 0.002 ? targets[i] : next;
+      if (weights[i] !== targets[i]) moving = true;
+    });
+    layout();
+    frame = moving ? requestAnimationFrame(step) : 0;
+  };
+  const aim = (index) => {
+    const n = panels.length;
+    targets = panels.map(() => 1);
+    if (index >= 0 && n > 1) {
+      const W = hero.clientWidth;
+      const total = W + (parseFloat(getComputedStyle(hero).getPropertyValue("--slant")) / 100) * W;
+      const want = Math.min((hero.clientHeight * 16) / 9, total * 0.55);
+      const even = total / n;
+      if (want > even) targets[index] = (want * (n - 1)) / (total - want);
+    }
+    if (calm.matches) {
+      targets.forEach((w, i) => (weights[i] = w));
+      return layout();
+    }
+    if (!frame) frame = requestAnimationFrame(step);
+  };
+  panels.forEach((panel, i) => {
+    panel.addEventListener("pointerenter", () => hover.matches && aim(i));
+    panel.addEventListener("focus", () => aim(i));
+    panel.addEventListener("blur", () => aim(-1));
+  });
+  hero.addEventListener("pointerleave", () => aim(-1));
+
+  // With more works than panels, every few seconds one random panel that
+  // isn't news or under the pointer crossfades to a work not on screen.
+  const swap = () => {
+    if (document.hidden || calm.matches) return;
+    const shown = new Set(panels.map((p) => [...p.querySelectorAll(".hero__art")].pop().dataset.work));
+    const options = withArt.filter((work) => work.hero && !shown.has(work.id) && !newsFor.has(work.id));
+    const free = panels.filter((p) => !p.classList.contains("has-news") && !p.matches(":hover"));
+    if (!options.length || !free.length) return;
+    const panel = free[Math.floor(Math.random() * free.length)];
+    const work = options[Math.floor(Math.random() * options.length)];
+    const next = art(work);
+    next.classList.add("is-entering");
+    panel.querySelector(".hero__caption").before(next);
+    point(panel, work);
+    layout();
+    requestAnimationFrame(() => requestAnimationFrame(() => next.classList.remove("is-entering")));
+    setTimeout(() => {
+      while (panel.querySelectorAll(".hero__art").length > 1) panel.querySelector(".hero__art").remove();
+    }, 1600);
+  };
+
+  layout();
+  new ResizeObserver(layout).observe(hero);
+  if (withArt.filter((w) => w.hero).length > count) setInterval(swap, SWAP_EVERY);
 })();
 
 
@@ -2947,7 +3044,13 @@ const getNews = async (query) => {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 };
-const NEWS_LIST = "select=slug,title,title_fa,summary,summary_fa,cover_url,published_at&published=eq.true&order=published_at.desc";
+const NEWS_LIST = "select=slug,title,title_fa,summary,summary_fa,cover_url,work_id,published_at&published=eq.true&order=published_at.desc";
+// A post's picture: its own cover, or else the art of the work it's about.
+const newsCover = (post, works = []) => {
+  if (post.cover_url) return post.cover_url;
+  const work = post.work_id && works.find((w) => w.id === post.work_id);
+  return (work && (work.hero || work.images[0])) || "";
+};
 
 // Post text, written plainly: a blank line starts a paragraph, "## " a
 // heading, "- " a list item; **bold** and [text](https://…) links inside.
@@ -3011,14 +3114,15 @@ const richText = (text) => {
 };
 
 // One post as a card, for the news list and the home page.
-const newsCard = (post) => {
+const newsCard = (post, works) => {
   const link = document.createElement("a");
   link.className = "news-card";
   link.href = `news.html?post=${encodeURIComponent(post.slug)}`;
-  if (post.cover_url) {
+  const picture = newsCover(post, works);
+  if (picture) {
     const img = document.createElement("img");
     img.className = "news-card__cover";
-    img.src = post.cover_url;
+    img.src = picture;
     img.alt = "";
     img.loading = "lazy";
     link.append(img);
@@ -3077,8 +3181,9 @@ const newsCard = (post) => {
     heading.dir = "auto";
     heading.translate = false;
     const cover = view.querySelector(".news-post__cover");
-    if (post.cover_url) {
-      cover.src = post.cover_url;
+    const picture = newsCover(post, await catalog);
+    if (picture) {
+      cover.src = picture;
       cover.hidden = false;
     }
     const body = view.querySelector(".news-post__body");
@@ -3097,7 +3202,7 @@ const newsCard = (post) => {
       path: `/news.html?post=${encodeURIComponent(post.slug)}`,
       title: `${title} · SauFox Entertainment`,
       description: newsField(post, "summary") || title,
-      image: post.cover_url || undefined,
+      image: picture || undefined,
     });
     view.hidden = false;
     return;
@@ -3113,9 +3218,10 @@ const newsCard = (post) => {
     try {
       posts = await getNews(`${NEWS_LIST}&offset=${shown}&limit=${PAGE + 1}`);
     } catch (e) {}
+    const works = await catalog;
     posts.slice(0, PAGE).forEach((post) => {
       const item = document.createElement("li");
-      item.append(newsCard(post));
+      item.append(newsCard(post, works));
       list.append(item);
     });
     shown += Math.min(posts.length, PAGE);
@@ -3135,7 +3241,8 @@ const newsCard = (post) => {
     posts = await getNews(`${NEWS_LIST}&limit=3`);
   } catch (e) {}
   if (!posts.length) return;
-  section.querySelector(".home-news__list").replaceChildren(...posts.map(newsCard));
+  const works = await catalog;
+  section.querySelector(".home-news__list").replaceChildren(...posts.map((post) => newsCard(post, works)));
   section.hidden = false;
 })();
 

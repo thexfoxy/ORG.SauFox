@@ -563,7 +563,65 @@ main {
   }
 
   .hero__panel:hover .hero__art {
-    transform: scale(1.08);
+    transform: scale(1.04);
+  }
+}
+
+/* Panels with a news post: a "News" tag at the top, and the post's title
+   once the panel opens up (js/main.js sets the caption's place and width). */
+.hero__caption {
+  position: absolute;
+  top: 18px;
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.hero__caption[hidden] {
+  display: none;
+}
+
+.hero__kicker {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #1a0d04;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero__title {
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(15, 15, 17, 0.72);
+  backdrop-filter: blur(6px);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.35s ease, transform 0.45s var(--ease-out);
+}
+
+.hero__panel:hover .hero__title,
+.hero__panel:focus-visible .hero__title {
+  opacity: 1;
+  transform: none;
+}
+
+/* Phones have no hover and narrow panels: just the tag; the post's title
+   is on the news page it opens. */
+@media (hover: none) {
+  .hero__title {
+    display: none;
+  }
+
+  .hero__kicker {
+    font-size: 10px;
   }
 }
 

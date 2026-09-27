@@ -267,6 +267,9 @@ nobody can log in.
 - Text is written plainly and rendered as elements (never HTML): a blank
   line starts a paragraph, "## " a heading, "- " a list item, and
   **bold** and [text](https://…) links work inside.
+- A post linked to a work needs no cover of its own: the work's art stands
+  in (news cards, the post page), and the work gets a panel in the home
+  page's hero that opens the post.
 - Admin panel → News: new post, edit, cover upload (to `works/news/`,
   shrunk to WebP), publish now or at a set Tehran time, delete. New posts
   aren't in sitemap.xml by themselves; news.html is.
@@ -418,12 +421,16 @@ Home page:
       letters leave one by one, "Sign Up Now" / "Welcome Back" rises in their
       place, and the text glows softly. Add `?demo=new|returning|member` to
       the URL to preview each state.
-- [x] 2. Hero: 16:9 key art, one slanted panel per work (up to five) whose
-      bottom edge steps down from left to right in a smooth S-curve; with
-      more than five works the panels swap between them at random every few
-      seconds. While there is only one work, its image fills the hero with no
-      slant. Hovering a panel zooms its art and dims the rest. Data: each
-      work's key art and phone crop, set in the admin panel.
+- [x] 2. Hero: 16:9 key art, one slanted panel per work (up to seven on wide
+      screens, five on tablets, four on phones) whose bottom edge steps down
+      from left to right in a smooth S-curve; with more works than panels,
+      the panels swap between them at random every few seconds. Works with a
+      news post come first: their panel shows the work's art (or its cover),
+      a "News" tag and, on hover, the post's title, and opens the post. With
+      a mouse, the panel under the pointer widens to show its whole banner
+      while the others narrow, and the rest dim. While there is only one
+      work, its image fills the hero with no slant. Data: each work's key
+      art and phone crop, set in the admin panel; news from `news.work_id`.
 - [x] 3. Studio slogan: a short line, "And my success is not but through God."
       (Qur'an 11:88), in the space under the hero's curve
 - [x] 4. Work cards: a sliding row tucked right under the slogan; on the right
