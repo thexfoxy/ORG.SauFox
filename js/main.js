@@ -2858,9 +2858,10 @@ const signedInGoHome = async (user) => {
       name.translate = false;
       name.dir = "auto";
       // Each role in this page's language when it's a known one.
-      const ai = !lead && creditPlace(credit.roles) === "ai";
-      // An AI assistant's card says so on a gold label; the rest are its roles.
-      const shownRoles = ai ? credit.roles.filter((r) => !AI.test(r)) : credit.roles;
+      // In the AI Assistant section the heading already says so; the role
+      // line shows what else they did.
+      const other = creditPlace(credit.roles) === "ai" ? credit.roles.filter((r) => !AI.test(r)) : [];
+      const shownRoles = other.length ? other : credit.roles;
       const role = make("span", "credit__role", shownRoles.map((r) => t(r)).join(" · "));
       role.translate = false;
       role.dir = "auto";
@@ -2875,10 +2876,6 @@ const signedInGoHome = async (user) => {
         character.dir = "auto";
         name.className = "credit__player";
         text.append(character, name);
-      } else if (ai) {
-        item.classList.add("credit--ai");
-        text.append(make("span", "credit__badge", "AI Assistant"), name);
-        if (shownRoles.length) text.append(role);
       } else text.append(name, role);
       item.append(face, text);
       return item;
@@ -2890,24 +2887,20 @@ const signedInGoHome = async (user) => {
       box.append(list);
     }
     const assistants = work.credits.filter((c) => creditPlace(c.roles) === "ai");
+    // AI assistants get a section of their own beside the crew's, so they
+    // read as part of the making without mixing with the people.
     const groups = [
       ["Crew", work.credits.filter((c) => creditPlace(c.roles) === "crew")],
+      ["AI Assistant", assistants],
       ["Cast", work.credits.filter((c) => creditPlace(c.roles) === "cast")],
-    ].filter(([label, people]) => people.length || (label === "Crew" && assistants.length));
+    ].filter(([, people]) => people.length);
+    const pair = groups.some(([l]) => l === "Crew") && assistants.length ? make("div", "title-credits__pair") : null;
     groups.forEach(([label, people]) => {
       const group = make("div", "title-credits__group");
       if (groups.length > 1 || leads.length) group.append(make("h3", "title-credits__heading", label));
       const list = make("ul", label === "Cast" ? "title-credits__list title-credits__list--cast" : "title-credits__list");
       list.append(...people.map((credit) => person(credit)));
-      // AI assistants: small gold frames stacked in the crew row's far
-      // corner, well apart from the people.
-      if (label === "Crew" && assistants.length) {
-        const row = make("div", "title-credits__row");
-        const ai = make("ul", "title-credits__ai");
-        ai.append(...assistants.map((credit) => person(credit)));
-        row.append(list, ai);
-        group.append(row);
-      } else group.append(list);
+      group.append(list);
       if (people.length > SHOWN) {
         list.classList.add("is-folded");
         const more = make("button", "title-credits__more", `Show all ${people.length}`);
@@ -2918,7 +2911,11 @@ const signedInGoHome = async (user) => {
         });
         group.append(more);
       }
-      box.append(group);
+      if (pair && label !== "Cast") {
+        group.classList.add(label === "Crew" ? "title-credits__group--crew" : "title-credits__group--ai");
+        pair.append(group);
+        if (label === "AI Assistant") box.append(pair);
+      } else box.append(group);
     });
     page.querySelector('[data-slot="credits-count"]').textContent = digits(work.credits.length);
     page.querySelector(".title-credits").hidden = false;
