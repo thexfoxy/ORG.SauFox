@@ -1321,7 +1321,7 @@ const posterCard = (work) => {
   if (work.reviews) {
     const score = document.createElement("span");
     score.className = "poster-card__score";
-    score.append(starsFor(work.score, "stars stars--small"), ` ${scoreText(work.score)}`);
+    score.append(scoreOf(work.score, "score score--small"));
     link.append(score);
   }
   return link;
@@ -1344,9 +1344,9 @@ const posterCard = (work) => {
   const kindsInUse = KINDS.filter(([, test]) => CATALOG.some(test)).length;
   if (kindsInUse < 2) return;
 
-  // Top rated: by average stars, pulled towards 3 while a work has few
-  // ratings, so one 5-star review doesn't top the list.
-  const ranked = (w) => (w.score * w.reviews + 3 * 3) / (w.reviews + 3);
+  // Top rated: by average score out of 10, pulled towards 6 while a work
+  // has few ratings, so one 10 doesn't top the list.
+  const ranked = (w) => (w.score * w.reviews + 6 * 3) / (w.reviews + 3);
   const rows = [
     ["Top rated", (w) => w.reviews > 0, (a, b) => ranked(b) - ranked(a)],
     ["Coming soon", (w) => ["coming", "preorder", "production"].includes(w.status)],
@@ -3044,16 +3044,31 @@ const signedInGoHome = async (user) => {
   });
 })();
 
-// Stars for a score out of 5: "★★★★★" filled to the score (see .stars).
+// Scores are out of 10, as on IMDb: a gold star, the score, then "/10".
 const starsFor = (score, className = "stars") => {
   const el = document.createElement("span");
   el.className = className;
-  el.textContent = "★★★★★";
-  el.style.setProperty("--fill", `${Math.max(0, Math.min(5, score)) * 20}%`);
+  el.textContent = "★";
   el.setAttribute("aria-hidden", "true");
   return el;
 };
 const scoreText = (score) => num(score, 1);
+// A count as IMDb writes it: 950, 1.2K, 3.4M.
+const compact = (n) =>
+  n >= 1e6 ? `${num(n / 1e6, 1)}M` : n >= 1e3 ? `${num(n / 1e3, 1)}K` : num(n);
+// An average keeps one decimal (8.0); one person's rating is whole (9).
+const scoreOf = (score, className = "score", whole = false) => {
+  const el = document.createElement("span");
+  el.className = className;
+  el.translate = false;
+  el.dir = "ltr";
+  const value = document.createElement("b");
+  value.textContent = whole ? num(score) : scoreText(score);
+  const out = document.createElement("small");
+  out.textContent = `/${digits(10)}`;
+  el.append(starsFor(score), value, out);
+  return el;
+};
 
 // Ratings and reviews on a work's page (work.html#reviews). Members write
 // one each: stars and a comment once the work is released, a comment
@@ -3098,6 +3113,134 @@ const scoreText = (score) => num(score, 1);
   section.querySelector(".reviews__login span").textContent = released ? "to rate and review." : "to comment.";
   section.hidden = false;
 
+  // ---------- Beside the title, as on IMDb: the SauFox rating and yours ----------
+  // "Your rating" opens a box of ten stars; rating needs no written review.
+  let box = null;
+  const showAverage = (score, count) => {
+    if (!box) return;
+    const average = box.querySelector(".title-rating__average");
+    average.hidden = !count;
+    if (!count) return;
+    const value = average.querySelector(".title-rating__value");
+    const total = make("small", "title-rating__count", compact(count));
+    total.translate = false;
+    value.replaceChildren(scoreOf(score, "score score--head"), total);
+  };
+  const showMine = () => {
+    if (!box) return;
+    const mine = box.querySelector(".title-rating__mine");
+    const value = own && own.rating;
+    mine.classList.toggle("is-rated", Boolean(value));
+    if (value) {
+      const rated = make("span", "score score--mine");
+      rated.translate = false;
+      rated.dir = "ltr";
+      rated.append(make("span", "stars", "★"), make("b", "", digits(value)), make("small", "", `/${digits(10)}`));
+      mine.replaceChildren(rated);
+    } else mine.replaceChildren(make("span", "stars stars--empty", "☆"), make("span", "", "Rate"));
+  };
+  const rateDialog = () => {
+    const dialog = make("dialog", "rate-dialog");
+    const close = make("button", "rate-dialog__close", "✕");
+    close.type = "button";
+    close.setAttribute("aria-label", "Close");
+    const big = make("div", "rate-dialog__big");
+    const bigValue = make("b", "", "?");
+    bigValue.translate = false;
+    big.append(make("span", "", "★"), bigValue);
+    const title = make("strong", "rate-dialog__work", work.title);
+    title.translate = false;
+    const stars = make("div", "rate-dialog__stars");
+    stars.setAttribute("role", "radiogroup");
+    stars.setAttribute("aria-label", "Your rating");
+    let pick = (own && own.rating) || 0;
+    const show = (value) => {
+      bigValue.textContent = value ? digits(value) : "?";
+      big.classList.toggle("is-set", Boolean(value));
+      stars.querySelectorAll("button").forEach((b) => b.classList.toggle("is-on", Number(b.dataset.star) <= value));
+    };
+    for (let n = 1; n <= 10; n++) {
+      const star = make("button", "", "★");
+      star.type = "button";
+      star.dataset.star = n;
+      star.setAttribute("role", "radio");
+      star.setAttribute("aria-label", `${n}/10`);
+      star.addEventListener("mouseenter", () => show(n));
+      star.addEventListener("focus", () => show(n));
+      star.addEventListener("click", () => {
+        pick = n;
+        done.disabled = false;
+        stars.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", String(Number(b.dataset.star) === n)));
+        show(n);
+      });
+      stars.append(star);
+    }
+    stars.addEventListener("mouseleave", () => show(pick));
+    const note = make("p", "auth__message");
+    note.setAttribute("role", "status");
+    const done = make("button", "rate-dialog__submit", "Rate");
+    done.type = "button";
+    done.disabled = !pick;
+    const clear = make("button", "rate-dialog__clear", "Remove rating");
+    clear.type = "button";
+    clear.hidden = !(own && own.rating);
+    dialog.append(close, big, make("span", "rate-dialog__label", "Rate this"), title, stars, note, done, clear);
+    document.body.append(dialog);
+    const shut = () => {
+      dialog.close();
+      dialog.remove();
+    };
+    close.addEventListener("click", shut);
+    dialog.addEventListener("click", (event) => event.target === dialog && shut());
+    dialog.addEventListener("close", () => dialog.remove());
+    const saved = (data) => {
+      own = data;
+      fillForm();
+      showMine();
+      loadPage(true);
+      showSummary();
+      shut();
+    };
+    done.addEventListener("click", async () => {
+      done.disabled = true;
+      note.textContent = "Saving…";
+      const { data, error } = own
+        ? await account.from("reviews").update({ rating: pick }).eq("id", own.id).select(FIELDS).single()
+        : await account.from("reviews").insert({ work_id: work.id, rating: pick }).select(FIELDS).single();
+      done.disabled = false;
+      if (error) return (note.textContent = "Not saved. Check your connection and try again.");
+      saved(data);
+    });
+    clear.addEventListener("click", async () => {
+      clear.disabled = true;
+      // A written review stays, without its stars; a bare rating goes.
+      const { data, error } = own.body
+        ? await account.from("reviews").update({ rating: null }).eq("id", own.id).select(FIELDS).single()
+        : await account.from("reviews").delete().eq("id", own.id).then((res) => ({ ...res, data: null }));
+      clear.disabled = false;
+      if (error) return (note.textContent = "Not saved. Check your connection and try again.");
+      saved(data);
+    });
+    dialog.showModal();
+    show(pick);
+  };
+  const rateBox = () => {
+    if (!released) return;
+    box = make("div", "title-rating");
+    const average = make("a", "title-rating__item title-rating__average");
+    average.href = "#reviews";
+    average.hidden = true;
+    average.append(make("span", "title-rating__label", "SauFox rating"), make("span", "title-rating__value"));
+    const yours = make("div", "title-rating__item");
+    const mine = make("button", "title-rating__mine");
+    mine.type = "button";
+    mine.addEventListener("click", () => (session ? rateDialog() : needLogin()));
+    yours.append(make("span", "title-rating__label", "Your rating"), mine);
+    box.append(average, yours);
+    document.querySelector(".title-head").append(box);
+    showMine();
+  };
+
   // ---------- Summary: average, count and a bar for each star ----------
   const showSummary = async () => {
     if (!released) return;
@@ -3105,22 +3248,15 @@ const scoreText = (score) => num(score, 1);
     const count = (totals && totals.review_count) || 0;
     const summary = section.querySelector(".reviews__summary");
     summary.hidden = !count;
-    // The score beside the title, linking down here.
-    let badge = document.querySelector(".title-score");
-    if (!count) return badge && badge.remove();
-    const score = totals.review_sum / count;
-    section.querySelector('[data-slot="score"]').textContent = scoreText(score);
-    section.querySelector('[data-slot="stars"]').style.setProperty("--fill", `${score * 20}%`);
+    // The score beside the title (see rateBox), linking down here.
+    const score = count ? totals.review_sum / count : 0;
+    showAverage(score, count);
+    if (!count) return;
+    section.querySelector('[data-slot="score"]').replaceChildren(scoreOf(score, "score score--big"));
     section.querySelector('[data-slot="count"]').textContent =
       count === 1 ? "1 rating" : `${num(count)} ratings`;
-    if (!badge) {
-      badge = make("a", "title-score");
-      badge.href = "#reviews";
-      document.querySelector(".title-head").append(badge);
-    }
-    badge.replaceChildren(starsFor(score), make("span", "", `${scoreText(score)} · ${count === 1 ? "1 rating" : `${num(count)} ratings`}`));
     const counts = await Promise.all(
-      [5, 4, 3, 2, 1].map((star) =>
+      [10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((star) =>
         account
           .from("reviews")
           .select("id", { count: "exact", head: true })
@@ -3138,7 +3274,7 @@ const scoreText = (score) => num(score, 1);
         fill.style.setProperty("--share", `${(n / count) * 100}%`);
         const track = make("span", "reviews__bar-track");
         track.append(fill);
-        row.append(make("span", "", `${digits(5 - i)} ★`), track, make("span", "reviews__bar-count", num(n)));
+        row.append(make("span", "", `${digits(10 - i)} ★`), track, make("span", "reviews__bar-count", num(n)));
         return row;
       })
     );
@@ -3158,7 +3294,7 @@ const scoreText = (score) => num(score, 1);
     name.translate = false;
     head.append(name);
     if (review.owner) head.append(make("span", "review__badge", "Bought it"));
-    if (review.rating) head.append(starsFor(review.rating, "stars stars--small"));
+    if (review.rating) head.append(scoreOf(review.rating, "score score--small", true));
     head.append(make("time", "review__date", dateText(review.created_at)));
     main.append(head);
     if (review.body) {
@@ -3358,7 +3494,7 @@ const scoreText = (score) => num(score, 1);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const body = bodyInput.value.trim();
-    if (released && !rating) return say("Choose from 1 to 5 stars.");
+    if (released && !rating) return say("Choose from 1 to 10 stars.");
     if (!released && !body) {
       bodyInput.focus();
       return say("Write your comment first.");
@@ -3374,6 +3510,7 @@ const scoreText = (score) => num(score, 1);
     own = data;
     fillForm();
     say(released ? "Thanks! Your review is up." : "Thanks! Your comment is up.", true);
+    showMine();
     loadPage(true);
     showSummary();
   });
@@ -3395,10 +3532,12 @@ const scoreText = (score) => num(score, 1);
     own = null;
     fillForm();
     say("Deleted.", true);
+    showMine();
     loadPage(true);
     showSummary();
   });
 
+  rateBox();
   if (location.hash === "#reviews") section.scrollIntoView();
   loadPage(true);
   showSummary();
@@ -3703,7 +3842,7 @@ const foldText = (text) =>
       ),
     ])
   );
-  const ranked = (w) => (w.score * w.reviews + 3 * 3) / (w.reviews + 3);
+  const ranked = (w) => (w.score * w.reviews + 6 * 3) / (w.reviews + 3);
   const price = (w) => (w.prices && w.prices.IRR != null ? w.prices.IRR : null);
   const SORTS = {
     featured: () => 0,
@@ -5171,7 +5310,7 @@ const foldText = (text) =>
       make(
         "strong",
         "",
-        `${titles[review.work_id] || review.work_id} · ${review.rating ? `${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)}` : "comment"}`
+        `${titles[review.work_id] || review.work_id} · ${review.rating ? `★ ${review.rating}/10` : "comment"}`
       ),
       make("span", "", `${review.author_name || "Member"}${review.owner ? " · bought it" : ""} · ${whenText(review.created_at)}`)
     );

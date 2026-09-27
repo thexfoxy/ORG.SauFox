@@ -327,7 +327,7 @@ nobody can log in.
 
 ## Ratings and reviews
 
-- `reviews` table: one per member per work, 1-5 stars and an optional
+- `reviews` table: one per member per work, 1-10 stars (as on IMDb) and an optional
   comment (up to 2000 characters). Before a work is released it takes
   comments only; the database drops any stars. The trigger
   `private.review_defaults` fills in the author's name and photo from their
@@ -335,11 +335,15 @@ nobody can log in.
   the `hidden` and `reply` fields; admins can only hide a review or reply
   to it. `private.review_totals` keeps `works.review_count` and
   `works.review_sum` (visible rated reviews) up to date.
+- Work page, under the title (released works): "SauFox rating ★ 8.4/10"
+  with the number of ratings (1.2K), and "Your rating": ☆ Rate opens a box
+  of ten stars; a rating needs no written review, can be changed, and
+  "Remove rating" takes it off (a written review stays, without stars).
 - Work page → Ratings & reviews (Comments before release): the average,
-  a bar per star, the member's own review (edit or delete), and the list,
-  10 at a time. Cards show the average; the home page gets a "Top rated"
-  row once two works have ratings (a work with few ratings is pulled
-  towards 3 stars).
+  a bar for each of the ten stars, the member's own review (edit or
+  delete), and the list, 10 at a time. Scores show as ★ 8.4/10; cards show
+  the average; the home page gets a "Top rated" row once two works have
+  ratings (a work with few ratings is pulled towards 6).
 - Admin panel → Reviews and comments: hide or show, reply, delete.
 - Helpful: `review_votes`, one per member per review (not their own);
   `reviews.helpful_count` is kept by a trigger, and reviews can be sorted

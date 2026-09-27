@@ -5653,29 +5653,50 @@ a.hero__panel {
 
 /* ---------- Ratings and reviews ---------- */
 
-/* Five stars filled to --fill (the score as a share of 5). */
+/* Scores out of 10, as on IMDb: a gold star, the score, "/10". */
 .stars {
-  --fill: 0%;
-  display: inline-block;
-  font-size: 18px;
+  color: var(--gold);
   line-height: 1;
-  letter-spacing: 2px;
-  color: transparent;
-  background: linear-gradient(90deg, var(--accent) var(--fill), rgba(255, 255, 255, 0.18) var(--fill));
-  -webkit-background-clip: text;
-  background-clip: text;
+}
+
+.score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
   white-space: nowrap;
 }
 
-[dir="rtl"] .stars {
-  background: linear-gradient(270deg, var(--accent) var(--fill), rgba(255, 255, 255, 0.18) var(--fill));
-  -webkit-background-clip: text;
-  background-clip: text;
+.score b {
+  font-weight: 700;
+  color: var(--text);
 }
 
-.stars--small {
+.score small {
+  font-size: 0.8em;
+  color: var(--muted);
+}
+
+.score--small {
+  gap: 3px;
   font-size: 12px;
-  letter-spacing: 1px;
+}
+
+.score--small small {
+  margin-inline-start: -2px;
+}
+
+.score--big {
+  align-items: center;
+  font-size: 22px;
+}
+
+.score--big .stars {
+  font-size: 40px;
+}
+
+.score--big b {
+  font-size: 48px;
+  line-height: 1;
 }
 
 .poster-card__score {
@@ -5687,18 +5708,242 @@ a.hero__panel {
   color: var(--muted);
 }
 
-.title-score {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  font-size: 14px;
-  color: var(--muted);
+/* Beside the title, as on IMDb: "SauFox rating ★ 8.4/10 1.2K" and
+   "Your rating ☆ Rate"; the second opens the ten-star box. */
+.title-rating {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin-top: 14px;
+}
+
+.title-rating__item {
+  display: grid;
+  gap: 4px;
+  color: inherit;
   text-decoration: none;
 }
 
-.title-score:hover {
+.title-rating__item[hidden] {
+  display: none;
+}
+
+.title-rating__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.title-rating__value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 8px;
+  margin-inline-start: -8px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.title-rating__average:hover .title-rating__value,
+.title-rating__mine:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.score--head {
+  font-size: 15px;
+}
+
+.score--head .stars {
+  font-size: 22px;
+}
+
+.score--head b {
+  font-size: 20px;
+}
+
+.title-rating__count {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.title-rating__mine {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 8px;
+  margin-inline-start: -8px;
+  border: 0;
+  border-radius: 8px;
+  font: 600 16px/1.2 var(--font-body);
+  color: var(--accent);
+  background: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.title-rating__mine .stars {
+  font-size: 22px;
+  color: var(--accent);
+}
+
+.title-rating__mine .score b {
+  font-size: 20px;
+  color: var(--accent);
+}
+
+/* The ten-star box. */
+.rate-dialog {
+  width: min(460px, calc(100vw - 32px));
+  padding: 56px 24px 24px;
+  overflow: visible;
+  border: 1px solid var(--line);
+  border-radius: 16px;
   color: var(--text);
+  background: var(--surface);
+  text-align: center;
+}
+
+.rate-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.rate-dialog__close {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 10px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  background: none;
+  cursor: pointer;
+}
+
+.rate-dialog__close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* The big star over the top edge, with the number picked. */
+.rate-dialog__big {
+  position: absolute;
+  top: -44px;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  transform: translateX(-50%);
+}
+
+.rate-dialog__big span {
+  position: absolute;
+  font-size: 96px;
+  line-height: 1;
+  color: var(--surface-2);
+  transition: color 0.15s ease;
+}
+
+.rate-dialog__big.is-set span {
+  color: var(--accent);
+}
+
+.rate-dialog__big b {
+  position: relative;
+  top: 4px;
+  font-size: 24px;
+  color: var(--text);
+}
+
+.rate-dialog__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.rate-dialog__work {
+  display: block;
+  margin: 6px 0 18px;
+  font-size: 19px;
+}
+
+.rate-dialog__stars {
+  display: flex;
+  justify-content: center;
+}
+
+.rate-dialog__stars button {
+  padding: 2px 3px;
+  border: 0;
+  font-size: 30px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.2);
+  background: none;
+  cursor: pointer;
+  transition: color 0.1s ease, transform 0.12s ease;
+}
+
+.rate-dialog__stars button.is-on {
+  color: var(--accent);
+}
+
+.rate-dialog__stars button:hover {
+  transform: scale(1.15);
+}
+
+.rate-dialog__stars button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.rate-dialog .auth__message {
+  min-height: 1.4em;
+  margin: 10px 0 4px;
+}
+
+.rate-dialog__submit,
+.rate-dialog__clear {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--radius);
+  font: 600 15px/1 var(--font-body);
+  cursor: pointer;
+}
+
+.rate-dialog__submit {
+  color: #111;
+  background: var(--accent);
+}
+
+.rate-dialog__submit:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rate-dialog__clear {
+  margin-top: 8px;
+  color: var(--muted);
+  background: none;
+}
+
+.rate-dialog__clear:hover {
+  color: var(--text);
+}
+
+@media (max-width: 420px) {
+  .rate-dialog__stars button {
+    padding: 2px 1px;
+    font-size: 26px;
+  }
 }
 
 .title-reviews {
@@ -5740,7 +5985,7 @@ a.hero__panel {
 
 .reviews__bar {
   display: grid;
-  grid-template-columns: 34px 1fr 36px;
+  grid-template-columns: 40px 1fr 36px;
   align-items: center;
   gap: 10px;
   font-size: 12px;
@@ -5783,13 +6028,14 @@ a.hero__panel {
 
 .star-input {
   display: flex;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 2px;
 }
 
 .star-input button {
-  padding: 0 2px;
+  padding: 0 1px;
   border: 0;
-  font-size: 30px;
+  font-size: 26px;
   line-height: 1;
   color: rgba(255, 255, 255, 0.18);
   background: none;
