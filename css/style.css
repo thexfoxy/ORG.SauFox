@@ -567,22 +567,20 @@ main {
   }
 }
 
-/* Panels with a news post: a "News" tag at the top, and the post's title
-   once the panel opens up (js/main.js sets the caption's place and width). */
-.hero__caption {
+/* The whole strip links on (to the post or the work); the tag and the
+   glass card sit above it. */
+.hero__link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Panels with a news post: a "News" tag in the top corner (js/main.js
+   places it and the card). */
+.hero__tag {
   position: absolute;
   top: 18px;
-  display: grid;
-  justify-items: start;
-  gap: 8px;
-  pointer-events: none;
-}
-
-.hero__caption[hidden] {
-  display: none;
-}
-
-.hero__kicker {
+  z-index: 2;
   padding: 5px 10px;
   border-radius: 999px;
   background: var(--accent);
@@ -591,38 +589,183 @@ main {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
 }
 
-.hero__title {
-  max-width: 100%;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(15, 15, 17, 0.72);
-  backdrop-filter: blur(6px);
-  color: var(--text);
-  font-size: 15px;
-  line-height: 1.4;
+/* The glass card: opens on the panel under the pointer (or with keyboard
+   focus), once the panel has widened. */
+.hero__card {
+  position: absolute;
+  top: 18px;
+  z-index: 2;
+  display: grid;
+  gap: 10px;
+  width: 360px;
+  max-height: calc(var(--hero-h) * 0.66);
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(40, 40, 46, 0.55), rgba(15, 15, 17, 0.45));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
   opacity: 0;
-  transform: translateY(-6px);
-  transition: opacity 0.35s ease, transform 0.45s var(--ease-out);
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.98);
+  transform-origin: top left;
+  transition:
+    opacity 0.3s ease,
+    transform 0.45s var(--ease-out),
+    visibility 0s linear 0.3s;
 }
 
-.hero__panel:hover .hero__title,
-.hero__panel:focus-visible .hero__title {
-  opacity: 1;
-  transform: none;
+.hero__card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 12px;
+  color: rgba(245, 243, 239, 0.75);
 }
 
-/* Phones have no hover and narrow panels: just the tag; the post's title
-   is on the news page it opens. */
-@media (hover: none) {
-  .hero__title {
+.hero__badge {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #1a0d04;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hero__badge--work {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text);
+}
+
+.hero__card-title {
+  font-size: 19px;
+  line-height: 1.3;
+  color: #fff;
+}
+
+.hero__card-text {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(245, 243, 239, 0.85);
+}
+
+.hero__card-work {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(245, 243, 239, 0.7);
+}
+
+.hero__card-more {
+  justify-self: start;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.hero__card-more::after {
+  content: " →";
+}
+
+:root[lang="fa"] .hero__card-more::after {
+  content: " ←";
+}
+
+.hero__card-more:hover {
+  text-decoration: underline;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero__panel:hover .hero__card,
+  .hero__panel:focus-within .hero__card {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition-delay: 0.18s, 0.18s, 0s;
+  }
+
+  .hero__panel:hover .hero__tag,
+  .hero__panel:focus-within .hero__tag {
+    opacity: 0;
+  }
+}
+
+/* Phones have no hover and narrow panels: just the tag; everything else is
+   on the page the panel opens. */
+@media (hover: none), (pointer: coarse) {
+  .hero__card {
     display: none;
   }
 
-  .hero__kicker {
+  .hero__tag {
     font-size: 10px;
   }
+}
+
+/* ---------- YouTube thumbnail link (hero card, news post, work page) ---------- */
+.yt-card {
+  display: grid;
+  gap: 8px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.yt-card__frame {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #000;
+}
+
+.yt-card__frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s var(--ease-out), filter 0.3s ease;
+}
+
+.yt-card__play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.yt-card__play svg {
+  width: 60px;
+  height: auto;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.45));
+  transition: transform 0.3s var(--ease-out);
+}
+
+.yt-card:hover .yt-card__frame img {
+  transform: scale(1.04);
+  filter: brightness(0.85);
+}
+
+.yt-card:hover .yt-card__play svg {
+  transform: scale(1.12);
+}
+
+.yt-card__label {
+  font-size: 13px;
+  font-weight: 600;
 }
 
 @media (max-width: 700px) {
@@ -6044,4 +6187,14 @@ a.hero__panel {
 
 .admin-plan__checks > span {
   color: var(--muted);
+}
+
+.news-post__video {
+  max-width: 640px;
+  margin: 28px 0 0;
+}
+
+.title-video {
+  max-width: 420px;
+  margin: 18px 0 0;
 }

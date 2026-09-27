@@ -256,6 +256,8 @@ const toWork = (row, rates = {}) => ({
   stills: row.stills || [],
   trailerDate: row.trailer_date,
   trailer: row.trailer || "",
+  youtube: row.youtube_url || "",
+  youtubeThumb: row.youtube_thumb_url || "",
   synopsis: (LANG === "fa" && row.synopsis_fa) || row.synopsis || "",
   genres: row.genres || [],
   platforms: row.platforms || [],
@@ -560,6 +562,49 @@ const fetchProfile = async (user) => {
   });
 })();
 
+// ---------- YouTube ----------
+// A YouTube link as https://www.youtube.com/watch?v=<id> (from watch, youtu.be,
+// shorts, live or embed links); "" for nothing, null if it isn't one.
+const youtubeId = (url) => {
+  const match = String(url || "").match(
+    /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{6,20})/
+  );
+  return match ? match[1] : "";
+};
+const youtubeUrl = (text) => {
+  const value = String(text || "").trim();
+  if (!value) return "";
+  const id = youtubeId(value);
+  return id ? `https://www.youtube.com/watch?v=${id}` : null;
+};
+// A thumbnail that opens the video on YouTube. The thumbnail uploaded in the
+// admin panel comes from this site (YouTube's own images need a VPN in Iran);
+// without one, YouTube's is tried, and a plain dark frame stays if it fails.
+const youtubeCard = (url, thumb, label = "Watch on YouTube") => {
+  const link = document.createElement("a");
+  link.className = "yt-card";
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener";
+  const frame = document.createElement("span");
+  frame.className = "yt-card__frame";
+  const img = document.createElement("img");
+  img.alt = "";
+  img.loading = "lazy";
+  img.src = thumb || `https://i.ytimg.com/vi/${youtubeId(url)}/hqdefault.jpg`;
+  img.addEventListener("error", () => img.remove());
+  const play = document.createElement("span");
+  play.className = "yt-card__play";
+  play.innerHTML =
+    '<svg viewBox="0 0 68 48" aria-hidden="true"><path d="M66.5 7.7a8.5 8.5 0 0 0-6-6C55.2.3 34 .3 34 .3s-21.2 0-26.5 1.4a8.5 8.5 0 0 0-6 6C.1 13 .1 24 .1 24s0 11 1.4 16.3a8.5 8.5 0 0 0 6 6C12.8 47.7 34 47.7 34 47.7s21.2 0 26.5-1.4a8.5 8.5 0 0 0 6-6C67.9 35 67.9 24 67.9 24s0-11-1.4-16.3z" fill="#f00"/><path d="M45 24 27 14v20z" fill="#fff"/></svg>';
+  frame.append(img, play);
+  const text = document.createElement("span");
+  text.className = "yt-card__label";
+  text.textContent = label;
+  link.append(frame, text);
+  return link;
+};
+
 // The hero's bottom edge, shared by the hero and the work cards. Same shape
 // as the hero's mask in css/style.css, in its 1440 x 520 viewBox: flat at
 // y=370 up to x=460, a cubic down to (1200, 520), then flat. Takes x as a
@@ -586,9 +631,10 @@ const heroEdgeY = (() => {
 // Section 2 — Hero: key art from the studio's releases, one slanted panel per
 // work (up to five, seven on wide screens), or a single full-width image
 // while there is one work. Works with a news post come first: their panel
-// shows the work's art, links to the latest post about it, and carries the
-// post's title. On a mouse, the panel under the pointer widens to show its
-// whole banner while the others make room.
+// shows the work's art, a "News" tag, and links to the latest post about it.
+// On a mouse, the panel under the pointer widens to show its whole banner
+// while the others make room, and a glass card opens on it with the post's
+// or work's details and its YouTube video (thumbnail -> YouTube).
 (async function heroCollage() {
   const hero = document.querySelector(".hero");
   if (!hero) return;
@@ -639,18 +685,56 @@ const heroEdgeY = (() => {
     el.dataset.work = work.id;
     return el;
   };
-  // Where a panel goes, and what it says.
+  const STATUS = { released: "Released", preorder: "Pre-order", coming: "Coming soon", production: "In production" };
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text) node.textContent = text;
+    return node;
+  };
+  // The glass card: the post's details (or the work's), its YouTube video,
+  // and a link on.
+  const card = (work, post) => {
+    const box = make("div", "hero__card");
+    const top = make("p", "hero__card-top");
+    if (post) top.append(make("span", "hero__badge", t("News")), make("span", "", dateText(post.published_at)));
+    else top.append(make("span", "hero__badge hero__badge--work", t(work.kind)), make("span", "", t(STATUS[work.status] || "")));
+    const title = make("strong", "hero__card-title", post ? newsField(post, "title") : work.title);
+    title.dir = "auto";
+    title.translate = false;
+    box.append(top, title);
+    const about = post ? newsField(post, "summary") : work.statusText || work.synopsis;
+    if (about) {
+      const text = make("p", "hero__card-text", about);
+      text.dir = "auto";
+      text.translate = false;
+      box.append(text);
+    }
+    if (post) {
+      const on = make("p", "hero__card-work");
+      const name = make("span", "", work.title);
+      name.translate = false;
+      on.append(`${t(work.kind)} · `, name);
+      box.append(on);
+    }
+    // The post's video, or else the work's (its trailer).
+    const video = post && post.youtube_url ? [post.youtube_url, post.youtube_thumb_url] : work.youtube ? [work.youtube, work.youtubeThumb] : null;
+    if (video) box.append(youtubeCard(video[0], video[1]));
+    const more = make("a", "hero__card-more", post ? t("Read the news") : t("See the work"));
+    more.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : `work.html?id=${encodeURIComponent(work.id)}`;
+    box.append(more);
+    return box;
+  };
+  // Where a panel goes, and what it shows.
   const point = (panel, work) => {
     const post = newsFor.get(work.id);
-    panel.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : `work.html?id=${encodeURIComponent(work.id)}`;
-    panel.setAttribute("aria-label", post ? newsField(post, "title") : work.title);
+    const link = panel.querySelector(".hero__link");
+    link.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : `work.html?id=${encodeURIComponent(work.id)}`;
+    link.setAttribute("aria-label", post ? newsField(post, "title") : work.title);
     panel.classList.toggle("has-news", Boolean(post));
-    const caption = panel.querySelector(".hero__caption");
-    if (post) {
-      caption.querySelector(".hero__kicker").textContent = t("News");
-      caption.querySelector(".hero__title").textContent = newsField(post, "title");
-    }
-    caption.hidden = !post;
+    panel.querySelector(".hero__tag").hidden = !post;
+    panel.querySelector(".hero__card")?.remove();
+    panel.append(card(work, post));
   };
 
   hero.style.setProperty("--n", count);
@@ -658,19 +742,11 @@ const heroEdgeY = (() => {
   hero.replaceChildren(
     ...order.map((k, i) => {
       const work = picks[k];
-      const panel = document.createElement("a");
-      panel.className = "hero__panel";
+      const panel = make("div", "hero__panel");
       panel.style.setProperty("--i", i);
-      const caption = document.createElement("span");
-      caption.className = "hero__caption";
-      const kicker = document.createElement("span");
-      kicker.className = "hero__kicker";
-      const title = document.createElement("strong");
-      title.className = "hero__title";
-      title.dir = "auto";
-      title.translate = false;
-      caption.append(kicker, title);
-      panel.append(art(work), caption);
+      const link = make("a", "hero__link");
+      const tag = make("span", "hero__tag", t("News"));
+      panel.append(art(work), link, tag);
       point(panel, work);
       return panel;
     })
@@ -730,9 +806,12 @@ const heroEdgeY = (() => {
         el.style.left = `${(a - slant).toFixed(1)}px`;
         el.style.width = `${(width + slant).toFixed(1)}px`;
       });
-      const caption = panel.querySelector(".hero__caption");
-      caption.style.left = `${(Math.max(a, 0) + gap + 18).toFixed(1)}px`;
-      caption.style.width = `${Math.max(width - 2 * gap - 36 - (a < 0 ? -a : 0), 120).toFixed(1)}px`;
+      // The tag and card sit in the strip's top corner, clear of the slant.
+      const start = Math.max(a, 0) + gap + 18;
+      panel.querySelector(".hero__tag").style.left = `${start.toFixed(1)}px`;
+      const box = panel.querySelector(".hero__card");
+      box.style.left = `${start.toFixed(1)}px`;
+      box.style.maxWidth = `${Math.max(Math.min(b, W) - start - slant - 18, 0).toFixed(1)}px`;
     });
   };
 
@@ -765,8 +844,8 @@ const heroEdgeY = (() => {
   };
   panels.forEach((panel, i) => {
     panel.addEventListener("pointerenter", () => hover.matches && aim(i));
-    panel.addEventListener("focus", () => aim(i));
-    panel.addEventListener("blur", () => aim(-1));
+    panel.addEventListener("focusin", () => aim(i));
+    panel.addEventListener("focusout", (event) => !panel.contains(event.relatedTarget) && aim(-1));
   });
   hero.addEventListener("pointerleave", () => aim(-1));
 
@@ -782,7 +861,7 @@ const heroEdgeY = (() => {
     const work = options[Math.floor(Math.random() * options.length)];
     const next = art(work);
     next.classList.add("is-entering");
-    panel.querySelector(".hero__caption").before(next);
+    panel.querySelector(".hero__link").before(next);
     point(panel, work);
     layout();
     requestAnimationFrame(() => requestAnimationFrame(() => next.classList.remove("is-entering")));
@@ -2436,6 +2515,12 @@ const signedInGoHome = async (user) => {
   // open yet.
   const play = page.querySelector('[data-action="trailer"]');
   const trailerSoon = page.querySelector('[data-slot="trailer-soon"]');
+  // The trailer on YouTube: its thumbnail, under the actions.
+  if (youtubeId(work.youtube)) {
+    const video = youtubeCard(work.youtube, work.youtubeThumb, "Watch the trailer on YouTube");
+    video.classList.add("title-video");
+    page.querySelector(".title-actions").after(video);
+  }
   if (work.trailer) play.hidden = false;
   else if (work.trailerDate) {
     trailerSoon.textContent = `Trailer on ${dateText(work.trailerDate)}`;
@@ -3044,7 +3129,8 @@ const getNews = async (query) => {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 };
-const NEWS_LIST = "select=slug,title,title_fa,summary,summary_fa,cover_url,work_id,published_at&published=eq.true&order=published_at.desc";
+const NEWS_LIST =
+  "select=slug,title,title_fa,summary,summary_fa,cover_url,work_id,youtube_url,youtube_thumb_url,published_at&published=eq.true&order=published_at.desc";
 // A post's picture: its own cover, or else the art of the work it's about.
 const newsCover = (post, works = []) => {
   if (post.cover_url) return post.cover_url;
@@ -3189,6 +3275,12 @@ const newsCard = (post, works) => {
     const body = view.querySelector(".news-post__body");
     body.translate = false;
     body.append(richText(newsField(post, "body") || newsField(post, "summary")));
+    // The post's video: its thumbnail opens it on YouTube.
+    if (youtubeId(post.youtube_url)) {
+      const video = youtubeCard(post.youtube_url, post.youtube_thumb_url);
+      video.classList.add("news-post__video");
+      body.after(video);
+    }
     const work = post.work_id && (await catalog).find((w) => w.id === post.work_id);
     if (work) {
       const link = view.querySelector(".news-post__work");
@@ -3424,7 +3516,7 @@ const foldText = (text) =>
 
   let works = []; // every work, drafts too, in site order
   let editing = null; // the saved row being edited; null for a new work
-  let images = { cover: "", hero: "" };
+  let images = { cover: "", hero: "", thumb: "" };
   let stills = [];
   let idTouched = false;
 
@@ -3543,6 +3635,7 @@ const foldText = (text) =>
     heroFocus: $("w-hero-focus"),
     trailerDate: $("w-trailer-date"),
     trailer: $("w-trailer"),
+    youtube: $("w-youtube"),
     synopsis: $("w-synopsis"),
     synopsisFa: $("w-synopsis-fa"),
     genres: $("w-genres"),
@@ -3675,7 +3768,8 @@ const foldText = (text) =>
     fields.genres.value = (w.genres || []).join(", ");
     fields.platforms.value = (w.platforms || []).join(", ");
     fields.rating.value = w.rating || "";
-    images = { cover: w.cover_url || "", hero: w.hero_url || "" };
+    images = { cover: w.cover_url || "", hero: w.hero_url || "", thumb: w.youtube_thumb_url || "" };
+    fields.youtube.value = w.youtube_url || "";
     stills = (w.stills || []).slice();
     creditsEl.replaceChildren();
     (w.credits || []).forEach((c) => addCredit(c.role, c.name));
@@ -3700,7 +3794,7 @@ const foldText = (text) =>
 
   // Images are shrunk in the browser and saved as WebP, then uploaded at
   // once to works/<id>/…; the work itself changes on Save.
-  const MAX_WIDTH = { cover: 900, hero: 1920, still: 1600 };
+  const MAX_WIDTH = { cover: 900, hero: 1920, still: 1600, thumb: 1280 };
   const toWebp = async (file, maxWidth) => {
     if (!file.type.startsWith("image/")) throw new Error("Choose an image file: JPG, PNG or WebP.");
     const bitmap = await new Promise((resolve, reject) => {
@@ -3776,11 +3870,13 @@ const foldText = (text) =>
     const id = fields.id.value.trim();
     const kind = fields.kind.value.trim();
     const trailer = aparatId(fields.trailer.value);
+    const youtube = youtubeUrl(fields.youtube.value);
     const problem =
       (!title && [fields.title, "Enter a title."]) ||
       (!validId(id) && [fields.id, "Use lowercase letters, numbers and dashes for the page address, e.g. the-candlewood."]) ||
       (!kind && [fields.kind, "Enter the type of work, e.g. Game."]) ||
       (trailer === null && [fields.trailer, "Paste the Aparat link, like https://www.aparat.com/v/abc123."]) ||
+      (youtube === null && [fields.youtube, "Paste the YouTube link, like https://www.youtube.com/watch?v=abc123 or https://youtu.be/abc123."]) ||
       ([fields.irr, fields.usd, fields.eur].find((f) => f.value && !(Number(f.value) >= 0)) && [fields.irr, "Prices must be numbers of 0 or more."]);
     if (problem) {
       problem[0].focus();
@@ -3804,6 +3900,8 @@ const foldText = (text) =>
       stills,
       trailer_date: fromLocalInput(fields.trailerDate.value),
       trailer: trailer || null,
+      youtube_url: youtube || null,
+      youtube_thumb_url: images.thumb || null,
       synopsis: fields.synopsis.value.trim() || null,
       synopsis_fa: fields.synopsisFa.value.trim() || null,
       genres: list(fields.genres.value),
@@ -4314,17 +4412,23 @@ const foldText = (text) =>
     note.classList.toggle("is-ok", Boolean(ok));
   };
   const nf = (name) => newsForm.elements[name];
-  const coverImg = newsForm.querySelector(".admin-news__cover img");
+  const coverImg = newsForm.querySelector(".admin-news__cover:not(.admin-news__thumb) img");
   const coverRemove = newsForm.querySelector('[data-action="remove-cover"]');
+  const thumbImg = newsForm.querySelector(".admin-news__thumb img");
+  const thumbRemove = newsForm.querySelector('[data-action="remove-thumb"]');
   const postDelete = newsForm.querySelector('[data-action="delete-post"]');
   const postView = newsForm.querySelector('[data-slot="view-post"]');
   let editingPost = null;
   let cover = null;
+  let thumb = null;
   let slugTouched = false;
   const showCover = () => {
     coverImg.hidden = !cover;
     if (cover) coverImg.src = cover;
     coverRemove.hidden = !cover;
+    thumbImg.hidden = !thumb;
+    if (thumb) thumbImg.src = thumb;
+    thumbRemove.hidden = !thumb;
   };
   const postState = (post) =>
     !post.published ? "Draft" : new Date(post.published_at) > new Date() ? `Scheduled · ${whenText(post.published_at)}` : "Live";
@@ -4367,6 +4471,8 @@ const foldText = (text) =>
     nf("published_at").value = toLocalInput(post ? post.published_at : new Date().toISOString());
     nf("slug").disabled = Boolean(post);
     cover = (post && post.cover_url) || null;
+    thumb = (post && post.youtube_thumb_url) || null;
+    nf("youtube_url").value = (post && post.youtube_url) || "";
     showCover();
     postDelete.hidden = !post;
     postView.hidden = !(post && post.published);
@@ -4390,25 +4496,33 @@ const foldText = (text) =>
   nf("title").addEventListener("input", autoSlug);
   nf("title_fa").addEventListener("input", autoSlug);
   nf("slug").addEventListener("input", () => (slugTouched = true));
-  newsForm.querySelector('.admin-news__cover input[type="file"]').addEventListener("change", async (event) => {
-    const file = event.target.files[0];
-    event.target.value = "";
-    if (!file) return;
-    newsSay("Uploading…", true);
-    try {
-      const blob = await toWebp(file, 1600);
-      const path = `news/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.webp`;
-      const { error } = await photos.upload(path, blob, { contentType: "image/webp", cacheControl: "31536000" });
-      if (error) throw new Error("The image didn't upload. Check your connection and try again.");
-      cover = photos.getPublicUrl(path).data.publicUrl;
-      showCover();
-      newsSay("Image added. Save to keep it.", true);
-    } catch (e) {
-      newsSay(e.message);
-    }
-  });
+  // The cover and the YouTube thumbnail upload the same way, to works/news/.
+  const newsImage = (input, maxWidth, done) =>
+    input.addEventListener("change", async () => {
+      const file = input.files[0];
+      input.value = "";
+      if (!file) return;
+      newsSay("Uploading…", true);
+      try {
+        const blob = await toWebp(file, maxWidth);
+        const path = `news/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.webp`;
+        const { error } = await photos.upload(path, blob, { contentType: "image/webp", cacheControl: "31536000" });
+        if (error) throw new Error("The image didn't upload. Check your connection and try again.");
+        done(photos.getPublicUrl(path).data.publicUrl);
+        showCover();
+        newsSay("Image added. Save to keep it.", true);
+      } catch (e) {
+        newsSay(e.message);
+      }
+    });
+  newsImage(newsForm.querySelector('.admin-news__cover:not(.admin-news__thumb) input[type="file"]'), 1600, (url) => (cover = url));
+  newsImage(newsForm.querySelector('.admin-news__thumb input[type="file"]'), 1280, (url) => (thumb = url));
   coverRemove.addEventListener("click", () => {
     cover = null;
+    showCover();
+  });
+  thumbRemove.addEventListener("click", () => {
+    thumb = null;
     showCover();
   });
   newsForm.addEventListener("submit", async (event) => {
@@ -4417,6 +4531,8 @@ const foldText = (text) =>
     if (!value("title") && !value("title_fa")) return newsSay("Give the post a title, in Persian or English.");
     const address = nf("slug").value.trim();
     if (!validId(address)) return newsSay("The page address can use a-z, 0-9 and dashes, like candlewood-trailer-date.");
+    const youtube = youtubeUrl(nf("youtube_url").value);
+    if (youtube === null) return newsSay("Paste the YouTube link, like https://www.youtube.com/watch?v=abc123 or https://youtu.be/abc123.");
     const row = {
       title: value("title"),
       title_fa: value("title_fa"),
@@ -4426,6 +4542,8 @@ const foldText = (text) =>
       body_fa: value("body_fa"),
       work_id: nf("work_id").value || null,
       cover_url: cover,
+      youtube_url: youtube || null,
+      youtube_thumb_url: thumb,
       published: nf("published").checked,
       published_at: fromLocalInput(nf("published_at").value) || new Date().toISOString(),
     };

@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=52">
+  <link rel="stylesheet" href="css/style.css?v=53">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -173,6 +173,22 @@
                   <span>Upload</span>
                 </label>
                 <button class="admin-button" type="button" data-action="remove-cover" hidden>Remove</button>
+              </div>
+            </div>
+            <label class="admin-field">
+              <span>YouTube link <em>optional</em></span>
+              <input name="youtube_url" type="url" dir="ltr" placeholder="https://www.youtube.com/watch?v=…">
+              <small>The post shows its thumbnail, which opens the video on YouTube. Without one, the work&rsquo;s YouTube video is used in the hero card.</small>
+            </label>
+            <div class="admin-field">
+              <span>YouTube thumbnail <em>16:9</em></span>
+              <div class="admin-news__cover admin-news__thumb">
+                <img alt="" hidden>
+                <label class="admin-button">
+                  <input type="file" accept="image/*" hidden>
+                  <span>Upload</span>
+                </label>
+                <button class="admin-button" type="button" data-action="remove-thumb" hidden>Remove</button>
               </div>
             </div>
             <label class="admin-field">
@@ -544,6 +560,19 @@
             <input id="w-trailer" name="trailer" type="text" placeholder="https://www.aparat.com/v/…">
             <small>Adds a &ldquo;Watch trailer&rdquo; button.</small>
           </label>
+          <label class="admin-field">
+            <span>YouTube link <em>optional</em></span>
+            <input id="w-youtube" name="youtube_url" type="url" dir="ltr" placeholder="https://www.youtube.com/watch?v=…">
+            <small>Its thumbnail opens the video on YouTube: on the work&rsquo;s page and in the home page&rsquo;s hero card.</small>
+          </label>
+          <div class="admin-image admin-image--wide" data-image="thumb">
+            <span class="admin-image__label">YouTube thumbnail <em>16:9; YouTube&rsquo;s own needs a VPN in Iran</em></span>
+            <div class="admin-image__frame admin-image__frame--hero"><img alt=""></div>
+            <div class="admin-image__actions">
+              <label class="admin-button"><input type="file" accept="image/jpeg,image/png,image/webp"><span>Upload</span></label>
+              <button class="admin-link" type="button" data-action="clear">Remove</button>
+            </div>
+          </div>
         </div>
       </fieldset>
 
@@ -588,7 +617,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=52" defer></script>
-  <script src="js/main.js?v=52" defer></script>
+  <script src="js/vendor/supabase.js?v=53" defer></script>
+  <script src="js/main.js?v=53" defer></script>
 </body>
 </html>

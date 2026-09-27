@@ -270,6 +270,12 @@ nobody can log in.
 - A post linked to a work needs no cover of its own: the work's art stands
   in (news cards, the post page), and the work gets a panel in the home
   page's hero that opens the post.
+- YouTube: a post and a work can each have a YouTube link and a thumbnail
+  (`youtube_url`, `youtube_thumb_url`), set in the admin panel; the
+  thumbnail is uploaded to the site's storage because YouTube's own images
+  don't load in Iran without a VPN (without one, YouTube's is tried). The
+  thumbnail links to the video on YouTube: on the post, on the work's page
+  and in the hero card. Links are saved as https://www.youtube.com/watch?v=….
 - Admin panel → News: new post, edit, cover upload (to `works/news/`,
   shrunk to WebP), publish now or at a set Tehran time, delete. New posts
   aren't in sitemap.xml by themselves; news.html is.
@@ -426,9 +432,12 @@ Home page:
       from left to right in a smooth S-curve; with more works than panels,
       the panels swap between them at random every few seconds. Works with a
       news post come first: their panel shows the work's art (or its cover),
-      a "News" tag and, on hover, the post's title, and opens the post. With
-      a mouse, the panel under the pointer widens to show its whole banner
-      while the others narrow, and the rest dim. While there is only one
+      a "News" tag, and opens the post. With a mouse, the panel under the
+      pointer widens to show its whole banner while the others narrow and
+      dim, and a glass card opens on it: the post's date, title, summary and
+      work (or the work's kind, status and synopsis), the YouTube video's
+      thumbnail (opens YouTube in a new tab; the post's video, else the
+      work's), and a link on. Phones show just the tag. While there is only one
       work, its image fills the hero with no slant. Data: each work's key
       art and phone crop, set in the admin panel; news from `news.work_id`.
 - [x] 3. Studio slogan: a short line, "And my success is not but through God."
