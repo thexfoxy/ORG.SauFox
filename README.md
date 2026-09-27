@@ -481,8 +481,7 @@ Title page (`work.html?id=<id>`):
       has a name, a photo (or initials) and any number of roles
       (`works.credits`: name, photo, roles). Anyone who directs or writes
       shows first in a row of their own (bigger photos with an accent ring,
-      all their roles as a label over the name; both, then directors, then
-      writers); then the crew; then the cast (people whose roles are all
+      all their roles as a label over the name); then the crew; then the cast (people whose roles are all
       acting or voice: Actor, Voice actor, Narrator), as standing cards: the
       photo, the character they play (`character`; the admin panel asks for
       it once someone has an acting or voice role), and their own name
@@ -490,7 +489,8 @@ Title page (`work.html?id=<id>`):
       dozen per group until "Show all"; common roles show in Persian on the
       Persian site. In the admin panel each person has a photo upload, a
       name, a roles box (Enter or comma adds one, with suggestions; &times;
-      removes) and a move-up arrow. Older credits (one role, a group) turn
+      removes) and a move-up arrow that moves them up within their section
+      (leads, crew or cast); every section on the page keeps that order. Older credits (one role, a group) turn
       into roles by themselves.
 - [x] Category rows (Coming soon, Games, Films, Animation, Novels) under
       the main row, built from the catalogue. They stay hidden until the

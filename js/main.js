@@ -2813,9 +2813,9 @@ const signedInGoHome = async (user) => {
     synopsis.hidden = false;
   }
 
-  // Cast & crew: whoever directs or writes first, larger and set apart
-  // (those who do both, then directors, then writers), with all their roles;
-  // then the crew, then the cast, in the admin panel's order, each group
+  // Cast & crew: whoever directs or writes first, larger and set apart, with
+  // all their roles; then the crew, then the cast. Every section keeps the
+  // admin panel's order; each group
   // showing a dozen people until it's opened. Without a photo, the
   // person's initials stand in.
   if (work.credits && work.credits.length) {
@@ -2864,13 +2864,7 @@ const signedInGoHome = async (user) => {
       item.append(face, text);
       return item;
     };
-    const does = (credit, re) => credit.roles.some((r) => re.test(r));
-    const leadRank = (credit) => (does(credit, DIRECTOR) && does(credit, WRITER) ? 0 : does(credit, DIRECTOR) ? 1 : 2);
-    const leads = work.credits
-      .map((credit, i) => [credit, i])
-      .filter(([credit]) => creditPlace(credit.roles) === "lead")
-      .sort(([a, i], [b, j]) => leadRank(a) - leadRank(b) || i - j)
-      .map(([credit]) => credit);
+    const leads = work.credits.filter((credit) => creditPlace(credit.roles) === "lead");
     if (leads.length) {
       const list = make("ul", "title-credits__leads");
       list.append(...leads.map((credit) => person(credit, true)));
@@ -4108,10 +4102,30 @@ const foldText = (text) =>
     nameInput.value = credit.name || "";
     nameInput.maxLength = 80;
     nameInput.setAttribute("aria-label", "Name");
+    // Up past the previous person in the same section (leads, crew or cast),
+    // since that's the order the work's page shows.
     const up = make("button", "admin-icon", "↑");
     up.type = "button";
-    up.setAttribute("aria-label", "Move up");
-    up.addEventListener("click", () => item.previousElementSibling && item.previousElementSibling.before(item));
+    up.setAttribute("aria-label", "Move up in its section");
+    up.title = "Move up in its section";
+    const placeOf = (row) =>
+      creditPlace(
+        [...row.querySelectorAll(".admin-roles__chip")]
+          .map((c) => c.dataset.role)
+          .concat(row.querySelector(".admin-roles input").value.split(",").map((r) => r.trim()))
+          .filter(Boolean)
+      );
+    up.addEventListener("click", () => {
+      const mine = placeOf(item);
+      let before = item.previousElementSibling;
+      while (before && placeOf(before) !== mine) before = before.previousElementSibling;
+      if (!before) return;
+      before.before(item);
+      item.classList.remove("is-moved");
+      void item.offsetWidth;
+      item.classList.add("is-moved");
+      up.focus();
+    });
     const remove = make("button", "admin-icon", "✕");
     remove.type = "button";
     remove.setAttribute("aria-label", "Remove this person");

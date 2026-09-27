@@ -4028,6 +4028,17 @@ a.hero__panel {
   align-items: center;
 }
 
+/* A row just moved flashes, so it's easy to follow. */
+.admin-credit.is-moved {
+  animation: admin-moved 0.9s ease;
+}
+
+@keyframes admin-moved {
+  from {
+    background: rgba(255, 122, 26, 0.18);
+  }
+}
+
 /* The character an actor or voice plays: a line under the row. */
 .admin-credit__character {
   grid-column: 2 / -1;
