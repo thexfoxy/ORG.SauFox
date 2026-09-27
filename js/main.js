@@ -2890,17 +2890,24 @@ const signedInGoHome = async (user) => {
       box.append(list);
     }
     const assistants = work.credits.filter((c) => creditPlace(c.roles) === "ai");
-    // AI assistants close the crew, in the same grid, in a gold frame.
     const groups = [
-      ["Crew", work.credits.filter((c) => creditPlace(c.roles) === "crew").concat(assistants)],
+      ["Crew", work.credits.filter((c) => creditPlace(c.roles) === "crew")],
       ["Cast", work.credits.filter((c) => creditPlace(c.roles) === "cast")],
-    ].filter(([, people]) => people.length);
+    ].filter(([label, people]) => people.length || (label === "Crew" && assistants.length));
     groups.forEach(([label, people]) => {
       const group = make("div", "title-credits__group");
       if (groups.length > 1 || leads.length) group.append(make("h3", "title-credits__heading", label));
       const list = make("ul", label === "Cast" ? "title-credits__list title-credits__list--cast" : "title-credits__list");
       list.append(...people.map((credit) => person(credit)));
-      group.append(list);
+      // AI assistants: small gold frames stacked in the crew row's far
+      // corner, well apart from the people.
+      if (label === "Crew" && assistants.length) {
+        const row = make("div", "title-credits__row");
+        const ai = make("ul", "title-credits__ai");
+        ai.append(...assistants.map((credit) => person(credit)));
+        row.append(list, ai);
+        group.append(row);
+      } else group.append(list);
       if (people.length > SHOWN) {
         list.classList.add("is-folded");
         const more = make("button", "title-credits__more", `Show all ${people.length}`);

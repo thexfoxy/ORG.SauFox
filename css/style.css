@@ -2719,12 +2719,43 @@ main.profile-page {
   line-height: 1.2;
 }
 
-/* AI assistants: at the end of the crew row, in a gold frame with a gold
-   ring round the photo and an "AI Assistant" label. */
+/* AI assistants: small gold frames, stacked one on another in the far
+   corner of the crew row, with a gold ring round the photo and an
+   "AI Assistant" label. Under the crew on phones. */
+.title-credits__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px 72px;
+  align-items: start;
+}
+
+.title-credits__row > .title-credits__list:empty {
+  display: none;
+}
+
+.title-credits__ai {
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 700px) {
+  .title-credits__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .title-credits__ai {
+    justify-self: start;
+  }
+}
+
 .credit--ai {
-  margin: -10px;
-  padding: 10px;
-  padding-inline-end: 18px;
+  gap: 10px;
+  padding: 5px;
+  padding-inline-end: 16px;
   border: 1px solid color-mix(in srgb, var(--gold) 70%, transparent);
   border-radius: 999px;
   background: linear-gradient(120deg, color-mix(in srgb, var(--gold) 14%, transparent), color-mix(in srgb, var(--gold) 4%, transparent));
@@ -2732,12 +2763,30 @@ main.profile-page {
 }
 
 .credit--ai .credit__face {
-  box-shadow: 0 0 0 2px var(--gold);
+  flex-basis: 40px;
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 0 0 1.5px var(--gold);
+}
+
+.credit--ai .credit__initials {
+  font-size: 14px;
+}
+
+.credit--ai .credit__text {
+  gap: 1px;
+}
+
+.credit--ai .credit__name {
+  font-size: 13px;
+}
+
+.credit--ai .credit__role {
+  font-size: 11.5px;
 }
 
 .credit__badge {
-  margin-bottom: 3px;
-  font-size: 10.5px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
