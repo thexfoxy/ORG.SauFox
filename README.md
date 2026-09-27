@@ -208,6 +208,22 @@ sign-up, password login, Google sign-in, emailed code and password reset
 In that order: with CAPTCHA on in Supabase but no site key on the site,
 nobody can log in.
 
+## News
+
+- `news` table: a post in Persian and/or English (title, summary, text),
+  a cover, optionally the work it's about, `published` and `published_at`.
+  Everyone reads published posts whose time has come; admins manage them.
+- `news.html` lists posts (12 at a time); `news.html?post=<slug>` shows
+  one, with its own title, description and share image. A post with only
+  one language shows it on both versions of the site. The home page shows
+  the latest three once there are any; every footer links to News.
+- Text is written plainly and rendered as elements (never HTML): a blank
+  line starts a paragraph, "## " a heading, "- " a list item, and
+  **bold** and [text](https://…) links work inside.
+- Admin panel → News: new post, edit, cover upload (to `works/news/`,
+  shrunk to WebP), publish now or at a set Tehran time, delete. New posts
+  aren't in sitemap.xml by themselves; news.html is.
+
 ## Browse and search
 
 - `browse.html`: every published work, with a search box and filters for

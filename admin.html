@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=48">
+  <link rel="stylesheet" href="css/style.css?v=49">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -61,6 +61,80 @@
         <p class="admin-orders__mail" data-slot="mail-problems" role="status" hidden></p>
         <ol class="admin-orders__list"></ol>
         <p class="admin-orders__empty" hidden>No orders yet.</p>
+      </section>
+
+      <!-- Studio news (news.html): write, schedule, publish. -->
+      <section class="admin-news admin-group">
+        <div class="admin-news__head">
+          <h2 class="admin-rates__title">News</h2>
+          <button class="admin-button admin-button--primary" type="button" data-action="new-post">New post</button>
+        </div>
+        <p class="admin-group__hint">Write in Persian, English or both; a post with one language shows it on both versions of the site. A published post appears at its publish time. Text: a blank line starts a paragraph, &ldquo;## &rdquo; a heading, &ldquo;- &rdquo; a list item; **bold** and [link text](https://&hellip;) work too.</p>
+        <ol class="admin-news__list"></ol>
+        <p class="admin-news__empty" hidden>No posts yet.</p>
+
+        <form class="admin-news__form" novalidate hidden>
+          <div class="admin-grid">
+            <label class="admin-field">
+              <span>Title in Persian</span>
+              <input name="title_fa" type="text" maxlength="160" dir="rtl">
+            </label>
+            <label class="admin-field">
+              <span>Title in English</span>
+              <input name="title" type="text" maxlength="160">
+            </label>
+            <label class="admin-field">
+              <span>Summary in Persian <em>optional</em></span>
+              <textarea name="summary_fa" rows="2" maxlength="400" dir="rtl"></textarea>
+            </label>
+            <label class="admin-field">
+              <span>Summary in English <em>optional</em></span>
+              <textarea name="summary" rows="2" maxlength="400"></textarea>
+            </label>
+            <label class="admin-field">
+              <span>Text in Persian</span>
+              <textarea name="body_fa" rows="10" dir="rtl"></textarea>
+            </label>
+            <label class="admin-field">
+              <span>Text in English</span>
+              <textarea name="body" rows="10"></textarea>
+            </label>
+            <label class="admin-field">
+              <span>Page address</span>
+              <input name="slug" type="text" maxlength="80" dir="ltr" placeholder="e.g. candlewood-trailer-date" required>
+            </label>
+            <label class="admin-field">
+              <span>About a work <em>optional</em></span>
+              <select name="work_id"><option value="">None</option></select>
+            </label>
+            <div class="admin-field">
+              <span>Cover image <em>optional</em></span>
+              <div class="admin-news__cover">
+                <img alt="" hidden>
+                <label class="admin-button">
+                  <input type="file" accept="image/*" hidden>
+                  <span>Upload</span>
+                </label>
+                <button class="admin-button" type="button" data-action="remove-cover" hidden>Remove</button>
+              </div>
+            </div>
+            <label class="admin-field">
+              <span>Publish time (Tehran)</span>
+              <input name="published_at" type="datetime-local">
+            </label>
+          </div>
+          <label class="admin-check">
+            <input name="published" type="checkbox">
+            <span>Published (shows on the site from its publish time)</span>
+          </label>
+          <div class="admin-maintenance__save">
+            <p class="admin-message" role="status" aria-live="polite"></p>
+            <button class="admin-button admin-button--danger" type="button" data-action="delete-post" hidden>Delete</button>
+            <a class="admin-button" data-slot="view-post" target="_blank" rel="noopener" hidden>View</a>
+            <button class="admin-button" type="button" data-action="close-post">Close</button>
+            <button class="admin-button admin-button--primary" type="submit">Save</button>
+          </div>
+        </form>
       </section>
 
       <!-- Members' reviews and comments on works (newest first). -->
@@ -381,7 +455,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=48" defer></script>
-  <script src="js/main.js?v=48" defer></script>
+  <script src="js/vendor/supabase.js?v=49" defer></script>
+  <script src="js/main.js?v=49" defer></script>
 </body>
 </html>

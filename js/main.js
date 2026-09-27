@@ -301,7 +301,7 @@ const loadSite = async () => {
 };
 
 // Started once, on the pages that show works.
-const site = document.querySelector(".hero, .works, .plans, .title-page, .login-bg, .profile-page, .checkout, .browse")
+const site = document.querySelector(".hero, .works, .plans, .title-page, .login-bg, .profile-page, .checkout, .browse, .news")
   ? loadSite()
   : Promise.resolve({ works: [], settings: {}, offline: false });
 const catalog = site.then((data) => data.works);
@@ -2836,6 +2836,208 @@ const scoreText = (score) => num(score, 1);
   showSummary();
 })();
 
+// ---------- Studio news ----------
+// A post's text in this page's language, or the other one if that's all
+// it has.
+const newsField = (post, name) =>
+  (LANG === "fa" ? post[`${name}_fa`] || post[name] : post[name] || post[`${name}_fa`]) || "";
+const getNews = async (query) => {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/news?${query}`, { headers: { apikey: SUPABASE_KEY }, signal: timeout(15000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+};
+const NEWS_LIST = "select=slug,title,title_fa,summary,summary_fa,cover_url,published_at&published=eq.true&order=published_at.desc";
+
+// Post text, written plainly: a blank line starts a paragraph, "## " a
+// heading, "- " a list item; **bold** and [text](https://…) links inside.
+// Built as elements, never as HTML, so nothing in it can run.
+const richText = (text) => {
+  const inline = (line) => {
+    const out = document.createDocumentFragment();
+    const re = /\*\*(.+?)\*\*|\[([^\]]+)\]\((https?:\/\/[^\s)]+|[a-z0-9-]+\.html[^\s)]*)\)/g;
+    let last = 0;
+    for (const m of line.matchAll(re)) {
+      out.append(line.slice(last, m.index));
+      if (m[1]) {
+        const b = document.createElement("strong");
+        b.textContent = m[1];
+        out.append(b);
+      } else {
+        const a = document.createElement("a");
+        a.textContent = m[2];
+        a.href = m[3];
+        if (/^https?:/.test(m[3]) && !m[3].startsWith("https://saufoxentertainment.ir")) {
+          a.target = "_blank";
+          a.rel = "noopener";
+        }
+        out.append(a);
+      }
+      last = m.index + m[0].length;
+    }
+    out.append(line.slice(last));
+    return out;
+  };
+  const out = document.createDocumentFragment();
+  String(text || "")
+    .replace(/\r/g, "")
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .forEach((block) => {
+      const lines = block.split("\n");
+      let el;
+      if (lines.every((l) => /^\s*[-•]\s+/.test(l))) {
+        el = document.createElement("ul");
+        lines.forEach((l) => {
+          const li = document.createElement("li");
+          li.append(inline(l.replace(/^\s*[-•]\s+/, "")));
+          el.append(li);
+        });
+      } else if (/^#{2,3}\s+/.test(block) && lines.length === 1) {
+        el = document.createElement("h2");
+        el.append(inline(block.replace(/^#{2,3}\s+/, "")));
+      } else {
+        el = document.createElement("p");
+        lines.forEach((l, i) => {
+          if (i) el.append(document.createElement("br"));
+          el.append(inline(l));
+        });
+      }
+      el.dir = "auto";
+      out.append(el);
+    });
+  return out;
+};
+
+// One post as a card, for the news list and the home page.
+const newsCard = (post) => {
+  const link = document.createElement("a");
+  link.className = "news-card";
+  link.href = `news.html?post=${encodeURIComponent(post.slug)}`;
+  if (post.cover_url) {
+    const img = document.createElement("img");
+    img.className = "news-card__cover";
+    img.src = post.cover_url;
+    img.alt = "";
+    img.loading = "lazy";
+    link.append(img);
+  }
+  const text = document.createElement("span");
+  text.className = "news-card__text";
+  const date = document.createElement("time");
+  date.className = "news-card__date";
+  date.dateTime = post.published_at;
+  date.textContent = dateText(post.published_at);
+  const title = document.createElement("strong");
+  title.className = "news-card__title";
+  title.textContent = newsField(post, "title");
+  title.dir = "auto";
+  title.translate = false;
+  text.append(date, title);
+  const summary = newsField(post, "summary");
+  if (summary) {
+    const p = document.createElement("span");
+    p.className = "news-card__summary";
+    p.textContent = summary;
+    p.dir = "auto";
+    p.translate = false;
+    text.append(p);
+  }
+  link.append(text);
+  return link;
+};
+
+// News (news.html) — the list, or one post with ?post=<slug>.
+(async function newsPage() {
+  const page = document.querySelector(".news");
+  if (!page) return;
+  const slug = new URLSearchParams(location.search).get("post");
+  const listView = page.querySelector(".news__list-view");
+  const missing = page.querySelector(".news-missing");
+
+  if (slug) {
+    listView.hidden = true;
+    let post;
+    try {
+      [post] = await getNews(
+        `select=*&published=eq.true&slug=eq.${encodeURIComponent(slug)}&limit=1`
+      );
+    } catch (e) {}
+    if (!post) {
+      missing.hidden = false;
+      setMeta('meta[name="robots"]', "content", "noindex");
+      return;
+    }
+    const view = page.querySelector(".news-post");
+    const title = newsField(post, "title");
+    view.querySelector(".news-post__date").textContent = dateText(post.published_at);
+    const heading = view.querySelector(".news-post__title");
+    heading.textContent = title;
+    heading.dir = "auto";
+    heading.translate = false;
+    const cover = view.querySelector(".news-post__cover");
+    if (post.cover_url) {
+      cover.src = post.cover_url;
+      cover.hidden = false;
+    }
+    const body = view.querySelector(".news-post__body");
+    body.translate = false;
+    body.append(richText(newsField(post, "body") || newsField(post, "summary")));
+    const work = post.work_id && (await catalog).find((w) => w.id === post.work_id);
+    if (work) {
+      const link = view.querySelector(".news-post__work");
+      link.href = `work.html?id=${encodeURIComponent(work.id)}`;
+      link.textContent = t(`See ${work.title}`);
+      link.hidden = false;
+    }
+    document.title = `${title} · ${t("SauFox Entertainment")}`;
+    setMeta('meta[property="og:type"]', "content", "article");
+    pageMeta({
+      path: `/news.html?post=${encodeURIComponent(post.slug)}`,
+      title: `${title} · SauFox Entertainment`,
+      description: newsField(post, "summary") || title,
+      image: post.cover_url || undefined,
+    });
+    view.hidden = false;
+    return;
+  }
+
+  // The list, 12 at a time.
+  const list = page.querySelector(".news__list");
+  const more = page.querySelector(".news__more");
+  const PAGE = 12;
+  let shown = 0;
+  const load = async () => {
+    let posts = [];
+    try {
+      posts = await getNews(`${NEWS_LIST}&offset=${shown}&limit=${PAGE + 1}`);
+    } catch (e) {}
+    posts.slice(0, PAGE).forEach((post) => {
+      const item = document.createElement("li");
+      item.append(newsCard(post));
+      list.append(item);
+    });
+    shown += Math.min(posts.length, PAGE);
+    more.hidden = posts.length <= PAGE;
+    page.querySelector(".news__empty").hidden = shown > 0;
+  };
+  more.addEventListener("click", load);
+  load();
+})();
+
+// Home page: the latest three posts, once there are any.
+(async function latestNews() {
+  const section = document.querySelector(".home-news");
+  if (!section) return;
+  let posts = [];
+  try {
+    posts = await getNews(`${NEWS_LIST}&limit=3`);
+  } catch (e) {}
+  if (!posts.length) return;
+  section.querySelector(".home-news__list").replaceChildren(...posts.map(newsCard));
+  section.hidden = false;
+})();
+
 // Search text in either language: lower case, Arabic letters as their Persian
 // forms (ي→ی, ك→ک …), no diacritics, zero-width non-joiners as spaces, and
 // Persian or Arabic digits as 0-9.
@@ -3291,9 +3493,7 @@ const foldText = (text) =>
   // Images are shrunk in the browser and saved as WebP, then uploaded at
   // once to works/<id>/…; the work itself changes on Save.
   const MAX_WIDTH = { cover: 900, hero: 1920, still: 1600 };
-  const upload = async (file, kind) => {
-    const id = fields.id.value.trim();
-    if (!validId(id)) throw new Error("Give the work a title and page address before adding images.");
+  const toWebp = async (file, maxWidth) => {
     if (!file.type.startsWith("image/")) throw new Error("Choose an image file: JPG, PNG or WebP.");
     const bitmap = await new Promise((resolve, reject) => {
       const img = new Image();
@@ -3301,13 +3501,18 @@ const foldText = (text) =>
       img.onerror = () => reject(new Error("That image couldn't be opened. Try another file."));
       img.src = URL.createObjectURL(file);
     });
-    const scale = Math.min(1, MAX_WIDTH[kind] / bitmap.width);
+    const scale = Math.min(1, maxWidth / bitmap.width);
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(bitmap.width * scale);
     canvas.height = Math.round(bitmap.height * scale);
     canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     URL.revokeObjectURL(bitmap.src);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.86));
+    return new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.86));
+  };
+  const upload = async (file, kind) => {
+    const id = fields.id.value.trim();
+    if (!validId(id)) throw new Error("Give the work a title and page address before adding images.");
+    const blob = await toWebp(file, MAX_WIDTH[kind]);
     const path = `${id}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.webp`;
     const { error } = await photos.upload(path, blob, { contentType: "image/webp", cacheControl: "31536000" });
     if (error) throw new Error("The image didn't upload. Check your connection and try again.");
@@ -3724,6 +3929,163 @@ const foldText = (text) =>
         mailSummary.hidden = !stuck;
       });
   loadOrders();
+
+  // ---------- News ----------
+  const newsBox = page.querySelector(".admin-news");
+  const newsList = newsBox.querySelector(".admin-news__list");
+  const newsForm = newsBox.querySelector(".admin-news__form");
+  const newsSay = (text, ok) => {
+    const note = newsForm.querySelector(".admin-message");
+    note.textContent = text;
+    note.classList.toggle("is-ok", Boolean(ok));
+  };
+  const nf = (name) => newsForm.elements[name];
+  const coverImg = newsForm.querySelector(".admin-news__cover img");
+  const coverRemove = newsForm.querySelector('[data-action="remove-cover"]');
+  const postDelete = newsForm.querySelector('[data-action="delete-post"]');
+  const postView = newsForm.querySelector('[data-slot="view-post"]');
+  let editingPost = null;
+  let cover = null;
+  let slugTouched = false;
+  const showCover = () => {
+    coverImg.hidden = !cover;
+    if (cover) coverImg.src = cover;
+    coverRemove.hidden = !cover;
+  };
+  const postState = (post) =>
+    !post.published ? "Draft" : new Date(post.published_at) > new Date() ? `Scheduled · ${whenText(post.published_at)}` : "Live";
+  const loadNews = async () => {
+    const { data, error } = await account.from("news").select("*").order("published_at", { ascending: false });
+    if (error) return;
+    newsList.replaceChildren(
+      ...data.map((post) => {
+        const row = make("li", "admin-news__item");
+        const main = make("div", "admin-news__main");
+        main.append(
+          make("strong", "", post.title_fa || post.title),
+          make("span", "", `${postState(post)} · ${whenText(post.published_at)}`)
+        );
+        const edit = make("button", "admin-button", "Edit");
+        edit.type = "button";
+        edit.addEventListener("click", () => openPost(post));
+        row.append(main, edit);
+        return row;
+      })
+    );
+    newsBox.querySelector(".admin-news__empty").hidden = data.length > 0;
+  };
+  const openPost = async (post) => {
+    editingPost = post || null;
+    slugTouched = Boolean(post);
+    newsForm.reset();
+    ["title", "title_fa", "summary", "summary_fa", "body", "body_fa", "slug"].forEach((name) => (nf(name).value = (post && post[name]) || ""));
+    const works = nf("work_id");
+    if (works.options.length === 1) {
+      const { data } = await account.from("works").select("id, title").order("sort");
+      (data || []).forEach((w) => {
+        const option = make("option", "", w.title);
+        option.value = w.id;
+        works.append(option);
+      });
+    }
+    works.value = (post && post.work_id) || "";
+    nf("published").checked = Boolean(post && post.published);
+    nf("published_at").value = toLocalInput(post ? post.published_at : new Date().toISOString());
+    nf("slug").disabled = Boolean(post);
+    cover = (post && post.cover_url) || null;
+    showCover();
+    postDelete.hidden = !post;
+    postView.hidden = !(post && post.published);
+    if (post) postView.href = `news.html?post=${encodeURIComponent(post.slug)}`;
+    newsSay("");
+    newsForm.hidden = false;
+    newsForm.scrollIntoView({ block: "start" });
+    nf(post ? "body_fa" : "title_fa").focus();
+  };
+  const closePost = () => {
+    newsForm.hidden = true;
+    editingPost = null;
+  };
+  newsBox.querySelector('[data-action="new-post"]').addEventListener("click", () => openPost(null));
+  newsForm.querySelector('[data-action="close-post"]').addEventListener("click", closePost);
+  // The address follows the English title (or the Persian one's date) until edited.
+  const autoSlug = () => {
+    if (editingPost || slugTouched) return;
+    nf("slug").value = slug(nf("title").value) || (nf("title_fa").value.trim() ? `news-${new Date().toISOString().slice(0, 10)}` : "");
+  };
+  nf("title").addEventListener("input", autoSlug);
+  nf("title_fa").addEventListener("input", autoSlug);
+  nf("slug").addEventListener("input", () => (slugTouched = true));
+  newsForm.querySelector('.admin-news__cover input[type="file"]').addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    event.target.value = "";
+    if (!file) return;
+    newsSay("Uploading…", true);
+    try {
+      const blob = await toWebp(file, 1600);
+      const path = `news/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.webp`;
+      const { error } = await photos.upload(path, blob, { contentType: "image/webp", cacheControl: "31536000" });
+      if (error) throw new Error("The image didn't upload. Check your connection and try again.");
+      cover = photos.getPublicUrl(path).data.publicUrl;
+      showCover();
+      newsSay("Image added. Save to keep it.", true);
+    } catch (e) {
+      newsSay(e.message);
+    }
+  });
+  coverRemove.addEventListener("click", () => {
+    cover = null;
+    showCover();
+  });
+  newsForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const value = (name) => nf(name).value.trim() || null;
+    if (!value("title") && !value("title_fa")) return newsSay("Give the post a title, in Persian or English.");
+    const address = nf("slug").value.trim();
+    if (!validId(address)) return newsSay("The page address can use a-z, 0-9 and dashes, like candlewood-trailer-date.");
+    const row = {
+      title: value("title"),
+      title_fa: value("title_fa"),
+      summary: value("summary"),
+      summary_fa: value("summary_fa"),
+      body: value("body"),
+      body_fa: value("body_fa"),
+      work_id: nf("work_id").value || null,
+      cover_url: cover,
+      published: nf("published").checked,
+      published_at: fromLocalInput(nf("published_at").value) || new Date().toISOString(),
+    };
+    newsSay("Saving…", true);
+    const { data, error } = editingPost
+      ? await account.from("news").update(row).eq("id", editingPost.id).select().single()
+      : await account.from("news").insert({ ...row, slug: address }).select().single();
+    if (error)
+      return newsSay(error.code === "23505" ? "Another post already uses that page address." : "Not saved. Check your connection and try again.");
+    editingPost = data;
+    nf("slug").disabled = true;
+    postDelete.hidden = false;
+    postView.hidden = !data.published;
+    postView.href = `news.html?post=${encodeURIComponent(data.slug)}`;
+    newsSay(data.published ? `Saved. ${postState(data)}.` : "Saved as a draft.", true);
+    loadNews();
+  });
+  postDelete.addEventListener("click", async () => {
+    // Press twice: the first press asks.
+    if (!postDelete.dataset.armed) {
+      postDelete.dataset.armed = "1";
+      postDelete.textContent = "Delete this post?";
+      setTimeout(() => {
+        delete postDelete.dataset.armed;
+        postDelete.textContent = "Delete";
+      }, 4000);
+      return;
+    }
+    const { error } = await account.from("news").delete().eq("id", editingPost.id);
+    if (error) return newsSay("Not deleted. Try again.");
+    closePost();
+    loadNews();
+  });
+  loadNews();
 
   // ---------- Reviews and comments ----------
   const reviewList = page.querySelector(".admin-reviews__list");

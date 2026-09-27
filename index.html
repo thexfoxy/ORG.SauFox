@@ -72,7 +72,7 @@
   </script>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=48">
+  <link rel="stylesheet" href="css/style.css?v=49">
   <script>
     // Set the auth state before first paint so the header never flickers.
     // member    = signed in              -> profile chip, no CTA
@@ -157,6 +157,15 @@
          appear once the catalogue spans two or more kinds of work. -->
     <section class="shelves" aria-label="Browse by category" hidden></section>
 
+    <!-- Latest studio news (news.html), once there are posts. -->
+    <section class="home-news" aria-labelledby="home-news-title" hidden>
+      <div class="home-news__head">
+        <h2 class="shelf__heading" id="home-news-title">Latest news</h2>
+        <a class="works__all" href="news.html">All news</a>
+      </div>
+      <div class="home-news__list"></div>
+    </section>
+
     <!-- Section 5: Subscriptions. Two plans side by side, Basic and
          Premium. Prices follow the currency chosen above the work cards. -->
     <section class="plans" id="plans" aria-labelledby="plans-title">
@@ -210,6 +219,7 @@
       <nav class="site-footer__col" aria-label="Studio">
         <h2>Studio</h2>
         <a href="browse.html">All works</a>
+        <a href="news.html">News</a>
         <a href="about.html">About us</a>
         <a href="about.html#contact">Contact</a>
         <a href="faq.html">Help &amp; FAQ</a>
@@ -246,7 +256,7 @@
     </div>
   </footer>
 
-  <script src="js/fa.js?v=48" defer></script>
-  <script src="js/main.js?v=48" defer></script>
+  <script src="js/fa.js?v=49" defer></script>
+  <script src="js/main.js?v=49" defer></script>
 </body>
 </html>

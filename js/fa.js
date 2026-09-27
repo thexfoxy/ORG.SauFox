@@ -362,6 +362,20 @@ const FA = {
   "Your session has ended. Log in again, then try once more.": "نشست شما تمام شده است. دوباره وارد شوید و بعد امتحان کنید.",
   "Your account wasn't deleted. Try again in a moment.": "حساب شما حذف نشد. کمی بعد دوباره امتحان کنید.",
 
+  // ---------- News ----------
+  "News · SauFox Entertainment": "اخبار · ساوفاکس اینترتینمنت",
+  "News from SauFox Entertainment: announcements, release dates and behind the scenes.": "اخبار ساوفاکس اینترتینمنت: اطلاعیه‌ها، تاریخ انتشار آثار و پشت صحنه.",
+  "News": "اخبار",
+  "Announcements, release dates and behind the scenes from the studio.": "اطلاعیه‌ها، تاریخ انتشار آثار و پشت صحنه‌ی استودیو.",
+  "No news yet": "هنوز خبری نیست",
+  "Check back soon.": "به‌زودی سر بزنید.",
+  "← All news": "→ همه‌ی اخبار",
+  "All news": "همه‌ی اخبار",
+  "Latest news": "تازه‌ترین اخبار",
+  "We couldn’t find that post": "این خبر پیدا نشد",
+  "It may have been moved or taken down.": "ممکن است جابه‌جا یا حذف شده باشد.",
+  "See {title}": "دیدن {title}",
+
   // ---------- Browse ----------
   "All works · SauFox Entertainment": "همه‌ی آثار · ساوفاکس اینترتینمنت",
   "Search and browse every game, animation, film and novel from SauFox Entertainment.": "جستجو و مرور همه‌ی بازی‌ها، انیمیشن‌ها، فیلم‌ها و رمان‌های ساوفاکس اینترتینمنت.",

@@ -24,20 +24,20 @@
       setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
     })();
   </script>
-  <title>All works · SauFox Entertainment</title>
-  <meta name="description" content="Search and browse every game, animation, film and novel from SauFox Entertainment.">
+  <title>News · SauFox Entertainment</title>
+  <meta name="description" content="News from SauFox Entertainment: announcements, release dates and behind the scenes.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <meta name="theme-color" content="#0f0f11">
-  <link rel="canonical" href="https://saufoxentertainment.ir/browse.html">
-  <link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/browse.html">
-  <link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/browse.html?lang=fa">
-  <link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/browse.html">
+  <link rel="canonical" href="https://saufoxentertainment.ir/news.html">
+  <link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/news.html">
+  <link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/news.html?lang=fa">
+  <link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/news.html">
   <meta property="og:site_name" content="SauFox Entertainment">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="All works · SauFox Entertainment">
-  <meta property="og:description" content="Search and browse every game, animation, film and novel from SauFox Entertainment.">
-  <meta property="og:url" content="https://saufoxentertainment.ir/browse.html">
+  <meta property="og:title" content="News · SauFox Entertainment">
+  <meta property="og:description" content="News from SauFox Entertainment: announcements, release dates and behind the scenes.">
+  <meta property="og:url" content="https://saufoxentertainment.ir/news.html">
   <meta property="og:image" content="https://saufoxentertainment.ir/assets/og.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -80,60 +80,36 @@
   </header>
 
   <!-- Help & FAQ. Each answer opens in place (<details>). -->
-  <!-- Every published work, with search, filters and sorting. The address
-       keeps them (browse.html?q=…&kind=…&status=…&genre=…&platform=…&sort=…),
-       so a link opens the same results. js/main.js (browsePage) fills it. -->
-  <main class="browse">
-    <header class="browse__head">
-      <h1 class="browse__title">All works</h1>
-      <form class="browse__search" role="search" novalidate>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        <input type="search" name="q" placeholder="Search by title, genre or story" aria-label="Search works" autocomplete="off" enterkeyhint="search">
-      </form>
-    </header>
+  <!-- Studio news: the list (news.html) and one post (news.html?post=<slug>).
+       js/main.js (newsPage) fills it in from the news table. -->
+  <main class="news">
+    <section class="news__list-view">
+      <h1 class="news__title">News</h1>
+      <p class="news__lead">Announcements, release dates and behind the scenes from the studio.</p>
+      <ol class="news__list"></ol>
+      <div class="empty news__empty" hidden>
+        <p class="empty__title">No news yet</p>
+        <p class="empty__text">Check back soon.</p>
+      </div>
+      <button class="reviews__more news__more" type="button" hidden>Show more</button>
+    </section>
 
-    <div class="browse__filters">
-      <label class="browse__filter">
-        <span>Type</span>
-        <select name="kind"><option value="">All</option></select>
-      </label>
-      <label class="browse__filter">
-        <span>Status</span>
-        <select name="status">
-          <option value="">All</option>
-          <option value="released">Released</option>
-          <option value="preorder">Pre-order</option>
-          <option value="coming">Coming soon</option>
-          <option value="production">In production</option>
-        </select>
-      </label>
-      <label class="browse__filter">
-        <span>Genre</span>
-        <select name="genre"><option value="">All</option></select>
-      </label>
-      <label class="browse__filter">
-        <span>Platform</span>
-        <select name="platform"><option value="">All</option></select>
-      </label>
-      <label class="browse__filter">
-        <span>Sort by</span>
-        <select name="sort">
-          <option value="featured">Featured</option>
-          <option value="newest">Newest</option>
-          <option value="rating">Top rated</option>
-          <option value="price-low">Price: low to high</option>
-          <option value="price-high">Price: high to low</option>
-        </select>
-      </label>
-      <button class="browse__clear" type="button" hidden>Clear all</button>
-    </div>
+    <article class="news-post" hidden>
+      <a class="news-post__back" href="news.html">&larr; All news</a>
+      <p class="news-post__date"></p>
+      <h1 class="news-post__title"></h1>
+      <img class="news-post__cover" alt="" hidden>
+      <div class="news-post__body"></div>
+      <a class="empty__button news-post__work" hidden></a>
+    </article>
 
-    <p class="browse__count" role="status" aria-live="polite"></p>
-    <div class="poster-grid browse__grid"></div>
-    <div class="empty browse__empty" hidden>
-      <p class="empty__title">Nothing matches</p>
-      <p class="empty__text">Try another word, or clear the filters.</p>
-    </div>
+    <section class="news-missing" hidden>
+      <div class="empty">
+        <p class="empty__title">We couldn&rsquo;t find that post</p>
+        <p class="empty__text">It may have been moved or taken down.</p>
+        <a class="empty__button" href="news.html">All news</a>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
