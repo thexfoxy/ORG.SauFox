@@ -3971,20 +3971,70 @@ a.hero__panel {
 
 .admin-credit {
   display: grid;
-  grid-template-columns: 44px 150px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) auto auto;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(0, 2fr) auto auto;
   gap: 8px;
   align-items: center;
 }
 
-.admin-credit select {
-  height: 40px;
-  padding: 0 8px;
+/* Roles: chips, then a box to type the next one. */
+.admin-roles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 5px 8px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--bg);
+  cursor: text;
+}
+
+.admin-roles:focus-within {
+  border-color: var(--accent);
+}
+
+.admin-roles__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.admin-roles__chip button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.admin-roles__chip button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.admin-roles input {
+  flex: 1 1 140px;
+  min-width: 120px;
+  height: 30px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
   color: var(--text);
   font: inherit;
   font-size: 14px;
+  outline: none;
 }
 
 /* The photo: a circle to click; a "+" while empty. */
@@ -4015,11 +4065,12 @@ a.hero__panel {
 
 @media (max-width: 900px) {
   .admin-credit {
-    grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) auto auto;
+    grid-template-columns: 44px minmax(0, 1fr) auto auto;
   }
 
-  .admin-credit select {
-    grid-column: 2 / 4;
+  .admin-roles {
+    grid-column: 2 / -1;
+    grid-row: 2;
   }
 }
 

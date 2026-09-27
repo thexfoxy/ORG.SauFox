@@ -477,18 +477,18 @@ Title page (`work.html?id=<id>`):
       name in the corner under the curve, the poster, price, a "Watch
       trailer" button (Aparat, which plays in Iran) or the trailer date,
       a live countdown to the trailer, synopsis, a gallery of stills that
-      open full size (arrow keys and Esc work), and Cast & crew: the
-      director & writer(s), director(s) and writer(s) first in a row of their
-      own (bigger photos with an accent ring, the job as a label over the
-      name), then the crew, then the cast, a round photo (or initials), name and role each, a
-      dozen per group until "Show all" (`works.credits`: group = director,
-      writer, director_writer, crew or cast, role, role_fa, name, photo; set in the admin
-      panel, where each person has a photo upload, the group, the role in
-      both languages and a move-up arrow; credits without a group count as
-      crew, or director / writer when that's their role). Sections with
-      no data stay hidden. Home-page cards and hero panels link here.
-
-Home page, later additions:
+      open full size (arrow keys and Esc work), and Cast & crew. Each person
+      has a name, a photo (or initials) and any number of roles
+      (`works.credits`: name, photo, roles). Anyone who directs or writes
+      shows first in a row of their own (bigger photos with an accent ring,
+      all their roles as a label over the name; both, then directors, then
+      writers); then the crew; then the cast (people whose roles are all
+      acting or voice: Actor, Voice actor, Narrator, "as <character>"). A
+      dozen per group until "Show all"; common roles show in Persian on the
+      Persian site. In the admin panel each person has a photo upload, a
+      name, a roles box (Enter or comma adds one, with suggestions; &times;
+      removes) and a move-up arrow. Older credits (one role, a group) turn
+      into roles by themselves.
 - [x] Category rows (Coming soon, Games, Films, Animation, Novels) under
       the main row, built from the catalogue. They stay hidden until the
       catalogue spans at least two kinds of work.

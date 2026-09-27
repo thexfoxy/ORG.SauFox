@@ -243,17 +243,26 @@ const pricesOf = (row, rates) => {
   return { prices, approx };
 };
 
-// A credit's group; credits from before groups existed count as crew, or as
-// director / writer when that's their role.
-const creditGroup = (credit) =>
-  credit.group ||
-  (/^(director|writer)\s*(&|and|\/)\s*(writer|director)$/i.test(credit.role)
-    ? "director_writer"
-    : /^director$/i.test(credit.role)
-      ? "director"
-      : /^(writer|screenplay|author)$/i.test(credit.role)
-        ? "writer"
-        : "crew");
+// ---------- Cast & crew ----------
+// Each person has a name, a photo and any number of roles (works.credits:
+// { name, photo, roles }). Where they show follows from the roles: anyone
+// who directs or writes leads, actors and voices are the cast, the rest the
+// crew. Credits from before (one role, perhaps a group) become roles.
+const DIRECTOR = /^(director|co-director|کارگردان)$/i;
+const WRITER = /^(writer|co-writer|screenplay|screenwriter|story|author|نویسنده|فیلم‌نامه|فیلمنامه|فیلم‌نامه‌نویس)$/i;
+const CAST = /^(actor|actress|cast|voice|voice actor|voice actress|narrator|as .+|voice of .+|بازیگر|صداپیشه|گوینده|راوی|در نقش .+)$/i;
+const creditRoles = (credit) => {
+  if (Array.isArray(credit.roles)) return credit.roles.filter(Boolean);
+  if (credit.group === "director_writer") return ["Director", "Writer"];
+  const role = String(credit.role || "").trim();
+  if (!role) return [];
+  // An old cast entry's role was the character played.
+  if (credit.group === "cast" && !CAST.test(role)) return [`as ${role}`];
+  return role.split(/\s*(?:,|&|\/|\band\b)\s*/i).filter(Boolean);
+};
+// "lead" (directs or writes), "cast" (only acts or voices) or "crew".
+const creditPlace = (roles) =>
+  roles.some((r) => DIRECTOR.test(r) || WRITER.test(r)) ? "lead" : roles.length && roles.every((r) => CAST.test(r)) ? "cast" : "crew";
 
 const toWork = (row, rates = {}) => ({
   ...pricesOf(row, rates),
@@ -275,7 +284,9 @@ const toWork = (row, rates = {}) => ({
   genres: row.genres || [],
   platforms: row.platforms || [],
   rating: row.rating || "",
-  credits: (row.credits || []).map((credit) => ({ ...credit, group: creditGroup(credit) })),
+  credits: (row.credits || [])
+    .map((credit) => ({ name: credit.name || "", photo: credit.photo || "", roles: creditRoles(credit) }))
+    .filter((credit) => credit.name),
   created: row.created_at || "",
   // Both languages' texts, for search (browse.html).
   text: [row.synopsis, row.synopsis_fa, row.status_text, row.status_text_fa].filter(Boolean).join(" "),
@@ -2790,8 +2801,9 @@ const signedInGoHome = async (user) => {
     synopsis.hidden = false;
   }
 
-  // Cast & crew: the director(s) and writer(s) first (anyone who's both
-  // leading), larger and set apart; then the crew, then the cast, in the admin panel's order, each group
+  // Cast & crew: whoever directs or writes first, larger and set apart
+  // (those who do both, then directors, then writers), with all their roles;
+  // then the crew, then the cast, in the admin panel's order, each group
   // showing a dozen people until it's opened. Without a photo, the
   // person's initials stand in.
   if (work.credits && work.credits.length) {
@@ -2820,8 +2832,9 @@ const signedInGoHome = async (user) => {
       const name = make("strong", "credit__name", credit.name);
       name.translate = false;
       name.dir = "auto";
-      const role = make("span", "credit__role", LANG === "fa" && credit.role_fa ? credit.role_fa : credit.role);
-      if (LANG === "fa" && credit.role_fa) role.translate = false;
+      // Each role in this page's language when it's a known one.
+      const role = make("span", "credit__role", credit.roles.map((r) => t(r)).join(" · "));
+      role.translate = false;
       role.dir = "auto";
       // A lead's job reads first, as a label.
       if (lead) {
@@ -2831,15 +2844,21 @@ const signedInGoHome = async (user) => {
       item.append(face, text);
       return item;
     };
-    const leads = ["director_writer", "director", "writer"].flatMap((g) => work.credits.filter((c) => c.group === g));
+    const does = (credit, re) => credit.roles.some((r) => re.test(r));
+    const leadRank = (credit) => (does(credit, DIRECTOR) && does(credit, WRITER) ? 0 : does(credit, DIRECTOR) ? 1 : 2);
+    const leads = work.credits
+      .map((credit, i) => [credit, i])
+      .filter(([credit]) => creditPlace(credit.roles) === "lead")
+      .sort(([a, i], [b, j]) => leadRank(a) - leadRank(b) || i - j)
+      .map(([credit]) => credit);
     if (leads.length) {
       const list = make("ul", "title-credits__leads");
       list.append(...leads.map((credit) => person(credit, true)));
       box.append(list);
     }
     const groups = [
-      ["Crew", work.credits.filter((c) => !["cast", "director", "writer", "director_writer"].includes(c.group))],
-      ["Cast", work.credits.filter((c) => c.group === "cast")],
+      ["Crew", work.credits.filter((c) => creditPlace(c.roles) === "crew")],
+      ["Cast", work.credits.filter((c) => creditPlace(c.roles) === "cast")],
     ].filter(([, people]) => people.length);
     groups.forEach(([label, people]) => {
       const group = make("div", "title-credits__group");
@@ -3958,9 +3977,10 @@ const foldText = (text) =>
     );
   };
 
-  // One person in the cast & crew: photo (click to upload), Director,
-  // Writer, Director & Writer, Crew or Cast, role (and in Persian), name; moved up with the
-  // arrow.
+  // One person in the cast & crew: photo (click to upload), their roles
+  // (any number: type one and press Enter or comma; suggestions come from
+  // the common ones), name; moved up with the arrow. Who leads, acts or is
+  // crew follows from the roles on the work's page.
   const addCredit = (credit = {}) => {
     const item = make("li", "admin-credit");
     item.dataset.photo = credit.photo || "";
@@ -3992,25 +4012,67 @@ const foldText = (text) =>
     });
     photo.append(img, file);
     showPhoto();
-    const group = make("select");
-    group.setAttribute("aria-label", "Director, writer, cast or crew");
-    [["director", "Director"], ["writer", "Writer"], ["director_writer", "Director & Writer"], ["crew", "Crew"], ["cast", "Cast"]].forEach(([value, label]) =>
-      group.append(new Option(label, value))
-    );
-    group.value = credit.role || credit.name ? creditGroup(credit) : "crew";
-    const field = (value, placeholder, label, max, rtl) => {
-      const input = make("input");
-      input.type = "text";
-      input.placeholder = placeholder;
-      input.value = value || "";
-      input.maxLength = max;
-      input.setAttribute("aria-label", label);
-      if (rtl) input.dir = "rtl";
-      return input;
+
+    // Roles: chips, and a box to type the next one.
+    const roles = make("div", "admin-roles");
+    const typing = make("input");
+    typing.type = "text";
+    typing.maxLength = 60;
+    typing.placeholder = "Roles: Director, Composer, as Anna…";
+    typing.setAttribute("aria-label", "Roles");
+    typing.setAttribute("list", "credit-roles");
+    const chip = (text) => {
+      const tag = make("span", "admin-roles__chip");
+      tag.dataset.role = text;
+      const label = make("span", "", text);
+      const drop = make("button", "", "×");
+      drop.type = "button";
+      drop.setAttribute("aria-label", `Remove ${text}`);
+      drop.addEventListener("click", () => {
+        tag.remove();
+        hint();
+      });
+      tag.append(label, drop);
+      typing.before(tag);
+      hint();
     };
-    const roleInput = field(credit.role, "Role, e.g. Composer", "Role", 60);
-    const roleFa = field(credit.role_fa, "نقش به فارسی (اختیاری)", "Role in Persian", 60, true);
-    const nameInput = field(credit.name, "Name", "Name", 80);
+    // The long example only while there are no roles yet.
+    const hint = () =>
+      (typing.placeholder = roles.querySelector(".admin-roles__chip") ? "Add a role" : "Roles: Director, Composer, as Anna…");
+    const commit = () => {
+      typing.value
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .forEach((part) => {
+          if (![...roles.querySelectorAll(".admin-roles__chip")].some((c) => c.dataset.role.toLowerCase() === part.toLowerCase())) chip(part);
+        });
+      typing.value = "";
+    };
+    typing.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === ",") {
+        event.preventDefault();
+        commit();
+      } else if (event.key === "Backspace" && !typing.value) {
+        roles.querySelector(".admin-roles__chip:last-of-type")?.remove();
+        hint();
+      }
+    });
+    // Picking a suggestion adds it straight away.
+    typing.addEventListener("input", (event) => {
+      if (event.inputType === "insertReplacementText" || !event.inputType) commit();
+    });
+    typing.addEventListener("blur", commit);
+    roles.addEventListener("click", (event) => event.target === roles && typing.focus());
+    roles.append(typing);
+    creditRoles(credit).forEach(chip);
+
+    const nameInput = make("input");
+    nameInput.type = "text";
+    nameInput.placeholder = "Name";
+    nameInput.value = credit.name || "";
+    nameInput.maxLength = 80;
+    nameInput.setAttribute("aria-label", "Name");
     const up = make("button", "admin-icon", "↑");
     up.type = "button";
     up.setAttribute("aria-label", "Move up");
@@ -4019,9 +4081,9 @@ const foldText = (text) =>
     remove.type = "button";
     remove.setAttribute("aria-label", "Remove this person");
     remove.addEventListener("click", () => item.remove());
-    item.append(photo, group, roleInput, roleFa, nameInput, up, remove);
+    item.append(photo, nameInput, roles, up, remove);
     creditsEl.append(item);
-    return roleInput;
+    return nameInput;
   };
 
   const showEditor = (row) => {
@@ -4196,19 +4258,14 @@ const foldText = (text) =>
       rating: fields.rating.value.trim() || null,
       credits: [...creditsEl.children]
         .map((item) => {
-          const [role, roleFa, name] = item.querySelectorAll('input[type="text"]');
-          const group = item.querySelector("select").value;
-          // A director or writer needs no role; it says so.
-          const credit = {
-            group,
-            role: role.value.trim() || { director: "Director", writer: "Writer", director_writer: "Director & Writer" }[group] || "",
-            name: name.value.trim(),
-          };
-          if (roleFa.value.trim()) credit.role_fa = roleFa.value.trim();
+          // A role still being typed counts too.
+          const pending = item.querySelector(".admin-roles input").value.split(",").map((r) => r.trim());
+          const roles = [...item.querySelectorAll(".admin-roles__chip")].map((chip) => chip.dataset.role).concat(pending).filter(Boolean);
+          const credit = { name: item.querySelector('input[aria-label="Name"]').value.trim(), roles };
           if (item.dataset.photo) credit.photo = item.dataset.photo;
           return credit;
         })
-        .filter((c) => c.role && c.name),
+        .filter((c) => c.name && c.roles.length),
       updated_at: new Date().toISOString(),
     };
 

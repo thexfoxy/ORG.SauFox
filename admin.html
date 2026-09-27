@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=62">
+  <link rel="stylesheet" href="css/style.css?v=63">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -655,8 +655,9 @@
 
       <fieldset class="admin-group">
         <legend>Cast &amp; crew</legend>
-        <p class="admin-group__hint">Everyone who made the work. Choose Director, Writer, or Director &amp; Writer for someone who is both: they get their own row at the top, with bigger photos (their role can stay empty). Music, art, programming and the rest go under Crew, shown next; actors and voices under Cast, shown last. The role can be a job (Composer) or, for the cast, the character they play. Click the circle to add a photo (square works best). They show on the work&rsquo;s page in this order.</p>
+        <p class="admin-group__hint">Everyone who made the work, with as many roles as each has: type a role and press Enter or a comma (or pick one of the suggestions), and &times; removes it. Anyone who is a Director or Writer shows first, in a row of their own with bigger photos. Actors and voices (Actor, Voice actor, Narrator, or the character they play as <em>as Anna</em>) are the Cast; everyone else is the Crew, shown before the cast. Common roles show in Persian on the Persian site by themselves. Click the circle to add a photo (square works best). They show on the work&rsquo;s page in this order.</p>
         <ol class="admin-credits"></ol>
+        <datalist id="credit-roles"><option value="Director"></option><option value="Co-director"></option><option value="Writer"></option><option value="Co-writer"></option><option value="Screenplay"></option><option value="Story"></option><option value="Author"></option><option value="Producer"></option><option value="Executive producer"></option><option value="Composer"></option><option value="Music"></option><option value="Sound design"></option><option value="Cinematographer"></option><option value="Editor"></option><option value="Art director"></option><option value="Animation director"></option><option value="Lead animator"></option><option value="Animator"></option><option value="Character design"></option><option value="Illustrator"></option><option value="Cover art"></option><option value="Game designer"></option><option value="Level design"></option><option value="Programmer"></option><option value="3D artist"></option><option value="Visual effects"></option><option value="Translator"></option><option value="Actor"></option><option value="Actress"></option><option value="Voice actor"></option><option value="Voice actress"></option><option value="Narrator"></option></datalist>
         <button class="admin-button" type="button" data-action="add-credit">Add a person</button>
       </fieldset>
 
@@ -668,7 +669,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=62" defer></script>
-  <script src="js/main.js?v=62" defer></script>
+  <script src="js/vendor/supabase.js?v=63" defer></script>
+  <script src="js/main.js?v=63" defer></script>
 </body>
 </html>
