@@ -72,7 +72,7 @@
   </script>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=55">
+  <link rel="stylesheet" href="css/style.css?v=56">
   <script>
     // Set the auth state before first paint so the header never flickers.
     // member    = signed in              -> profile chip, no CTA
@@ -166,8 +166,8 @@
       <div class="home-news__list"></div>
     </section>
 
-    <!-- Section 5: Subscriptions. Basic, Premium (orange) and Titanium
-         (brushed titanium), from public.plans; the length buttons pick which
+    <!-- Section 5: Subscriptions. Iron, Gold and Titanium, each in its
+         metal, from public.plans; the length buttons pick which
          prices show (public.plan_prices), prices follow the currency chosen
          above the work cards, and the discount and free-viewing lines follow
          the plan's settings in the admin panel. Buying one goes through
@@ -184,11 +184,11 @@
         </div>
       </div>
       <div class="plans__grid">
-        <article class="plan" data-plan="basic">
-          <h3 class="plan__name">Basic</h3>
+        <article class="plan plan--iron" data-plan="iron">
+          <h3 class="plan__name">Iron</h3>
           <p class="plan__blurb">For readers, and a little off everything.</p>
           <div class="plan__price">
-            <span class="plan__amounts" data-plan="basic"></span>
+            <span class="plan__amounts" data-plan="iron"></span>
             <span class="plan__per">/ month</span>
           </div>
           <p class="plan__save" hidden></p>
@@ -197,24 +197,24 @@
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-slot="discount">10% off every work in the store</span></li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Studio news and trailers first</li>
           </ul>
-          <a class="plan__button" href="checkout.html?plan=basic">Choose Basic</a>
+          <a class="plan__button" href="checkout.html?plan=iron">Choose Iron</a>
         </article>
 
-        <article class="plan plan--premium" data-plan="premium">
-          <h3 class="plan__name">Premium</h3>
+        <article class="plan plan--gold" data-plan="gold">
+          <h3 class="plan__name">Gold</h3>
           <p class="plan__blurb">Animation free, and a bigger discount.</p>
           <div class="plan__price">
-            <span class="plan__amounts" data-plan="premium"></span>
+            <span class="plan__amounts" data-plan="gold"></span>
             <span class="plan__per">/ month</span>
           </div>
           <p class="plan__save" hidden></p>
           <ul class="plan__list">
-            <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Everything in Basic</li>
+            <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Everything in Iron</li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-slot="free">Watch every animation free, and read every novel</span></li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-slot="discount">25% off every work in the store</span></li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Behind-the-scenes videos and art books</li>
           </ul>
-          <a class="plan__button" href="checkout.html?plan=premium">Go Premium</a>
+          <a class="plan__button" href="checkout.html?plan=gold">Go Gold</a>
         </article>
 
         <article class="plan plan--titanium" data-plan="titanium">
@@ -226,7 +226,7 @@
           </div>
           <p class="plan__save" hidden></p>
           <ul class="plan__list">
-            <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Everything in Premium</li>
+            <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Everything in Gold</li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-slot="free">Watch every film and animation free, and read every novel</span></li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-slot="discount">50% off every work in the store</span></li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>No pre-orders needed: your price stays the same before and after release</li>
@@ -288,7 +288,7 @@
     </div>
   </footer>
 
-  <script src="js/fa.js?v=55" defer></script>
-  <script src="js/main.js?v=55" defer></script>
+  <script src="js/fa.js?v=56" defer></script>
+  <script src="js/main.js?v=56" defer></script>
 </body>
 </html>

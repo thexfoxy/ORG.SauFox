@@ -430,11 +430,11 @@ const payOrder = async (orderId) => {
 };
 
 // ---------- Subscriptions ----------
-// Basic, Premium and Titanium (public.plans; settings.plans), each sold for
+// Iron, Gold and Titanium (public.plans; settings.plans), each sold for
 // 7 days, 1, 3 or 6 months or a year at its own price (public.plan_prices;
 // plan.prices by days). A paid plan order gives the member that many days;
 // the database takes the plan's discount off every work they order.
-const PLAN_NAMES = { basic: "Basic", premium: "Premium", titanium: "Titanium" };
+const PLAN_NAMES = { iron: "Iron", gold: "Gold", titanium: "Titanium" };
 const planName = (id) => PLAN_NAMES[id] || id;
 const PLAN_LENGTHS = [
   [7, "7 days"],
@@ -645,11 +645,14 @@ const heroEdgeY = (() => {
 
 // Section 2 — Hero: key art from the studio's releases, one slanted panel per
 // work (up to five, seven on wide screens), or a single full-width image
-// while there is one work. Works with a news post come first: their panel
-// shows the work's art, a "News" tag, and links to the latest post about it.
-// On a mouse, the panel under the pointer widens to show its whole banner
-// while the others make room, and a card opens on it with the post's or
-// work's details and its YouTube video (thumbnail -> YouTube).
+// while there is one work. The featured work (the one with the newest news
+// post, else a random one) takes the left 58% with its banner nearly whole,
+// and its card stays open (an eye button hides it, remembered in this
+// browser); the rest share the right side in equal strips. Works with a news
+// post come first: their panel shows the work's art, a "News" tag, and links
+// to the latest post about it. On a mouse, a strip on the right widens
+// within that side and a card opens on it with the post's or work's details
+// and its YouTube video (thumbnail -> YouTube).
 (async function heroCollage() {
   const hero = document.querySelector(".hero");
   if (!hero) return;
@@ -689,8 +692,8 @@ const heroEdgeY = (() => {
   const picks = [...newsWorks, ...others].slice(0, MAX_PANELS);
   const count = picks.length;
   if (!count) return;
-  // Spread the news panels among the others rather than all on the left.
-  const order = shuffle(picks.map((_, i) => i));
+  // The featured work first (on the left), the rest in a random order.
+  const order = [0, ...shuffle(picks.slice(1).map((_, i) => i + 1))];
 
   const art = (work) => {
     const el = document.createElement("span");
@@ -740,6 +743,10 @@ const heroEdgeY = (() => {
     box.append(more);
     return box;
   };
+  const EYE =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+  const EYE_OFF =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.1 3.9M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7c1.7 0 3.2-.5 4.5-1.2M9.9 9.9a3 3 0 0 0 4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   // The cards live in a layer just after the hero, outside its clipped
   // strips and curved mask, so a card is never cut off; each lines up with
   // its panel.
@@ -753,13 +760,35 @@ const heroEdgeY = (() => {
     link.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : `work.html?id=${encodeURIComponent(work.id)}`;
     link.setAttribute("aria-label", post ? newsField(post, "title") : work.title);
     panel.classList.toggle("has-news", Boolean(post));
-    panel.querySelector(".hero__tag").hidden = !post;
     const i = Number(panel.dataset.index);
+    // The featured panel has its card (or the eye button) instead of a tag.
+    panel.querySelector(".hero__tag").hidden = !post || (i === 0 && count > 1);
     const next = card(work, post);
+    // The featured work's card stays open, with an eye button to hide it.
+    if (i === 0 && count > 1) {
+      next.classList.add("is-pinned");
+      const hide = make("button", "hero__eye");
+      hide.type = "button";
+      hide.innerHTML = EYE_OFF;
+      hide.setAttribute("aria-label", t("Hide the news"));
+      hide.title = t("Hide the news");
+      hide.addEventListener("click", () => pin(false));
+      next.querySelector(".hero__card-top").append(hide);
+    }
     if (cards[i]) cards[i].replaceWith(next);
     else layer.append(next);
     cards[i] = next;
   };
+  // Shown in the card's place while it's hidden: brings it back.
+  const peek = make("button", "hero__peek");
+  peek.type = "button";
+  peek.innerHTML = EYE;
+  peek.setAttribute("aria-label", t("Show the news"));
+  peek.title = t("Show the news");
+  peek.addEventListener("click", () => pin(true));
+  layer.append(peek);
+  let pinned = local.get("heroCard") !== "hidden";
+  let hovered = -1;
 
   hero.style.setProperty("--n", count);
   hero.dataset.count = count;
@@ -779,9 +808,19 @@ const heroEdgeY = (() => {
   const panels = [...hero.children];
 
   // ---------- Layout ----------
-  // Each panel's share of the width. All equal at rest; the hovered one
-  // grows to about a 16:9 banner (at most 55% of the hero).
-  const weights = panels.map(() => 1);
+  // Each panel's share of the width: the featured one 58%, the others an
+  // equal share of the rest; a hovered strip on the right takes 55% of that
+  // side while its neighbours narrow.
+  const FEATURED = 0.58;
+  const shares = (index) => {
+    const n = panels.length;
+    if (n === 1) return [1];
+    const rest = 1 - FEATURED;
+    return panels.map((_, i) =>
+      i === 0 ? FEATURED : index > 0 && n > 2 ? (i === index ? rest * 0.55 : (rest * 0.45) / (n - 2)) : rest / (n - 1)
+    );
+  };
+  const weights = shares(-1);
   let targets = weights.slice();
   let frame = 0;
 
@@ -837,6 +876,10 @@ const heroEdgeY = (() => {
       const box = cards[i];
       box.style.top = `${18 - H}px`;
       box.style.left = `${Math.min(start, W - box.offsetWidth - 18).toFixed(1)}px`;
+      if (i === 0) {
+        peek.style.top = `${18 - H}px`;
+        peek.style.left = `${start.toFixed(1)}px`;
+      }
     });
   };
 
@@ -851,26 +894,31 @@ const heroEdgeY = (() => {
     layout();
     frame = moving ? requestAnimationFrame(step) : 0;
   };
+  // Which cards are open: the hovered panel's, and the featured one's
+  // unless it's been hidden.
+  const showCards = () => {
+    cards.forEach((box, i) => {
+      const open = i === 0 && count > 1 ? pinned : i === hovered;
+      box.classList.toggle("is-open", open);
+      panels[i].classList.toggle("is-open", open);
+    });
+    peek.hidden = count < 2 || pinned;
+  };
+  const pin = (show) => {
+    pinned = show;
+    local.set("heroCard", show ? null : "hidden");
+    showCards();
+    (show ? cards[0].querySelector(".hero__eye") : peek).focus({ preventScroll: true });
+  };
   const aim = (index) => {
-    const n = panels.length;
-    targets = panels.map(() => 1);
-    if (index >= 0 && n > 1) {
-      const W = hero.clientWidth;
-      const total = W + (parseFloat(getComputedStyle(hero).getPropertyValue("--slant")) / 100) * W;
-      const want = Math.min((hero.clientHeight * 16) / 9, total * 0.55);
-      const even = total / n;
-      if (want > even) targets[index] = (want * (n - 1)) / (total - want);
-    }
+    hovered = index;
+    targets = shares(index);
+    showCards();
     if (calm.matches) {
       targets.forEach((w, i) => (weights[i] = w));
       return layout();
     }
     if (!frame) frame = requestAnimationFrame(step);
-    // The panel's card opens with it.
-    cards.forEach((box, i) => {
-      box.classList.toggle("is-open", i === index);
-      panels[i].classList.toggle("is-open", i === index);
-    });
   };
   const inside = (node) => node && (hero.contains(node) || layer.contains(node));
   panels.forEach((panel, i) => {
@@ -889,7 +937,9 @@ const heroEdgeY = (() => {
     if (document.hidden || calm.matches) return;
     const shown = new Set(panels.map((p) => [...p.querySelectorAll(".hero__art")].pop().dataset.work));
     const options = withArt.filter((work) => work.hero && !shown.has(work.id) && !newsFor.has(work.id));
-    const free = panels.filter((p) => !p.classList.contains("has-news") && !p.matches(":hover") && !cards[p.dataset.index].classList.contains("is-open"));
+    const free = panels.filter(
+      (p) => p.dataset.index !== "0" && !p.classList.contains("has-news") && !p.matches(":hover") && !cards[p.dataset.index].classList.contains("is-open")
+    );
     if (!options.length || !free.length) return;
     const panel = free[Math.floor(Math.random() * free.length)];
     const work = options[Math.floor(Math.random() * options.length)];
@@ -904,6 +954,7 @@ const heroEdgeY = (() => {
     }, 1600);
   };
 
+  showCards();
   layout();
   new ResizeObserver(layout).observe(hero);
   if (withArt.filter((w) => w.hero).length > count) setInterval(swap, SWAP_EVERY);
@@ -4207,7 +4258,7 @@ const foldText = (text) =>
     .lte("starts_at", new Date().toISOString())
     .gt("ends_at", new Date().toISOString())
     .then(({ data }) => {
-      const RANK = { basic: 1, premium: 2, titanium: 3 };
+      const RANK = { iron: 1, gold: 2, titanium: 3 };
       const best = {};
       (data || []).forEach((s) => {
         if (!best[s.user_id] || RANK[s.plan_id] > RANK[best[s.user_id]]) best[s.user_id] = s.plan_id;
@@ -4915,7 +4966,7 @@ const foldText = (text) =>
 })();
 
 // Checkout (checkout.html?id=<id>) — one work, for members; or a plan
-// (checkout.html?plan=basic|premium|titanium&days=7|30|90|180|365). The
+// (checkout.html?plan=iron|gold|titanium&days=7|30|90|180|365). The
 // order is saved as "awaiting payment"; the database fills in the title,
 // price (less the member's plan discount and any code) and email itself, so
 // nothing here can change what's charged. When online payment is open, the

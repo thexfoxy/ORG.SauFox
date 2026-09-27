@@ -227,8 +227,9 @@ nobody can log in.
 
 ## Subscriptions
 
-- Three plans in `public.plans` (everyone reads; admins change): Basic,
-  Premium (orange) and Titanium (brushed titanium), each with a discount on
+- Three plans in `public.plans` (everyone reads; admins change): Iron,
+  Gold and Titanium, each themed in its metal (name, button, ticks and a
+  brushed sheen), each with a discount on
   every work (10 / 25 / 50%), what its members watch or read free
   (`free_kinds`: animation, film, novel) and whether it's on sale.
 - Each plan is sold for 7 days, 1, 3 or 6 months or a year, each at its own
@@ -431,20 +432,21 @@ Home page:
       letters leave one by one, "Sign Up Now" / "Welcome Back" rises in their
       place, and the text glows softly. Add `?demo=new|returning|member` to
       the URL to preview each state.
-- [x] 2. Hero: 16:9 key art, one slanted panel per work (up to seven on wide
-      screens, five on tablets, four on phones) whose bottom edge steps down
-      from left to right in a smooth S-curve; with more works than panels,
-      the panels swap between them at random every few seconds. Works with a
-      news post come first: their panel shows the work's art (or its cover),
-      a "News" tag, and opens the post. With a mouse, the panel under the
-      pointer widens to show its whole banner while the others narrow and
-      dim, and a plain, see-through dark card opens on it (in a layer after
-      the hero, so it's never cut off, and its text is never shortened): the post's date, title, summary and
-      work (or the work's kind, status and synopsis), the YouTube video's
-      thumbnail (opens YouTube in a new tab; the post's video, else the
-      work's), and a link on. Phones show just the tag. While there is only one
-      work, its image fills the hero with no slant. Data: each work's key
-      art and phone crop, set in the admin panel; news from `news.work_id`.
+- [x] 2. Hero: 16:9 key art in slanted panels whose bottom edge steps down
+      from left to right in a smooth S-curve. The featured work (the one
+      with the newest news post, else a random one) takes the left 58%,
+      its banner nearly whole, and its card stays open (details, YouTube
+      thumbnail beside the text, link on); an eye button hides it and
+      brings it back, remembered in the browser (`heroCard`). The other
+      works (up to six on wide screens, four on tablets, three on phones)
+      share the right side in equal strips, swapping at random every few
+      seconds when there are more; on a mouse, the strip under the pointer
+      widens within that side and its card opens (a plain see-through dark
+      card in a layer after the hero, never cut off, text never shortened).
+      Strips with a news post show a "News" tag and open the post. Phones
+      show no cards. While there is only one work, its image fills the hero
+      with no slant. Data: each work's key art and phone crop, set in the
+      admin panel; news from `news.work_id`.
 - [x] 3. Studio slogan: a short line, "And my success is not but through God."
       (Qur'an 11:88), in the space under the hero's curve
 - [x] 4. Work cards: a sliding row tucked right under the slogan; on the right
@@ -453,11 +455,11 @@ Home page:
       on and settles on a card). Currency buttons below (Auto cycles USD / EUR /
       Rials, or pin one). Each card has an image slider, a price strip and a
       status box. Data: the catalogue (`public.works`).
-- [x] 5. Subscriptions: Basic, Premium and Titanium boxes, three across on
+- [x] 5. Subscriptions: Iron, Gold and Titanium boxes, three across on
       wide screens and stacked on phones, with a length switch (7 days to a
       year) above. Prices follow the currency chosen above the work cards.
-      On hover each box gets a soft light that follows the pointer (white on
-      Basic, orange on Premium, silver on Titanium). Buying one
+      On hover each box gets a soft light in its metal that follows the
+      pointer. Buying one
       goes through checkout (see Subscriptions).
 
 Title page (`work.html?id=<id>`):

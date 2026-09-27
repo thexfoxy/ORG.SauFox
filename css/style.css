@@ -48,6 +48,10 @@
   --text: #f5f3ef;
   --muted: #8e8c95;
   --accent: #ff7a1a;
+  --iron: #9aa1a9;
+  --iron-metal: linear-gradient(115deg, #8a9098 0%, #4d5258 24%, #aab0b7 46%, #5a5f66 68%, #7c8289 86%, #9ea4ab 100%);
+  --gold: #e6b84a;
+  --gold-metal: linear-gradient(115deg, #fff0b3 0%, #e4b33e 22%, #a9761b 42%, #f7d97c 60%, #c7921f 80%, #fbe6a0 100%);
   --titanium: #c3ccd5;
   --titanium-metal: linear-gradient(115deg, #f1f4f7 0%, #b3bdc7 22%, #7b8793 42%, #dfe5ea 60%, #939eaa 80%, #eef2f5 100%);
 
@@ -633,6 +637,68 @@ main {
   transition-delay: 0.18s, 0.18s, 0s;
 }
 
+/* The featured work's card opens and closes at once, with its eye button.
+   It stays open, so it's kept low: wider, with the YouTube thumbnail beside
+   the text instead of under it. */
+.hero__card.is-pinned.is-open {
+  transition-delay: 0s;
+}
+
+.hero__card.is-pinned:has(.yt-card) {
+  grid-template-columns: minmax(0, 1fr) 240px;
+  column-gap: 18px;
+  width: min(660px, 50vw);
+}
+
+.hero__card.is-pinned .yt-card {
+  grid-column: 2;
+  grid-row: 1 / span 6;
+  align-self: start;
+}
+
+.hero__eye,
+.hero__peek {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  background: rgba(12, 12, 14, 0.5);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.hero__eye {
+  margin-inline-start: auto;
+}
+
+.hero__eye:hover,
+.hero__peek:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.hero__eye svg,
+.hero__peek svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* In the card's place while it's hidden. */
+.hero__peek {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: rgba(12, 12, 14, 0.62);
+}
+
+.hero__peek[hidden] {
+  display: none;
+}
+
 .hero__card-top {
   display: flex;
   align-items: center;
@@ -1098,8 +1164,8 @@ main {
 
 /* ==========================================================================
    Section 5 — Subscriptions
-   Three boxes side by side: Basic, Premium (orange) and Titanium (brushed
-   titanium). The two paid-up tiers are set apart by a lighter surface and a
+   Three boxes side by side, each in its metal: Iron (dark forged iron),
+   Gold and Titanium (bright brushed titanium). The two paid-up tiers are set apart by a lighter surface and a
    filled button, nothing louder. Stacked on phones. Above them, buttons for
    the length (7 days to a year) pick which prices show.
    ========================================================================== */
@@ -1194,16 +1260,44 @@ main {
   border: 1px solid transparent;
 }
 
-.plan--premium {
-  background: var(--surface-2);
+/* Each plan is its metal: --metal (a gradient for the name and button),
+   --metal-solid (ticks), --light (hover light, as r, g, b) and --metal-ink
+   (text on the button). A faint brushed sheen of it lies on the box. */
+.plan--iron {
+  --metal: var(--iron-metal);
+  --metal-solid: var(--iron);
+  --light: 160, 168, 178;
+  --metal-ink: #0f1113;
 }
 
-/* Titanium: a faint brushed-metal sheen on the box, a metal name and button. */
+.plan--gold {
+  --metal: var(--gold-metal);
+  --metal-solid: var(--gold);
+  --light: 230, 184, 74;
+  --metal-ink: #231703;
+}
+
+.plan--titanium {
+  --metal: var(--titanium-metal);
+  --metal-solid: var(--titanium);
+  --light: 205, 215, 226;
+  --metal-ink: #14181c;
+}
+
+.plan--iron,
+.plan--gold,
 .plan--titanium {
   background:
-    linear-gradient(160deg, rgba(210, 220, 230, 0.08), rgba(210, 220, 230, 0) 55%),
+    linear-gradient(160deg, rgba(var(--light), 0.08), rgba(var(--light), 0) 55%),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px),
     var(--surface-2);
+}
+
+.plan--iron {
+  background:
+    linear-gradient(160deg, rgba(var(--light), 0.06), rgba(var(--light), 0) 55%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.01) 0 1px, transparent 1px 3px),
+    var(--surface);
 }
 
 .plan__name {
@@ -1211,20 +1305,20 @@ main {
   font: 400 clamp(44px, 4.4vw, 64px)/1 var(--font-logo);
 }
 
-.plan--premium .plan__name {
-  color: var(--accent);
-}
-
+.plan--iron .plan__name,
+.plan--gold .plan__name,
 .plan--titanium .plan__name {
   width: fit-content;
-  background: var(--titanium-metal);
+  background: var(--metal);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
+.plan--iron .plan__check,
+.plan--gold .plan__check,
 .plan--titanium .plan__check {
-  color: var(--titanium);
+  color: var(--metal-solid);
 }
 
 /* The member's current plan. */
@@ -1317,33 +1411,25 @@ main {
   text-shadow: 0 0 12px rgba(255, 190, 140, 0.7);
 }
 
-.plan--premium .plan__button {
-  background: var(--accent);
-  color: #1a0d04;
-}
-
-.plan--premium .plan__button:hover {
-  background: #ff8c3a;
-  text-shadow: none;
-}
-
+.plan--iron .plan__button,
+.plan--gold .plan__button,
 .plan--titanium .plan__button {
-  background: var(--titanium-metal);
+  background: var(--metal);
   background-size: 200% 100%;
-  color: #14181c;
+  color: var(--metal-ink);
   transition: background-position 0.8s var(--ease-out), text-shadow 0.4s;
 }
 
+.plan--iron .plan__button:hover,
+.plan--gold .plan__button:hover,
 .plan--titanium .plan__button:hover {
   background-position: 100% 0;
-  color: #14181c;
+  color: var(--metal-ink);
   text-shadow: none;
 }
 
-/* Always side by side; on small screens everything inside scales down. */
-/* Both plans: on hover a soft light follows the pointer across the box,
-   its edge catches the same light, and the box lifts a little. Basic's
-   light is white, Premium's orange. */
+/* On hover a soft light in the plan's metal follows the pointer across the
+   box, its edge catches the same light, and the box lifts a little. */
 .plan {
   --mx: 50%;
   --my: 0%;
@@ -1353,13 +1439,6 @@ main {
   transition: transform 0.5s var(--ease-out), border-color 0.3s ease;
 }
 
-.plan--premium {
-  --light: 255, 122, 26;
-}
-
-.plan--titanium {
-  --light: 205, 215, 226;
-}
 
 .plan::before,
 .plan::after {
@@ -4780,7 +4859,8 @@ a.hero__panel {
 
 /* Payments */
 .plan__button.is-soon,
-.plan--premium .plan__button.is-soon,
+.plan--iron .plan__button.is-soon,
+.plan--gold .plan__button.is-soon,
 .plan--titanium .plan__button.is-soon {
   color: var(--muted);
   background: transparent;
@@ -6215,10 +6295,16 @@ a.hero__panel {
   font-size: 15px;
 }
 
-.checkout-summary__plan.is-premium,
-.order__thumb--plan.is-premium {
-  background: rgba(255, 122, 26, 0.14);
-  color: var(--accent);
+.checkout-summary__plan.is-iron,
+.order__thumb--plan.is-iron {
+  background: rgba(160, 168, 178, 0.12);
+  color: var(--iron);
+}
+
+.checkout-summary__plan.is-gold,
+.order__thumb--plan.is-gold {
+  background: rgba(230, 184, 74, 0.14);
+  color: var(--gold);
 }
 
 .checkout-summary__plan.is-titanium,
@@ -6227,12 +6313,12 @@ a.hero__panel {
   color: var(--titanium);
 }
 
-.plan-badge.is-basic::before {
-  background: var(--text);
+.plan-badge.is-iron::before {
+  background: var(--iron-metal);
 }
 
-.plan-badge.is-premium::before {
-  background: var(--accent);
+.plan-badge.is-gold::before {
+  background: var(--gold-metal);
 }
 
 .plan-badge.is-titanium::before {
@@ -6250,8 +6336,12 @@ a.hero__panel {
   color: var(--text);
 }
 
-.member-price.is-premium strong {
-  color: var(--accent);
+.member-price.is-iron strong {
+  color: var(--iron);
+}
+
+.member-price.is-gold strong {
+  color: var(--gold);
 }
 
 .member-price.is-titanium strong {
@@ -6278,8 +6368,12 @@ a.hero__panel {
   clear: both;
 }
 
-.admin-plan[data-plan="premium"] legend {
-  color: var(--accent);
+.admin-plan[data-plan="iron"] legend {
+  color: var(--iron);
+}
+
+.admin-plan[data-plan="gold"] legend {
+  color: var(--gold);
 }
 
 .admin-plan[data-plan="titanium"] legend {
