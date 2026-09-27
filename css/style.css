@@ -48,6 +48,7 @@
   --text: #f5f3ef;
   --muted: #8e8c95;
   --accent: #ff7a1a;
+  --mvp: #3d8bff;
 
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-logo: "Great Vibes", cursive;
@@ -898,8 +899,9 @@ main {
 
 /* ==========================================================================
    Section 5 — Subscriptions
-   Two large boxes, always side by side. Premium is set apart by a lighter surface
-   and a filled orange button, nothing louder.
+   Three boxes side by side: Basic, Premium (orange) and MVP (blue). The two
+   paid-up tiers are set apart by a lighter surface and a filled button,
+   nothing louder. Stacked on phones.
    ========================================================================== */
 
 .plans {
@@ -918,7 +920,7 @@ main {
 
 .plans__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(16px, 2vw, 28px);
 }
 
@@ -932,7 +934,8 @@ main {
   border: 1px solid transparent;
 }
 
-.plan--premium {
+.plan--premium,
+.plan--mvp {
   background: var(--surface-2);
 }
 
@@ -943,6 +946,23 @@ main {
 
 .plan--premium .plan__name {
   color: var(--accent);
+}
+
+.plan--mvp .plan__name,
+.plan--mvp .plan__check {
+  color: var(--mvp);
+}
+
+/* The member's current plan. */
+.plan__current {
+  align-self: flex-start;
+  margin: -6px 0 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(var(--light), 0.14);
+  color: rgb(var(--light));
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .plan__blurb {
@@ -1033,6 +1053,16 @@ main {
   text-shadow: none;
 }
 
+.plan--mvp .plan__button {
+  background: var(--mvp);
+  color: #04101f;
+}
+
+.plan--mvp .plan__button:hover {
+  background: #62a3ff;
+  text-shadow: none;
+}
+
 /* Always side by side; on small screens everything inside scales down. */
 /* Both plans: on hover a soft light follows the pointer across the box,
    its edge catches the same light, and the box lifts a little. Basic's
@@ -1048,6 +1078,10 @@ main {
 
 .plan--premium {
   --light: 255, 122, 26;
+}
+
+.plan--mvp {
+  --light: 61, 139, 255;
 }
 
 .plan::before,
@@ -1087,9 +1121,20 @@ main {
   }
 }
 
+@media (max-width: 1100px) and (min-width: 761px) {
+  .plans__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plan--mvp {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 760px) {
   .plans__grid {
-    gap: 10px;
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .plan {
@@ -4446,7 +4491,8 @@ a.hero__panel {
 
 /* Payments */
 .plan__button.is-soon,
-.plan--premium .plan__button.is-soon {
+.plan--premium .plan__button.is-soon,
+.plan--mvp .plan__button.is-soon {
   color: var(--muted);
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--line);
@@ -5827,4 +5873,117 @@ a.hero__panel {
   font-size: 15px;
   letter-spacing: 0.05em;
   color: var(--text);
+}
+
+/* ---------- Subscriptions: plan tiles in checkout and orders, the profile badge ---------- */
+.checkout-summary__plan,
+.order__thumb--plan {
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  color: var(--text);
+  font: 400 22px/1 var(--font-logo);
+}
+
+.checkout-summary__plan {
+  width: 76px;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 8px;
+  font-size: 20px;
+}
+
+.order__thumb--plan {
+  overflow: hidden;
+  font-size: 15px;
+}
+
+.checkout-summary__plan.is-premium,
+.order__thumb--plan.is-premium {
+  background: rgba(255, 122, 26, 0.14);
+  color: var(--accent);
+}
+
+.checkout-summary__plan.is-mvp,
+.order__thumb--plan.is-mvp {
+  background: rgba(61, 139, 255, 0.16);
+  color: var(--mvp);
+}
+
+.plan-badge.is-basic::before {
+  background: var(--text);
+}
+
+.plan-badge.is-premium::before {
+  background: var(--accent);
+}
+
+.plan-badge.is-mvp::before {
+  background: var(--mvp);
+}
+
+/* A work's price for the member, less their plan's discount (work.html). */
+.member-price {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.member-price strong {
+  color: var(--text);
+}
+
+.member-price.is-premium strong {
+  color: var(--accent);
+}
+
+.member-price.is-mvp strong {
+  color: var(--mvp);
+}
+
+/* Admin: the three plans */
+.admin-plan {
+  margin: 18px 0 0;
+  padding: 16px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.admin-plan legend {
+  float: left;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.admin-plan legend + * {
+  clear: both;
+}
+
+.admin-plan[data-plan="premium"] legend {
+  color: var(--accent);
+}
+
+.admin-plan[data-plan="mvp"] legend {
+  color: var(--mvp);
+}
+
+.admin-plan__members {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.admin-plan__checks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  margin: 14px 0 0;
+  font-size: 14px;
+}
+
+.admin-plan__checks > span {
+  color: var(--muted);
 }

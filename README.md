@@ -145,7 +145,7 @@ up. Signed-out visitors log in first and come back to the checkout.
   asks Zarinpal and marks the order paid with its reference number. Only
   that function can mark an order paid (the trigger lets the service role
   through); the amount always comes from the order.
-- The admin panel's "Payments and subscriptions" switches it: Off (orders
+- The admin panel's "Payments" switches it: Off (orders
   wait; the checkout says payment opens soon), Test (Zarinpal's sandbox,
   admins only; orders are marked test) or Live. Live needs the Zarinpal
   merchant ID in Supabase → Edge Functions → Secrets as
@@ -188,9 +188,7 @@ up. Signed-out visitors log in first and come back to the checkout.
 - Paid works appear in Profile → Library ("Pre-ordered · arrives on release
   day" until they're released), and their page's buy button becomes "In
   your library".
-- Subscription prices (Rials per month) are set in the same admin form;
-  the home page shows them, in dollars and euros too once exchange rates
-  are set. Subscriptions can't be bought yet: members see "Opens soon".
+- Subscriptions are bought the same way (see below).
 
 ## Bot check (Cloudflare Turnstile)
 
@@ -226,6 +224,36 @@ nobody can log in.
   mark the order paid in the admin panel.
 - Admin panel → Discount codes: add (with a Random button), turn on/off,
   delete unused; orders show the code and what it took off.
+
+## Subscriptions
+
+- Three plans in `public.plans` (everyone reads; admins change): Basic,
+  Premium (orange) and MVP (blue), each with a price in Rials, a length in
+  days (30), a discount on every work (10 / 25 / 50%), what its members
+  watch or read free (`free_kinds`: animation, film, novel) and whether
+  it's on sale. Admin panel → Subscriptions edits them and shows how many
+  members have each plan now.
+- Buying: the home page's plan buttons go to `checkout.html?plan=<id>`. The
+  order carries `plan_id`; the order trigger prices it from `plans` (no
+  discount codes), one unpaid plan order at a time, and refuses a plan
+  lower than the one running (SF003). Paying goes through Zarinpal like any
+  order.
+- `subscriptions`: one row per paid plan order (trigger
+  `orders_plan_events`), from payment for the plan's days, or after the
+  same plan's current stretch when renewing. Cancelling the order in the
+  admin panel removes its row. The member's plan is the highest one running
+  (`private.current_plan`); `public.my_membership()` returns it.
+- Plan discount: the order trigger takes it off every work order
+  (`member_discount_irr`), then any code on what's left, never below 10,000
+  Rials. `public.price_for(work)` gives a member their price (checkout and
+  the work page show it). `public.plan_covers(work)` says whether the plan
+  lets them watch or read a work free, for the player and reader to come.
+- Emails: the receipt says until when the plan runs; three days before a
+  plan ends (unless it's been renewed) the member gets a "renew" email,
+  sent by the 15-minute email run.
+- The profile shows the plan and its end date with a Renew link; the home
+  page marks the member's plan (remembered in the browser) and the lower
+  ones as included. Terms: terms.html#subscriptions.
 
 ## News
 
@@ -403,10 +431,11 @@ Home page:
       on and settles on a card). Currency buttons below (Auto cycles USD / EUR /
       Rials, or pin one). Each card has an image slider, a price strip and a
       status box. Data: the catalogue (`public.works`).
-- [x] 5. Subscriptions: Basic and Premium boxes, side by side at every
-      screen size. Prices follow the currency chosen above the work cards.
-      On hover each box gets a soft light that follows the
-      pointer (white on Basic, orange on Premium). Plan features and prices are placeholders.
+- [x] 5. Subscriptions: Basic, Premium and MVP boxes, three across on wide
+      screens and stacked on phones. Prices follow the currency chosen above
+      the work cards. On hover each box gets a soft light that follows the
+      pointer (white on Basic, orange on Premium, blue on MVP). Buying one
+      goes through checkout (see Subscriptions).
 
 Title page (`work.html?id=<id>`):
 - [x] The work's key art in the hero's curved frame, its kind, status and

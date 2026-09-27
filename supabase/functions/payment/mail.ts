@@ -25,7 +25,20 @@ export type Order = {
   paid_at?: string | null;
   created_at: string;
   test: boolean;
+  plan_id?: string | null;
 };
+
+// Subscription orders: what they're called, and the row label.
+const PLAN_FA: Record<string, string> = { basic: "ساده", premium: "پرمیوم", mvp: "MVP" };
+const PLAN_EN: Record<string, string> = { basic: "Basic", premium: "Premium", mvp: "MVP" };
+const itemFa = (order: Order): [string, string] =>
+  order.plan_id
+    ? ["اشتراک", `اشتراک ${PLAN_FA[order.plan_id] || esc(order.plan_id)}`]
+    : ["اثر", `<span dir="ltr">${esc(order.title)}</span>`];
+const itemEn = (order: Order): [string, string] =>
+  order.plan_id ? ["Plan", `${PLAN_EN[order.plan_id] || esc(order.plan_id)} plan`] : ["Work", esc(order.title)];
+const whenDayFa = (iso: string) => new Date(iso).toLocaleDateString("fa-IR", { timeZone: "Asia/Tehran", dateStyle: "long" });
+const whenDayEn = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { timeZone: "Asia/Tehran", dateStyle: "long" });
 
 const esc = (text: unknown) =>
   String(text ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -89,7 +102,7 @@ export const placedEmail = (order: Order, payable: boolean) => {
     `<p style="margin:0;">سفارش شما ثبت شد و در انتظار پرداخت است.</p>` +
     rows(
       [
-        ["اثر", `<span dir="ltr">${esc(order.title)}</span>`],
+        itemFa(order),
         ["شماره‌ی سفارش", faNum(order.number)],
         ["مبلغ", rialsFa(order.amount_irr)],
         ["وضعیت", "در انتظار پرداخت"],
@@ -106,7 +119,7 @@ export const placedEmail = (order: Order, payable: boolean) => {
     `<p style="margin:0;">Your order is in and waiting for payment.</p>` +
     rows(
       [
-        ["Work", esc(order.title)],
+        itemEn(order),
         ["Order number", String(order.number)],
         ["Amount", rialsEn(order.amount_irr)],
         ["Status", "Awaiting payment"],
@@ -132,14 +145,15 @@ export const placedEmail = (order: Order, payable: boolean) => {
 };
 
 // ---------- To the buyer: payment receipt ----------
-export const paidEmail = (order: Order, released: boolean) => {
+export const paidEmail = (order: Order, released: boolean, planEnds?: string | null) => {
   const when = order.paid_at || new Date().toISOString();
+  const plan = Boolean(order.plan_id);
   const fa =
     hello(order.name, true) +
     `<p style="margin:0;">پرداخت شما انجام شد. این رسید را نگه دارید.</p>` +
     rows(
       [
-        ["اثر", `<span dir="ltr">${esc(order.title)}</span>`],
+        itemFa(order),
         ["شماره‌ی سفارش", faNum(order.number)],
         ["مبلغ پرداخت‌شده", rialsFa(order.amount_irr)],
         ["شماره‌ی پیگیری", `<span dir="ltr">${esc(order.ref_id || "—")}</span>`],
@@ -149,14 +163,18 @@ export const paidEmail = (order: Order, released: boolean) => {
       true
     ) +
     `<p style="margin:16px 0 0;">${
-      released ? "این اثر حالا در «کتابخانه»ی پروفایل شماست." : "این اثر در روز انتشار به «کتابخانه»ی پروفایل شما اضافه می‌شود."
+      plan
+        ? `اشتراک شما فعال شد${planEnds ? ` و تا ${whenDayFa(planEnds)} اعتبار دارد` : ""}. تخفیف اشتراک در خریدهای بعدی خودبه‌خود حساب می‌شود.`
+        : released
+          ? "این اثر حالا در «کتابخانه»ی پروفایل شماست."
+          : "این اثر در روز انتشار به «کتابخانه»ی پروفایل شما اضافه می‌شود."
     }</p>`;
   const en =
     hello(order.name, false) +
     `<p style="margin:0;">Your payment went through. Keep this receipt.</p>` +
     rows(
       [
-        ["Work", esc(order.title)],
+        itemEn(order),
         ["Order number", String(order.number)],
         ["Amount paid", rialsEn(order.amount_irr)],
         ["Reference", esc(order.ref_id || "—")],
@@ -166,7 +184,11 @@ export const paidEmail = (order: Order, released: boolean) => {
       false
     ) +
     `<p style="margin:16px 0 0;">${
-      released ? "It&rsquo;s in the Library in your profile now." : "It will appear in the Library in your profile on release day."
+      plan
+        ? `Your plan is active${planEnds ? ` until ${whenDayEn(planEnds)}` : ""}. Its discount comes off your next purchases by itself.`
+        : released
+          ? "It&rsquo;s in the Library in your profile now."
+          : "It will appear in the Library in your profile on release day."
     }</p>`;
   return {
     to: order.email,
@@ -174,9 +196,11 @@ export const paidEmail = (order: Order, released: boolean) => {
     html: page(
       fa,
       en,
-      button(`${SITE}/profile.html#library`, "کتابخانه‌ی من", "My library"),
-      `برای بازگشت وجه، طبق <a href="${SITE}/terms.html#purchases" style="color:#ff7a1a;">قوانین خرید</a>، شماره‌ی سفارش را به همین ایمیل پاسخ دهید.`,
-      `For a refund under the <a href="${SITE}/terms.html#purchases" style="color:#ff7a1a;">terms of purchase</a>, reply to this email with your order number.`
+      plan
+        ? button(`${SITE}/profile.html`, "پروفایل من", "My profile")
+        : button(`${SITE}/profile.html#library`, "کتابخانه‌ی من", "My library"),
+      `برای بازگشت وجه، طبق <a href="${SITE}/terms.html#${plan ? "subscriptions" : "purchases"}" style="color:#ff7a1a;">قوانین خرید</a>، شماره‌ی سفارش را به همین ایمیل پاسخ دهید.`,
+      `For a refund under the <a href="${SITE}/terms.html#${plan ? "subscriptions" : "purchases"}" style="color:#ff7a1a;">terms of purchase</a>, reply to this email with your order number.`
     ),
   };
 };
@@ -190,7 +214,7 @@ export const stageEmail = (order: Order, stage: "processing" | "completed") => {
     `<p style="margin:0;">${done ? "سفارش شما انجام شد." : "سفارش شما در حال انجام است."}</p>` +
     rows(
       [
-        ["اثر", `<span dir="ltr">${esc(order.title)}</span>`],
+        itemFa(order),
         ["شماره‌ی سفارش", faNum(order.number)],
         ["وضعیت", done ? "انجام شد" : "در حال انجام"],
       ],
@@ -206,7 +230,7 @@ export const stageEmail = (order: Order, stage: "processing" | "completed") => {
     `<p style="margin:0;">${done ? "Your order is complete." : "Your order is in progress."}</p>` +
     rows(
       [
-        ["Work", esc(order.title)],
+        itemEn(order),
         ["Order number", String(order.number)],
         ["Status", done ? "Completed" : "In progress"],
       ],
@@ -257,7 +281,7 @@ export const studioEmail = (order: Order, event: "placed" | "paid") => {
   return {
     to: STUDIO,
     replyTo: order.email,
-    subject: `[SauFox] ${paid ? "پرداخت شد" : "سفارش جدید"} ${faNum(order.number)} | ${paid ? "Paid" : "New order"} #${order.number}: ${order.title}${order.test ? " (test)" : ""}`,
+    subject: `[SauFox] ${paid ? "پرداخت شد" : "سفارش جدید"} ${faNum(order.number)} | ${paid ? "Paid" : "New order"} #${order.number}: ${order.plan_id ? `${PLAN_EN[order.plan_id] || order.plan_id} plan` : order.title}${order.test ? " (test)" : ""}`,
     html: page(fa, en, button(`${SITE}/admin.html`, "پنل مدیریت", "Admin panel")),
   };
 };
@@ -291,6 +315,27 @@ export const alertEmail = (email: string, work: { id: string; title: string }, e
       button(link, out ? "دیدن اثر" : "دیدن تریلر", out ? "See it" : "Watch the trailer"),
       "این ایمیل را چون در صفحه‌ی این اثر «خبرم کن» را زده بودید دریافت می‌کنید. برای لغو، همان دکمه را دوباره بزنید.",
       "You're getting this because you chose Notify me on this work's page. Press it again there to stop."
+    ),
+  };
+};
+
+// ---------- To a member whose plan ends in a few days ----------
+export const planEndingEmail = (email: string, planId: string, ends: string) => {
+  const fa =
+    `<p style="margin:0 0 8px;color:#f5f3ef;font-size:18px;font-weight:700;">اشتراک ${PLAN_FA[planId] || esc(planId)} شما رو به پایان است</p>` +
+    `<p style="margin:0;">اشتراک شما ${whenFa(ends)} تمام می‌شود و خودبه‌خود تمدید نمی‌شود. برای اینکه تخفیف‌ها و تماشای رایگان قطع نشوند، پیش از آن تمدیدش کنید؛ روزهای تازه به دنبال روزهای باقی‌مانده اضافه می‌شوند.</p>`;
+  const en =
+    `<p style="margin:0 0 8px;color:#f5f3ef;font-size:18px;font-weight:700;">Your ${PLAN_EN[planId] || esc(planId)} plan ends soon</p>` +
+    `<p style="margin:0;">It ends on ${whenEn(ends)} and doesn&rsquo;t renew by itself. Renew before then to keep your discounts and free viewing; the new days are added after the ones you have left.</p>`;
+  return {
+    to: email,
+    subject: `اشتراک ساوفاکس شما رو به پایان است | Your SauFox plan ends soon`,
+    html: page(
+      fa,
+      en,
+      button(`${SITE}/checkout.html?plan=${encodeURIComponent(planId)}`, "تمدید اشتراک", "Renew my plan"),
+      "این یادآوری فقط یک بار برای هر دوره فرستاده می‌شود.",
+      "We send this reminder once per plan period."
     ),
   };
 };

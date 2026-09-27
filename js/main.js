@@ -279,11 +279,12 @@ const loadSite = async () => {
     return res.json();
   };
   try {
-    const [rows, settings] = await Promise.all([
+    const [rows, settings, plans] = await Promise.all([
       get("works?select=*&published=eq.true&order=sort.asc,created_at.asc"),
-      get("site_settings?select=usd_irr,eur_irr,maintenance,maintenance_note,maintenance_note_fa,plan_basic_irr,plan_premium_irr,payments,sales_open&id=eq.1").catch(() => []),
+      get("site_settings?select=usd_irr,eur_irr,maintenance,maintenance_note,maintenance_note_fa,payments,sales_open&id=eq.1").catch(() => []),
+      get("plans?select=id,rank,price_irr,days,discount_percent,free_kinds,on_sale&order=rank.asc").catch(() => []),
     ]);
-    const rates = settings[0] || {};
+    const rates = { ...(settings[0] || {}), plans };
     local.set("catalog", JSON.stringify({ rows, rates }));
     return { works: rows.map((row) => toWork(row, rates)), settings: rates, offline: false };
   } catch (e) {
@@ -418,6 +419,49 @@ const payOrder = async (orderId) => {
     return "";
   }
   return PAYMENT_ERRORS[answer.error] || "Couldn't reach the payment service. Check your connection and try again.";
+};
+
+// ---------- Subscriptions ----------
+// Basic, Premium and MVP (public.plans; settings.plans). A paid plan order
+// gives the member a stretch of days; the database takes the plan's
+// discount off every work they order.
+const PLAN_NAMES = { basic: "Basic", premium: "Premium", mvp: "MVP" };
+const planName = (id) => PLAN_NAMES[id] || id;
+// The free-viewing line for a plan's free_kinds.
+const FREE_LINES = {
+  novel: "Read every novel free in the online reader",
+  animation: "Watch every animation free",
+  film: "Watch every film free",
+  "animation,novel": "Watch every animation free, and read every novel",
+  "film,novel": "Watch every film free, and read every novel",
+  "animation,film": "Watch every film and animation free",
+  "animation,film,novel": "Watch every film and animation free, and read every novel",
+};
+const freeLine = (kinds) => FREE_LINES[[...(kinds || [])].sort().join(",")] || "";
+// Which of animation / film / novel a work is (same as private.kind_class).
+const kindClass = (kind) =>
+  /film|movie/i.test(kind) ? "film" : /anim/i.test(kind) ? "animation" : /novel|book/i.test(kind) ? "novel" : "";
+// The signed-in member's plan: { plan, ends_at, discount_percent,
+// free_kinds } or null. Asked once per page, and remembered in this
+// browser for the pages that don't talk to the account (the home page).
+let membershipAsk = null;
+const myMembership = () =>
+  (membershipAsk ||= (async () => {
+    if (!local.get("session")) return null;
+    const session = await verifiedSession();
+    if (!session) return null;
+    const { data, error } = await account.rpc("my_membership");
+    if (error) return savedMembership();
+    local.set("plan", data ? JSON.stringify({ plan: data.plan, ends_at: data.ends_at }) : null);
+    return data;
+  })());
+const savedMembership = () => {
+  try {
+    const saved = local.get("session") && JSON.parse(local.get("plan") || "null");
+    return saved && new Date(saved.ends_at) > new Date() ? saved : null;
+  } catch (e) {
+    return null;
+  }
 };
 
 // Mobile numbers typed with Persian or Arabic digits, spaces or dashes.
@@ -998,7 +1042,42 @@ const posterCard = (work) => {
   // Prices are set in Rials in the admin panel; dollars and euros follow
   // the exchange rates there (marked "≈").
   const { settings } = await site;
-  const plans = boxes.map((box) => pricesOf({ price_irr: settings[`plan_${box.dataset.plan}_irr`] ?? null }, settings));
+  const rows = settings.plans || [];
+  const rowOf = (id) => rows.find((row) => row.id === id) || {};
+  const plans = boxes.map((box) => pricesOf({ price_irr: rowOf(box.dataset.plan).price_irr ?? null }, settings));
+
+  // Each plan's lines and button from its settings; the member's own plan
+  // is marked, and lower ones are already covered by it.
+  const mine = savedMembership();
+  const myRank = mine ? rowOf(mine.plan).rank || 0 : 0;
+  document.querySelectorAll(".plan").forEach((card) => {
+    const row = rowOf(card.dataset.plan);
+    if (row.days && row.days !== 30) card.querySelector(".plan__per").textContent = `/ ${row.days} days`;
+    if (row.discount_percent != null) {
+      const line = card.querySelector('[data-slot="discount"]');
+      if (row.discount_percent) line.textContent = `${row.discount_percent}% off every work in the store`;
+      else line.closest("li").remove();
+    }
+    if (row.free_kinds) {
+      const line = card.querySelector('[data-slot="free"]');
+      if (freeLine(row.free_kinds)) line.textContent = freeLine(row.free_kinds);
+      else line.closest("li").remove();
+    }
+    const button = card.querySelector(".plan__button");
+    const soon = (text) => {
+      button.removeAttribute("href");
+      button.classList.add("is-soon");
+      button.textContent = text;
+    };
+    if (mine && mine.plan === card.dataset.plan) {
+      const tag = document.createElement("p");
+      tag.className = "plan__current";
+      tag.textContent = `Your plan · until ${dateText(mine.ends_at)}`;
+      card.querySelector(".plan__blurb").after(tag);
+      button.textContent = "Renew";
+    } else if (row.rank && row.rank < myRank) soon("Included in your plan");
+    if (row.on_sale === false || row.price_irr == null) soon("Not on sale right now");
+  });
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
   const CODES = ["USD", "EUR", "IRR"].filter((code) => plans.every((plan) => plan.prices[code] != null));
   if (!CODES.length) {
@@ -1046,14 +1125,6 @@ const posterCard = (work) => {
     if (document.hidden || calm.matches || mode !== "auto" || CODES.length < 2) return;
     show((current + 1) % CODES.length);
   }, 2600);
-
-  // Members: subscriptions can't be bought yet, so no sign-up button.
-  if (local.get("session"))
-    document.querySelectorAll(".plan__button").forEach((button) => {
-      button.removeAttribute("href");
-      button.classList.add("is-soon");
-      button.textContent = "Opens soon";
-    });
 })();
 
 // Section 5 — Subscriptions: each plan's hover light follows the pointer.
@@ -1819,9 +1890,13 @@ const signedInGoHome = async (user) => {
         thumb.append(img);
       }
     }
+    if (order.plan_id) {
+      thumb.classList.add("order__thumb--plan", `is-${order.plan_id}`);
+      thumb.textContent = planName(order.plan_id);
+    }
     const text = make("div", "order__text");
-    const title = make("strong", "", order.title);
-    title.translate = false;
+    const title = make("strong", "", order.plan_id ? `${planName(order.plan_id)} plan` : order.title);
+    title.translate = Boolean(order.plan_id); // work titles stay as they are
     text.append(title, make("span", "", `Order ${order.number} · ${dateText(order.created_at)}`));
     if (order.ref_id) text.append(make("span", "selectable", `Reference ${order.ref_id}`));
     const side = make("div", "order__side");
@@ -1861,7 +1936,7 @@ const signedInGoHome = async (user) => {
           .from("orders")
           .update({ status: "cancelled" })
           .eq("id", order.id)
-          .select("id, number, work_id, title, amount_irr, status, created_at, ref_id")
+          .select("id, number, work_id, plan_id, title, amount_irr, status, created_at, ref_id")
           .single();
         if (error) {
           cancel.disabled = false;
@@ -1879,7 +1954,7 @@ const signedInGoHome = async (user) => {
   const showOrders = async (userId) => {
     const { data, error } = await account
       .from("orders")
-      .select("id, number, work_id, title, amount_irr, status, created_at, ref_id")
+      .select("id, number, work_id, plan_id, title, amount_irr, status, created_at, ref_id")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error || !data.length) return;
@@ -1942,6 +2017,17 @@ const signedInGoHome = async (user) => {
   showMyList(user.id);
   showOrders(user.id);
   showLibrary(user.id);
+  // The member's plan, beside their email.
+  myMembership().then((mine) => {
+    if (!mine) return;
+    const head = page.querySelector(".profile-head__plan");
+    const badge = head.querySelector(".plan-badge");
+    badge.textContent = `${planName(mine.plan)} plan · until ${dateText(mine.ends_at)}`;
+    badge.classList.add(`is-${mine.plan}`);
+    const link = head.querySelector('a[href="index.html#plans"]');
+    link.href = `checkout.html?plan=${encodeURIComponent(mine.plan)}`;
+    link.textContent = "Renew";
+  });
   // Admins get a way into the admin panel: shown at once if this browser
   // knows them as an admin, then confirmed by the database.
   const adminLink = document.createElement("a");
@@ -2233,6 +2319,21 @@ const signedInGoHome = async (user) => {
     factList.append(row);
   });
   factList.hidden = !factList.children.length;
+
+  // Members: the work's price with their plan's discount (as the database
+  // works it out), and whether their plan lets them watch or read it free.
+  myMembership().then(async (mine) => {
+    if (!mine) return;
+    const note = make("p", `member-price is-${mine.plan}`);
+    if ((mine.free_kinds || []).includes(kindClass(work.kind))) {
+      note.append(make("strong", "", kindClass(work.kind) === "novel" ? "Free to read with your plan" : "Free to watch with your plan"));
+    } else if (work.prices && work.prices.IRR != null) {
+      const { data } = await account.rpc("price_for", { work: work.id });
+      if (!data || !data.member_discount) return;
+      note.append(make("strong", "", `Your ${planName(mine.plan)} price: ${money.IRR(data.total)}`), ` (${mine.discount_percent}% off)`);
+    } else return;
+    factList.after(note);
+  });
 
   // Actions: the trailer once it's out, otherwise its date; buying isn't
   // open yet.
@@ -3741,24 +3842,20 @@ const foldText = (text) =>
     ratesMessage.textContent = error ? "The rates weren't saved. Check your connection and try again." : "Saved. Prices on the site use the new rates.";
   });
 
-  // ---------- Payments and subscription prices ----------
+  // ---------- Payments ----------
   const payForm = page.querySelector(".admin-payments");
   const payMessage = payForm.querySelector(".admin-message");
   const payMode = payForm.querySelector("#payments-mode");
   const salesMode = payForm.querySelector("#sales-open");
-  const planBasic = payForm.querySelector("#plan-basic");
-  const planPremium = payForm.querySelector("#plan-premium");
   account
     .from("site_settings")
-    .select("payments, sales_open, plan_basic_irr, plan_premium_irr")
+    .select("payments, sales_open")
     .eq("id", 1)
     .maybeSingle()
     .then(({ data }) => {
       if (!data) return;
       payMode.value = data.payments || "off";
       salesMode.value = data.sales_open === false ? "paused" : "open";
-      planBasic.value = data.plan_basic_irr ?? "";
-      planPremium.value = data.plan_premium_irr ?? "";
     });
   // Zarinpal only takes requests from registered IPs; the payment function
   // sends them from the database, so that's the IP to register.
@@ -3787,13 +3884,6 @@ const foldText = (text) =>
   });
   payForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const basic = number(planBasic);
-    const premium = number(planPremium);
-    if ([basic, premium].some((n) => n !== null && !(n > 0))) {
-      payMessage.classList.remove("is-ok");
-      payMessage.textContent = "Prices must be numbers above 0, or empty.";
-      return;
-    }
     payMessage.classList.add("is-ok");
     payMessage.textContent = "Saving…";
     const { error } = await account
@@ -3801,8 +3891,6 @@ const foldText = (text) =>
       .update({
         payments: payMode.value,
         sales_open: salesMode.value === "open",
-        plan_basic_irr: basic,
-        plan_premium_irr: premium,
         updated_at: new Date().toISOString(),
       })
       .eq("id", 1);
@@ -3812,6 +3900,73 @@ const foldText = (text) =>
       : salesMode.value === "paused"
         ? "Saved. Sales are paused: no new orders or payments until you reopen them."
         : { off: "Saved. Online payment is off.", test: "Saved. Test payments are on for admins.", live: "Saved. Online payment is live." }[payMode.value];
+  });
+
+  // ---------- Subscriptions ----------
+  const planForm = page.querySelector(".admin-plans");
+  const planMessage = planForm.querySelector(".admin-message");
+  const planBoxes = [...planForm.querySelectorAll(".admin-plan")];
+  const planField = (box, name) => box.querySelector(`[name="${name}"]`);
+  account
+    .from("plans")
+    .select("id, price_irr, days, discount_percent, free_kinds, on_sale")
+    .then(({ data }) =>
+      (data || []).forEach((row) => {
+        const box = planBoxes.find((b) => b.dataset.plan === row.id);
+        if (!box) return;
+        ["price_irr", "days", "discount_percent"].forEach((name) => (planField(box, name).value = row[name] ?? ""));
+        box.querySelectorAll('[name="free"]').forEach((check) => (check.checked = row.free_kinds.includes(check.value)));
+        planField(box, "on_sale").checked = row.on_sale;
+      })
+    );
+  // How many members have each plan now (the highest one counts).
+  account
+    .from("subscriptions")
+    .select("user_id, plan_id")
+    .lte("starts_at", new Date().toISOString())
+    .gt("ends_at", new Date().toISOString())
+    .then(({ data }) => {
+      const RANK = { basic: 1, premium: 2, mvp: 3 };
+      const best = {};
+      (data || []).forEach((s) => {
+        if (!best[s.user_id] || RANK[s.plan_id] > RANK[best[s.user_id]]) best[s.user_id] = s.plan_id;
+      });
+      planBoxes.forEach((box) => {
+        const count = Object.values(best).filter((id) => id === box.dataset.plan).length;
+        box.querySelector('[data-slot="members"]').textContent = `· ${count} ${count === 1 ? "member" : "members"} now`;
+      });
+    });
+  planForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const rows = planBoxes.map((box) => ({
+      id: box.dataset.plan,
+      price_irr: number(planField(box, "price_irr")),
+      days: number(planField(box, "days")),
+      discount_percent: number(planField(box, "discount_percent")) ?? 0,
+      free_kinds: [...box.querySelectorAll('[name="free"]:checked')].map((check) => check.value),
+      on_sale: planField(box, "on_sale").checked,
+    }));
+    const wrong = rows.find(
+      (row) =>
+        (row.price_irr !== null && !(row.price_irr >= 10000)) ||
+        !(row.days >= 1 && row.days <= 400) ||
+        !(row.discount_percent >= 0 && row.discount_percent <= 90)
+    );
+    if (wrong) {
+      planMessage.classList.remove("is-ok");
+      planMessage.textContent = `${PLAN_NAMES[wrong.id]}: the price is at least 10,000 Rials (or empty), the length 1 to 400 days, the discount 0 to 90%.`;
+      return;
+    }
+    planMessage.classList.add("is-ok");
+    planMessage.textContent = "Saving…";
+    const results = await Promise.all(
+      rows.map(({ id, ...row }) =>
+        account.from("plans").update({ ...row, updated_at: new Date().toISOString() }).eq("id", id)
+      )
+    );
+    const failed = results.some((result) => result.error);
+    planMessage.classList.toggle("is-ok", !failed);
+    planMessage.textContent = failed ? "Not saved. Check your connection and try again." : "Saved. The home page and checkout use the new plans.";
   });
 
   // ---------- Orders ----------
@@ -3834,7 +3989,9 @@ const foldText = (text) =>
       make(
         "span",
         "",
-        `${money.IRR(order.amount_irr)}${order.coupon_code ? ` (code ${order.coupon_code}, −${money.IRR(order.discount_irr)})` : ""} · ${whenText(order.created_at)}`
+        `${money.IRR(order.amount_irr)}${order.member_discount_irr ? ` (plan −${money.IRR(order.member_discount_irr)})` : ""}${
+          order.coupon_code ? ` (code ${order.coupon_code}, −${money.IRR(order.discount_irr)})` : ""
+        } · ${whenText(order.created_at)}`
       )
     );
     if (order.ref_id)
@@ -3915,7 +4072,7 @@ const foldText = (text) =>
   const loadOrders = () =>
     account
       .from("orders")
-      .select("id, number, title, amount_irr, name, email, phone, status, created_at, ref_id, card_pan, test, email_pending, email_error, email_tries, coupon_code, discount_irr")
+      .select("id, number, title, amount_irr, name, email, phone, status, created_at, ref_id, card_pan, test, email_pending, email_error, email_tries, coupon_code, discount_irr, member_discount_irr")
       .order("created_at", { ascending: false })
       .limit(200)
       .then(({ data, error }) => {
@@ -4457,9 +4614,11 @@ const foldText = (text) =>
   showList();
 })();
 
-// Checkout (checkout.html?id=<id>) — one work, for members. The order is
-// saved as "awaiting payment"; the database fills in the title, price and
-// email itself, so nothing here can change what's charged. When online
+// Checkout (checkout.html?id=<id>) — one work, for members; or a plan
+// (checkout.html?plan=basic|premium|mvp). The order is saved as "awaiting
+// payment"; the database fills in the title, price (less the member's plan
+// discount and any code) and email itself, so nothing here can change
+// what's charged. When online
 // payment is open, the member goes on to Zarinpal, which sends them back to
 // checkout.html?order=<order id>&Authority=…&Status=OK|NOK.
 (async function checkoutPage() {
@@ -4490,7 +4649,9 @@ const foldText = (text) =>
         "Your order is in",
         "It’s waiting for payment. Online payment opens soon, and we’ll email you when you can pay. You can follow or cancel it in your profile.",
       ],
-      paid: ["Payment received", "Thank you! The order is paid and shows in your profile. Keep the reference number for any questions."],
+      paid: plan
+        ? ["Payment received", "Thank you! Your plan is on, and its discount now comes off every work. See it in your profile."]
+        : ["Payment received", "Thank you! The order is paid and shows in your profile. Keep the reference number for any questions."],
       failed: [
         "The payment didn’t go through",
         "Your order is saved. If money left your account, the bank returns it within 72 hours. You can try again now, or later from your orders.",
@@ -4517,6 +4678,7 @@ const foldText = (text) =>
 
   // ---------- Back from the bank ----------
   const params = new URLSearchParams(location.search);
+  let plan = null;
   const returning = params.get("order");
   if (returning) {
     gate.textContent = "Checking your payment…";
@@ -4533,6 +4695,7 @@ const foldText = (text) =>
       gate.textContent = "Couldn't reach the payment service. Reload the page in a moment to check again.";
       return;
     }
+    plan = answer.plan || null;
     if (answer.paid) return finish("paid", { number: answer.number, ref: answer.ref_id });
     finish("failed", { number: answer.number });
     retry.addEventListener("click", async () => {
@@ -4551,35 +4714,76 @@ const foldText = (text) =>
   const session = await verifiedSession();
   if (!session) return goLogin();
   const user = session.user;
-  const id = new URLSearchParams(location.search).get("id");
-  const work = (await catalog).find((w) => w.id === id);
-  if (!work || !work.prices || work.prices.IRR == null) return show(missing);
+  const { settings } = await site;
+  const planId = params.get("plan");
+  plan = planId ? (settings.plans || []).find((p) => p.id === planId && p.on_sale && p.price_irr != null) || null : null;
+  const id = params.get("id");
+  const work = plan ? null : (await catalog).find((w) => w.id === id);
+  if (!plan && (!work || !work.prices || work.prices.IRR == null)) return show(missing);
+  const membership = await myMembership();
 
-  // Already ordered: that order is in the profile.
-  const { data: open } = await account
+  // Already ordered: that order is in the profile. (One unpaid plan order
+  // at a time, too.)
+  let openQuery = account
     .from("orders")
     .select("id")
     .eq("user_id", user.id)
-    .eq("work_id", work.id)
-    .in("status", ["awaiting_payment", "paid", "processing", "completed"])
+    .in("status", plan ? ["awaiting_payment"] : ["awaiting_payment", "paid", "processing", "completed"])
     .limit(1);
+  openQuery = plan ? openQuery.not("plan_id", "is", null) : openQuery.eq("work_id", work.id);
+  const { data: open } = await openQuery;
   if (open && open.length) return location.replace("profile.html#orders");
 
-  document.title = `Checkout · ${work.title} · SauFox Entertainment`;
   form.querySelectorAll(".checkout-card__step").forEach((step) => (step.textContent = digits(step.textContent)));
   const back = form.querySelector('[data-slot="back"]');
-  back.href = `work.html?id=${encodeURIComponent(work.id)}`;
-
-  // Summary
   const poster = form.querySelector(".checkout-summary__poster");
-  if (work.images[0]) poster.src = work.images[0];
-  else poster.hidden = true;
-  form.querySelector(".checkout-summary__kind").textContent = work.kind;
-  form.querySelector(".checkout-summary__name").textContent = work.title;
-  form.querySelector(".checkout-summary__edition").textContent =
-    work.status === "released" ? "Digital edition" : "Pre-order · in your Library on release day";
-  const rials = work.prices.IRR;
+  let rials;
+  let member = 0;
+  if (plan) {
+    document.title = `Checkout · ${planName(plan.id)} · SauFox Entertainment`;
+    back.href = "index.html#plans";
+    back.querySelector("span").textContent = "Back to plans";
+    poster.replaceWith(Object.assign(document.createElement("span"), { className: `checkout-summary__plan is-${plan.id}`, textContent: planName(plan.id) }));
+    form.querySelector(".checkout-summary__kind").textContent = "Subscription";
+    const name = form.querySelector(".checkout-summary__name");
+    name.textContent = `${planName(plan.id)} plan`;
+    name.removeAttribute("translate");
+    const mine = membership && membership.plan === plan.id;
+    form.querySelector(".checkout-summary__edition").textContent = mine
+      ? `${plan.days} days, added after your current plan ends on ${dateText(membership.ends_at)}`
+      : `${plan.days} days, starting as soon as you pay`;
+    form.querySelector(".checkout-coupon").hidden = true;
+    rials = plan.price_irr;
+    // A lower plan than the one running now would add nothing.
+    const current = membership && (settings.plans || []).find((p) => p.id === membership.plan);
+    if (current && current.rank > plan.rank) {
+      submit.disabled = true;
+      say(`Your ${planName(current.id)} plan already includes everything in ${planName(plan.id)}.`);
+    }
+  } else {
+    document.title = `Checkout · ${work.title} · SauFox Entertainment`;
+    back.href = `work.html?id=${encodeURIComponent(work.id)}`;
+    if (work.images[0]) poster.src = work.images[0];
+    else poster.hidden = true;
+    form.querySelector(".checkout-summary__kind").textContent = work.kind;
+    form.querySelector(".checkout-summary__name").textContent = work.title;
+    form.querySelector(".checkout-summary__edition").textContent =
+      work.status === "released" ? "Digital edition" : "Pre-order · in your Library on release day";
+    rials = work.prices.IRR;
+    // The member's plan discount, as the database works it out.
+    if (membership) {
+      const { data } = await account.rpc("price_for", { work: work.id });
+      member = (data && data.member_discount) || 0;
+    }
+  }
   form.querySelector('[data-slot="price"]').textContent = money.IRR(rials);
+  if (member) {
+    form.querySelector(".checkout-summary__member").hidden = false;
+    form.querySelector('[data-slot="member-label"]').textContent = t(
+      `${planName(membership.plan)} plan (${membership.discount_percent}% off)`
+    );
+    form.querySelector('[data-slot="member"]').textContent = `− ${money.IRR(member)}`;
+  }
   const total = form.querySelector('[data-slot="total"]');
   const showTotal = (amount) => {
     total.textContent = money.IRR(amount);
@@ -4587,7 +4791,7 @@ const foldText = (text) =>
     tomans.textContent = LANG === "fa" ? `${num(Math.round(amount / 10))} تومان` : `${num(Math.round(amount / 10))} Tomans`;
     total.append(tomans);
   };
-  showTotal(rials);
+  showTotal(rials - member);
 
   // Discount code: checked here to show the new total; the database checks
   // it again, and works out the price itself, when the order is saved.
@@ -4612,7 +4816,7 @@ const foldText = (text) =>
       form.querySelector('[data-slot="discount-label"]').textContent = t(`Discount (${quote.code})`);
       form.querySelector('[data-slot="discount"]').textContent = `− ${money.IRR(quote.discount)}`;
     }
-    showTotal(quote ? quote.total : rials);
+    showTotal(quote ? quote.total : rials - member);
     couponApply.textContent = t(quote ? "Remove" : "Apply");
   };
   couponApply.addEventListener("click", async () => {
@@ -4642,8 +4846,8 @@ const foldText = (text) =>
       couponApply.click();
     }
   });
-  const others = ["USD", "EUR"].filter((code) => work.prices[code] != null).map((code) => `≈ ${money[code](work.prices[code])}`);
-  if (others.length) {
+  const others = plan ? [] : ["USD", "EUR"].filter((code) => work.prices[code] != null).map((code) => `≈ ${money[code](work.prices[code])}`);
+  if (others.length && !member) {
     const approx = form.querySelector('[data-slot="approx"]');
     approx.textContent = `About ${others.join(" / ")}. You pay in Rials.`;
     approx.hidden = false;
@@ -4658,7 +4862,6 @@ const foldText = (text) =>
   phoneInput.value = local.get("phone") || "";
 
   // Payment: straight on to the bank when it's open.
-  const { settings } = await site;
   const canPay = paymentsOpen(settings);
   if (salesPaused(settings)) {
     submit.disabled = true;
@@ -4693,7 +4896,7 @@ const foldText = (text) =>
     say("Placing your order…", true);
     const { data, error } = await account
       .from("orders")
-      .insert({ work_id: work.id, name, phone, ...(coupon ? { coupon_code: coupon.code } : {}) })
+      .insert(plan ? { plan_id: plan.id, name, phone } : { work_id: work.id, name, phone, ...(coupon ? { coupon_code: coupon.code } : {}) })
       .select("id, number")
       .single();
     if (error) {
@@ -4712,7 +4915,9 @@ const foldText = (text) =>
         submit.disabled = true;
         return say(SALES_PAUSED);
       }
-      if (error.code === "P0001") return say("This work isn't on sale right now. Reload the page to see its latest details.");
+      if (error.code === "SF003") return say("Your current plan already includes this one.");
+      if (error.code === "P0001")
+        return say(plan ? "This plan isn't on sale right now." : "This work isn't on sale right now. Reload the page to see its latest details.");
       return say("Your order wasn't placed. Check your connection and try again.");
     }
     local.set("phone", phone);

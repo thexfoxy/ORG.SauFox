@@ -14,7 +14,8 @@
 // POST { action: "retry-emails", order_id? }     admins (one order), or the
 //   database every 15 minutes with the x-retry-key header (all orders)
 //   -> { sent, failed }  sends the emails that didn't go out before, and
-//   (from the database) the "Notify me" emails that are due
+//   (from the database) the "Notify me" and "your plan ends soon" emails
+//   that are due
 //
 // Emails (mail.ts): the buyer gets "order received" or a payment receipt,
 // and the studio a copy of each; every email goes out once per order. One
@@ -34,7 +35,7 @@
 // from the database (public.zarinpal_call), whose IP stays the same; the
 // admin panel shows it.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { alertEmail, mailReady, paidEmail, placedEmail, send, stageEmail, STUDIO, studioEmail, type Order } from "./mail.ts";
+import { alertEmail, mailReady, paidEmail, placedEmail, planEndingEmail, send, stageEmail, STUDIO, studioEmail, type Order } from "./mail.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
@@ -96,8 +97,8 @@ const later = (work: Promise<unknown>) => {
 // and paid orders. Returns whether an email went out.
 type Stage = "placed" | "paid" | "processing" | "completed";
 const ORDER_FIELDS =
-  "id, number, title, amount_irr, name, email, phone, ref_id, card_pan, paid_at, created_at, test, work_id, email_pending, email_tries";
-type Row = Order & { work_id: string; email_pending: string[]; email_tries: number };
+  "id, number, title, amount_irr, name, email, phone, ref_id, card_pan, paid_at, created_at, test, work_id, plan_id, email_pending, email_tries";
+type Row = Order & { work_id: string | null; email_pending: string[]; email_tries: number };
 const emailOnce = async (orderId: string, kind: Stage) => {
   if (!mailReady()) return false;
   const column = `${kind}_email_at`;
@@ -112,7 +113,10 @@ const emailOnce = async (orderId: string, kind: Stage) => {
   const pending = (order.email_pending || []).filter((k) => k !== kind);
   try {
     if (kind === "placed") await send(placedEmail(order, false));
-    else if (kind === "paid") {
+    else if (kind === "paid" && order.plan_id) {
+      const { data: sub } = await db.from("subscriptions").select("ends_at").eq("order_id", order.id).maybeSingle();
+      await send(paidEmail(order, true, sub?.ends_at));
+    } else if (kind === "paid") {
       const { data: work } = await db.from("works").select("status").eq("id", order.work_id).maybeSingle();
       await send(paidEmail(order, work?.status === "released"));
     } else await send(stageEmail(order, kind));
@@ -191,6 +195,42 @@ const sendAlerts = async () => {
   return { sent, failed };
 };
 
+// "Your plan ends soon", three days ahead, once per stretch, unless the
+// member has already renewed (a later stretch of any plan).
+const sendPlanReminders = async () => {
+  const now = new Date();
+  const { data: subs } = await db
+    .from("subscriptions")
+    .select("id, user_id, plan_id, ends_at")
+    .is("reminded_at", null)
+    .gt("ends_at", now.toISOString())
+    .lt("ends_at", new Date(now.getTime() + 3 * 86400000).toISOString())
+    .limit(20);
+  let sent = 0;
+  let failed = 0;
+  for (const sub of subs || []) {
+    const { count } = await db
+      .from("subscriptions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", sub.user_id)
+      .gt("ends_at", sub.ends_at);
+    const { data: who } = count ? { data: null } : await db.auth.admin.getUserById(sub.user_id);
+    const email = who?.user?.email;
+    try {
+      if (email) {
+        await send(planEndingEmail(email, sub.plan_id, sub.ends_at));
+        sent++;
+      }
+      await db.from("subscriptions").update({ reminded_at: new Date().toISOString() }).eq("id", sub.id);
+    } catch (e) {
+      console.error("plan reminder", (e as Error).message);
+      if (++failed >= 3) break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 600));
+  }
+  return { sent, failed };
+};
+
 const salesOpen = async () => {
   const { data } = await db.from("site_settings").select("sales_open").eq("id", 1).maybeSingle();
   return data?.sales_open !== false;
@@ -256,9 +296,10 @@ Deno.serve(async (req) => {
       failed += result.failed;
     }
     if (fromCron) {
-      const alerts = await sendAlerts();
-      sent += alerts.sent;
-      failed += alerts.failed;
+      for (const result of [await sendAlerts(), await sendPlanReminders()]) {
+        sent += result.sent;
+        failed += result.failed;
+      }
     }
     return reply({ sent, failed });
   }
@@ -336,22 +377,22 @@ Deno.serve(async (req) => {
   if (body.action === "verify") {
     const { data: order } = await db
       .from("orders")
-      .select("id, number, amount_irr, status, authorities, ref_id, test")
+      .select("id, number, amount_irr, status, authorities, ref_id, test, plan_id")
       .eq("id", orderId)
       .maybeSingle();
     if (!order) return reply({ error: "not_found" }, 404);
     if (["paid", "processing", "completed"].includes(order.status))
-      return reply({ paid: true, number: order.number, ref_id: order.ref_id });
+      return reply({ paid: true, number: order.number, ref_id: order.ref_id, plan: order.plan_id });
     const authority = String(body.authority || "");
     if (!(order.authorities || []).includes(authority)) return reply({ error: "not_found" }, 404);
-    if (body.status !== "OK") return reply({ paid: false, number: order.number });
+    if (body.status !== "OK") return reply({ paid: false, number: order.number, plan: order.plan_id });
 
     const zp = gateway(order.test);
     const answer = await zarinpal(order.test, "verify", { merchant_id: zp.merchant, amount: order.amount_irr, authority });
     const code = answer?.data?.code;
     if (code !== 100 && code !== 101) {
       console.error("zarinpal verify", JSON.stringify(answer));
-      return reply({ paid: false, number: order.number });
+      return reply({ paid: false, number: order.number, plan: order.plan_id });
     }
     const ref = String(answer.data.ref_id);
     await db
@@ -360,7 +401,7 @@ Deno.serve(async (req) => {
       .eq("id", order.id)
       .not("status", "in", "(paid,processing,completed)");
     later(emailOnce(order.id, "paid"));
-    return reply({ paid: true, number: order.number, ref_id: ref });
+    return reply({ paid: true, number: order.number, ref_id: ref, plan: order.plan_id });
   }
 
   return reply({ error: "bad_request" }, 400);
