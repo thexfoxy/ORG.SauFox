@@ -316,6 +316,33 @@ const site = document.querySelector(".hero, .works, .plans, .title-page, .login-
   : Promise.resolve({ works: [], settings: {}, offline: false });
 const catalog = site.then((data) => data.works);
 
+// Behind every page built from the catalogue: a collage of the studio's
+// artwork, faint and heavily blurred, so the dark background isn't flat.
+// Added once the page has loaded, so it never slows the first view. Not on
+// the login page (it has its own artwork).
+(async function pageBackdrop() {
+  if (!document.querySelector(".hero, .works, .plans, .title-page, .profile-page, .checkout, .browse, .news")) return;
+  const works = await catalog;
+  const pictures = [...new Set(works.flatMap((w) => [w.hero, ...w.images, ...w.stills]).filter(Boolean))];
+  if (!pictures.length) return;
+  if (document.readyState !== "complete") await new Promise((resolve) => addEventListener("load", resolve, { once: true }));
+  const layer = document.createElement("div");
+  layer.className = "page-backdrop";
+  layer.setAttribute("aria-hidden", "true");
+  // Enough tiles to fill the grid, each picture used in turn.
+  const TILES = 24;
+  for (let i = 0; i < TILES; i++) {
+    const img = document.createElement("img");
+    img.alt = "";
+    img.decoding = "async";
+    img.setAttribute("fetchpriority", "low");
+    img.src = pictures[(i * 7) % pictures.length];
+    layer.append(img);
+  }
+  layer.addEventListener("load", () => layer.classList.add("is-in"), { capture: true, once: true });
+  document.body.prepend(layer);
+})();
+
 // Maintenance and outages, on the pages built from the catalogue: visitors
 // go to the status page (which comes back here when the site is up).
 // Admins see the site as usual, with a reminder bar.

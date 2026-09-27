@@ -98,6 +98,42 @@ img {
 
 /* No text selection or copying, and images can't be dragged out, long-press
    saved or right-click saved (js/main.js also blocks the menu and copy). */
+/* The artwork collage behind the page (js/main.js): fixed, faint and very
+   blurred, over the dark background; it fades in once its first picture
+   has loaded. Scaled up so the blur's soft edges stay off screen. */
+.page-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(1.25);
+  filter: blur(48px) saturate(1.25);
+  transition: opacity 2s ease;
+}
+
+.page-backdrop.is-in {
+  opacity: 0.16;
+}
+
+.page-backdrop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 700px) {
+  .page-backdrop {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    filter: blur(36px) saturate(1.25);
+  }
+}
+
 body {
   -webkit-user-select: none;
   user-select: none;

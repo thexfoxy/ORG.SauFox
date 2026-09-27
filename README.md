@@ -407,6 +407,14 @@ rather than being added by script. The image comes from eNamad's server,
 so it updates by itself when the seal's level changes. For eNamad's domain
 check, a file they ask for goes in the repository root.
 
+## Page background
+
+Behind every page built from the catalogue (not login or admin), a fixed
+collage of all the works' artwork (covers, key art, gallery images), 24
+tiles, blurred 48px and at 16% opacity, over the dark background. It's added
+after the page has loaded (so it never slows the first view) and fades in
+(`pageBackdrop` in `js/main.js`, `.page-backdrop` in `css/style.css`).
+
 ## Content protection
 
 Text can't be selected or copied (except contact details marked `.selectable`), and images can't be dragged out or saved
