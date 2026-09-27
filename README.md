@@ -487,7 +487,7 @@ Title page (`work.html?id=<id>`):
       it once someone has an acting or voice role), and their own name
       smaller under it. A
       dozen per group until "Show all"; common roles show in Persian on the
-      Persian site. In the admin panel each person has a photo upload, a
+      Persian site. In the admin panel each person has a photo upload (a crop window opens first: drag, zoom, rotate; saved as a 400×400 WebP), a
       name, a roles box (Enter or comma adds one, with suggestions; &times;
       removes) and a move-up arrow that moves them up within their section
       (leads, crew or cast); every section on the page keeps that order. Older credits (one role, a group) turn

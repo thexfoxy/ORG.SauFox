@@ -4163,6 +4163,84 @@ a.hero__panel {
   color: var(--muted);
 }
 
+/* Cropping a person's photo: the square shows what's kept, the circle how
+   it will look on the page. */
+.admin-crop {
+  width: min(380px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.admin-crop::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.admin-crop__title {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+
+.admin-crop__hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.admin-crop__stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  aspect-ratio: 1;
+}
+
+.admin-crop__stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+
+.admin-crop__stage canvas:active {
+  cursor: grabbing;
+}
+
+.admin-crop__stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5), inset 0 0 0 2px rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+}
+
+.admin-crop__zoom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.admin-crop__zoom input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.admin-crop__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.admin-crop__actions .admin-button:first-child {
+  margin-inline-end: auto;
+}
+
 @media (max-width: 900px) {
   .admin-credit {
     grid-template-columns: 44px minmax(0, 1fr) auto auto;

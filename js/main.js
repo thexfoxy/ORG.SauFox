@@ -4015,9 +4015,17 @@ const foldText = (text) =>
       const chosen = file.files[0];
       file.value = "";
       if (!chosen) return;
+      let cropped;
+      try {
+        cropped = await cropPhoto(chosen);
+      } catch (e) {
+        say(e.message);
+        return;
+      }
+      if (!cropped) return;
       say("Uploading…", true);
       try {
-        item.dataset.photo = await upload(chosen, "person");
+        item.dataset.photo = await upload(cropped, "person", true);
         showPhoto();
         say("Photo added. Save to keep it.", true);
       } catch (e) {
@@ -4208,10 +4216,149 @@ const foldText = (text) =>
     URL.revokeObjectURL(bitmap.src);
     return new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.86));
   };
-  const upload = async (file, kind) => {
+  // A person's photo is cropped to a square first: drag to move it, zoom
+  // with the slider or the wheel, rotate by quarter turns. Resolves with a
+  // 400×400 WebP, or null when cancelled.
+  const CROP_OUT = 400;
+  const cropPhoto = async (file) => {
+    if (!file.type.startsWith("image/")) throw new Error("Choose an image file: JPG, PNG or WebP.");
+    const source = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("That image couldn't be opened. Try another file."));
+      img.src = URL.createObjectURL(file);
+    });
+
+    const dialog = make("dialog", "admin-crop");
+    const title = make("h3", "admin-crop__title", "Crop the photo");
+    const hint = make("p", "admin-crop__hint", "Drag to move the photo. Zoom until the face fills the circle.");
+    const stage = make("div", "admin-crop__stage");
+    const canvas = make("canvas");
+    stage.append(canvas);
+    const zoomRow = make("label", "admin-crop__zoom");
+    const zoom = make("input");
+    zoom.type = "range";
+    zoom.min = "1";
+    zoom.max = "4";
+    zoom.step = "0.01";
+    zoom.value = "1";
+    zoomRow.append(make("span", "", "Zoom"), zoom);
+    const actions = make("div", "admin-crop__actions");
+    const rotate = make("button", "admin-button", "Rotate");
+    const cancel = make("button", "admin-button", "Cancel");
+    const done = make("button", "admin-button admin-button--primary", "Use photo");
+    [rotate, cancel, done].forEach((b) => (b.type = "button"));
+    actions.append(rotate, cancel, done);
+    dialog.append(title, hint, stage, zoomRow, actions);
+    document.body.append(dialog);
+
+    // View state: the image is drawn centred at (x, y) from the middle of
+    // the square, scaled so the short side covers it at zoom 1.
+    let turn = 0;
+    let scale = 1;
+    let x = 0;
+    let y = 0;
+    const size = () => canvas.clientWidth || 320;
+    const dims = () => (turn % 2 ? [source.height, source.width] : [source.width, source.height]);
+    const base = (side) => {
+      const [w, h] = dims();
+      return side / Math.min(w, h);
+    };
+    // Keeps the square covered: the image can't be dragged past an edge.
+    const clamp = (side) => {
+      const [w, h] = dims();
+      const k = base(side) * scale;
+      const maxX = Math.max(0, (w * k - side) / 2);
+      const maxY = Math.max(0, (h * k - side) / 2);
+      x = Math.min(maxX, Math.max(-maxX, x));
+      y = Math.min(maxY, Math.max(-maxY, y));
+    };
+    const paint = (target, side) => {
+      const ctx = target.getContext("2d");
+      const k = base(side) * scale;
+      ctx.save();
+      ctx.fillStyle = "#111";
+      ctx.fillRect(0, 0, side, side);
+      ctx.translate(side / 2 + x * (side / size()), side / 2 + y * (side / size()));
+      ctx.rotate((turn * Math.PI) / 2);
+      ctx.drawImage(source, (-source.width * k) / 2, (-source.height * k) / 2, source.width * k, source.height * k);
+      ctx.restore();
+    };
+    const draw = () => {
+      const side = size();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.round(side * ratio);
+      canvas.height = Math.round(side * ratio);
+      clamp(side);
+      paint(canvas, canvas.width);
+    };
+
+    let drag = null;
+    canvas.addEventListener("pointerdown", (e) => {
+      drag = { px: e.clientX, py: e.clientY, x, y };
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      x = drag.x + e.clientX - drag.px;
+      y = drag.y + e.clientY - drag.py;
+      draw();
+    });
+    const stop = () => (drag = null);
+    canvas.addEventListener("pointerup", stop);
+    canvas.addEventListener("pointercancel", stop);
+    const setZoom = (value) => {
+      const next = Math.min(4, Math.max(1, value));
+      x *= next / scale;
+      y *= next / scale;
+      scale = next;
+      zoom.value = String(next);
+      draw();
+    };
+    zoom.addEventListener("input", () => setZoom(Number(zoom.value)));
+    canvas.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        setZoom(scale * (e.deltaY < 0 ? 1.08 : 1 / 1.08));
+      },
+      { passive: false }
+    );
+    rotate.addEventListener("click", () => {
+      turn = (turn + 1) % 4;
+      [x, y] = [-y, x];
+      draw();
+    });
+
+    dialog.showModal();
+    draw();
+
+    const answer = await new Promise((resolve) => {
+      cancel.addEventListener("click", () => resolve(false));
+      dialog.addEventListener("cancel", (e) => {
+        e.preventDefault();
+        resolve(false);
+      });
+      done.addEventListener("click", () => resolve(true));
+    });
+    let blob = null;
+    if (answer) {
+      const out = document.createElement("canvas");
+      out.width = CROP_OUT;
+      out.height = CROP_OUT;
+      paint(out, CROP_OUT);
+      blob = await new Promise((resolve) => out.toBlob(resolve, "image/webp", 0.88));
+    }
+    dialog.close();
+    dialog.remove();
+    URL.revokeObjectURL(source.src);
+    return blob;
+  };
+
+  const upload = async (file, kind, ready = false) => {
     const id = fields.id.value.trim();
     if (!validId(id)) throw new Error("Give the work a title and page address before adding images.");
-    const blob = await toWebp(file, MAX_WIDTH[kind]);
+    const blob = ready ? file : await toWebp(file, MAX_WIDTH[kind]);
     const path = `${id}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.webp`;
     const { error } = await photos.upload(path, blob, { contentType: "image/webp", cacheControl: "31536000" });
     if (error) throw new Error("The image didn't upload. Check your connection and try again.");
