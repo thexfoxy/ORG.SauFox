@@ -284,8 +284,14 @@ const loadSite = async () => {
     const [rows, settings, plans] = await Promise.all([
       get("works?select=*&published=eq.true&order=sort.asc,created_at.asc"),
       get("site_settings?select=usd_irr,eur_irr,maintenance,maintenance_note,maintenance_note_fa,payments,sales_open&id=eq.1").catch(() => []),
-      get("plans?select=id,rank,price_irr,days,discount_percent,free_kinds,on_sale&order=rank.asc").catch(() => []),
+      get("plans?select=id,rank,discount_percent,free_kinds,on_sale,plan_prices(days,price_irr)&order=rank.asc").catch(() => []),
     ]);
+    // Each plan's prices by length: { 7: rials, 30: rials, … } (none = not offered).
+    plans.forEach((plan) => {
+      plan.prices = {};
+      (plan.plan_prices || []).forEach((row) => row.price_irr != null && (plan.prices[row.days] = row.price_irr));
+      delete plan.plan_prices;
+    });
     const rates = { ...(settings[0] || {}), plans };
     local.set("catalog", JSON.stringify({ rows, rates }));
     return { works: rows.map((row) => toWork(row, rates)), settings: rates, offline: false };
@@ -424,11 +430,20 @@ const payOrder = async (orderId) => {
 };
 
 // ---------- Subscriptions ----------
-// Basic, Premium and MVP (public.plans; settings.plans). A paid plan order
-// gives the member a stretch of days; the database takes the plan's
-// discount off every work they order.
-const PLAN_NAMES = { basic: "Basic", premium: "Premium", mvp: "MVP" };
+// Basic, Premium and Titanium (public.plans; settings.plans), each sold for
+// 7 days, 1, 3 or 6 months or a year at its own price (public.plan_prices;
+// plan.prices by days). A paid plan order gives the member that many days;
+// the database takes the plan's discount off every work they order.
+const PLAN_NAMES = { basic: "Basic", premium: "Premium", titanium: "Titanium" };
 const planName = (id) => PLAN_NAMES[id] || id;
+const PLAN_LENGTHS = [
+  [7, "7 days"],
+  [30, "1 month"],
+  [90, "3 months"],
+  [180, "6 months"],
+  [365, "1 year"],
+];
+const lengthName = (days) => (PLAN_LENGTHS.find(([d]) => d === Number(days)) || [0, `${days} days`])[1];
 // The free-viewing line for a plan's free_kinds.
 const FREE_LINES = {
   novel: "Read every novel free in the online reader",
@@ -605,96 +620,6 @@ const youtubeCard = (url, thumb, label = "Watch on YouTube") => {
   return link;
 };
 
-// ---------- Liquid glass ----------
-// A glass panel that bends what's behind it at its rim, like a thick pane
-// with rounded edges. The bend is an SVG displacement filter used as the
-// element's backdrop filter; its map (red = sideways, green = up/down, 128
-// = no shift) is drawn for the element's size: flat in the middle, pulling
-// the view inward more and more toward the rounded edge. Chromium browsers
-// only; elsewhere the CSS keeps a plain frosted glass.
-const liquidGlass = (() => {
-  const ua = navigator.userAgent;
-  const able = /\bChrome\/\d+/.test(ua) && !/\bCriOS\b|Mobile/.test(ua) && !!window.CSS && CSS.supports("backdrop-filter", "blur(1px)");
-  let defs = null;
-  const made = new Map();
-  const NS = "http://www.w3.org/2000/svg";
-  const map = (w, h, radius, bezel) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    const image = ctx.createImageData(w, h);
-    const px = image.data;
-    const hw = w / 2;
-    const hh = h / 2;
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const dx = x + 0.5 - hw;
-        const dy = y + 0.5 - hh;
-        const qx = Math.abs(dx) - (hw - radius);
-        const qy = Math.abs(dy) - (hh - radius);
-        let depth;
-        let nx = 0;
-        let ny = 0;
-        if (qx > 0 && qy > 0) {
-          const len = Math.hypot(qx, qy) || 1;
-          depth = radius - len;
-          nx = (qx / len) * Math.sign(dx);
-          ny = (qy / len) * Math.sign(dy);
-        } else if (hw - Math.abs(dx) < hh - Math.abs(dy)) {
-          depth = hw - Math.abs(dx);
-          nx = Math.sign(dx);
-        } else {
-          depth = hh - Math.abs(dy);
-          ny = Math.sign(dy);
-        }
-        // 0 at the rim's inner edge, 1 at the outer edge, eased like a lens.
-        const t = depth < bezel ? 1 - Math.max(depth, 0) / bezel : 0;
-        const pull = t * t * (3 - 2 * t);
-        const i = (y * w + x) * 4;
-        px[i] = 128 - nx * pull * 127;
-        px[i + 1] = 128 - ny * pull * 127;
-        px[i + 2] = 128;
-        px[i + 3] = 255;
-      }
-    }
-    ctx.putImageData(image, 0, 0);
-    return canvas.toDataURL();
-  };
-  return (el, { radius = 22, bezel = 34, strength = 70 } = {}) => {
-    if (!able) return;
-    const w = Math.round(el.offsetWidth);
-    const h = Math.round(el.offsetHeight);
-    if (!w || !h) return;
-    const key = `${w}x${h}`;
-    if (!made.has(key)) {
-      if (!defs) {
-        const svg = document.createElementNS(NS, "svg");
-        svg.setAttribute("aria-hidden", "true");
-        svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
-        defs = document.createElementNS(NS, "defs");
-        svg.append(defs);
-        document.body.append(svg);
-      }
-      const id = `glass-${made.size + 1}`;
-      const filter = document.createElementNS(NS, "filter");
-      filter.id = id;
-      [["x", 0], ["y", 0], ["width", w], ["height", h], ["filterUnits", "userSpaceOnUse"], ["color-interpolation-filters", "sRGB"]].forEach(
-        ([k, v]) => filter.setAttribute(k, v)
-      );
-      filter.innerHTML =
-        `<feImage href="${map(w, h, radius, bezel)}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none" result="map"/>` +
-        `<feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="soft"/>` +
-        `<feDisplacementMap in="soft" in2="map" scale="${strength}" xChannelSelector="R" yChannelSelector="G" result="bent"/>` +
-        `<feColorMatrix in="bent" type="saturate" values="1.45"/>`;
-      defs.append(filter);
-      made.set(key, id);
-    }
-    el.style.setProperty("--glass", `url(#${made.get(key)})`);
-    el.classList.add("is-liquid");
-  };
-})();
-
 // The hero's bottom edge, shared by the hero and the work cards. Same shape
 // as the hero's mask in css/style.css, in its 1440 x 520 viewBox: flat at
 // y=370 up to x=460, a cubic down to (1200, 520), then flat. Takes x as a
@@ -723,8 +648,8 @@ const heroEdgeY = (() => {
 // while there is one work. Works with a news post come first: their panel
 // shows the work's art, a "News" tag, and links to the latest post about it.
 // On a mouse, the panel under the pointer widens to show its whole banner
-// while the others make room, and a glass card opens on it with the post's
-// or work's details and its YouTube video (thumbnail -> YouTube).
+// while the others make room, and a card opens on it with the post's or
+// work's details and its YouTube video (thumbnail -> YouTube).
 (async function heroCollage() {
   const hero = document.querySelector(".hero");
   if (!hero) return;
@@ -941,11 +866,10 @@ const heroEdgeY = (() => {
       return layout();
     }
     if (!frame) frame = requestAnimationFrame(step);
-    // The panel's card opens with it (the glass is fitted to its size first).
+    // The panel's card opens with it.
     cards.forEach((box, i) => {
-      const open = i === index;
-      if (open && !box.classList.contains("is-open")) liquidGlass(box);
-      box.classList.toggle("is-open", open);
+      box.classList.toggle("is-open", i === index);
+      panels[i].classList.toggle("is-open", i === index);
     });
   };
   const inside = (node) => node && (hero.contains(node) || layer.contains(node));
@@ -1319,8 +1243,9 @@ const posterCard = (work) => {
   section.hidden = false;
 })();
 
-// Section 5 — Subscriptions: plan prices use the same currency ticker as the
-// work cards and follow the currency chosen there ("auto" keeps cycling).
+// Section 5 — Subscriptions: the length buttons (7 days to a year) pick
+// which prices show; prices use the same currency ticker as the work cards
+// and follow the currency chosen there ("auto" keeps cycling).
 (async function planPrices() {
   const boxes = [...document.querySelectorAll(".plan__amounts")];
   if (!boxes.length) return;
@@ -1330,7 +1255,12 @@ const posterCard = (work) => {
   const { settings } = await site;
   const rows = settings.plans || [];
   const rowOf = (id) => rows.find((row) => row.id === id) || {};
-  const plans = boxes.map((box) => pricesOf({ price_irr: rowOf(box.dataset.plan).price_irr ?? null }, settings));
+  const PER = { 7: "/ 7 days", 30: "/ month", 90: "/ 3 months", 180: "/ 6 months", 365: "/ year" };
+  const offered = PLAN_LENGTHS.map(([d]) => d).filter((d) => rows.some((row) => row.prices && row.prices[d] != null));
+  const lengthButtons = [...document.querySelectorAll(".plans__length")];
+  lengthButtons.forEach((button) => (button.hidden = !offered.includes(Number(button.dataset.days))));
+  let days = Number(local.get("planLength")) || 30;
+  if (!offered.includes(days)) days = offered.includes(30) ? 30 : offered[0] || 30;
 
   // Each plan's lines and button from its settings; the member's own plan
   // is marked, and lower ones are already covered by it.
@@ -1338,7 +1268,6 @@ const posterCard = (work) => {
   const myRank = mine ? rowOf(mine.plan).rank || 0 : 0;
   document.querySelectorAll(".plan").forEach((card) => {
     const row = rowOf(card.dataset.plan);
-    if (row.days && row.days !== 30) card.querySelector(".plan__per").textContent = `/ ${row.days} days`;
     if (row.discount_percent != null) {
       const line = card.querySelector('[data-slot="discount"]');
       if (row.discount_percent) line.textContent = `${row.discount_percent}% off every work in the store`;
@@ -1349,42 +1278,22 @@ const posterCard = (work) => {
       if (freeLine(row.free_kinds)) line.textContent = freeLine(row.free_kinds);
       else line.closest("li").remove();
     }
-    const button = card.querySelector(".plan__button");
-    const soon = (text) => {
-      button.removeAttribute("href");
-      button.classList.add("is-soon");
-      button.textContent = text;
-    };
     if (mine && mine.plan === card.dataset.plan) {
       const tag = document.createElement("p");
       tag.className = "plan__current";
       tag.textContent = `Your plan · until ${dateText(mine.ends_at)}`;
       card.querySelector(".plan__blurb").after(tag);
-      button.textContent = "Renew";
-    } else if (row.rank && row.rank < myRank) soon("Included in your plan");
-    if (row.on_sale === false || row.price_irr == null) soon("Not on sale right now");
+    }
   });
-  const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const CODES = ["USD", "EUR", "IRR"].filter((code) => plans.every((plan) => plan.prices[code] != null));
-  if (!CODES.length) {
-    boxes.forEach((box) => (box.closest(".plan__price").hidden = true));
-    return;
-  }
-  const tickers = boxes.map((box, b) =>
-    CODES.map((code, i) => {
-      const span = document.createElement("span");
-      span.className = "card__amount" + (i === 0 ? " is-active" : "");
-      span.textContent = priceText(plans[b], code);
-      box.append(span);
-      return span;
-    })
-  );
 
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
   let mode = "auto";
   let current = 0;
+  let CODES = [];
+  let tickers = [];
   // Each box is as wide as the price it shows, so "/ month" sits right after.
   const fit = () =>
-    boxes.forEach((box, b) => (box.style.width = `${tickers[b][current].offsetWidth}px`));
+    boxes.forEach((box, b) => tickers[b] && tickers[b][current] && (box.style.width = `${tickers[b][current].offsetWidth}px`));
   const show = (i) => {
     if (i === current || i < 0) return;
     current = i;
@@ -1398,7 +1307,59 @@ const posterCard = (work) => {
     );
   };
 
-  fit();
+  // Shows every plan's price, saving and button for the chosen length.
+  const render = () => {
+    lengthButtons.forEach((button) => button.setAttribute("aria-pressed", String(Number(button.dataset.days) === days)));
+    const plans = boxes.map((box) => pricesOf({ price_irr: (rowOf(box.dataset.plan).prices || {})[days] ?? null }, settings));
+    CODES = ["USD", "EUR", "IRR"].filter((code) => plans.some((plan) => plan.prices[code] != null));
+    if (mode !== "auto" && CODES.includes(mode)) current = CODES.indexOf(mode);
+    if (current >= CODES.length) current = 0;
+    tickers = boxes.map((box, b) => {
+      box.closest(".plan__price").hidden = plans[b].prices.IRR == null;
+      box.replaceChildren();
+      return CODES.map((code, i) => {
+        const span = document.createElement("span");
+        span.className = "card__amount" + (i === current ? " is-active" : "");
+        span.textContent = plans[b].prices[code] != null ? priceText(plans[b], code) : "";
+        box.append(span);
+        return span;
+      });
+    });
+    document.querySelectorAll(".plan").forEach((card) => {
+      const row = rowOf(card.dataset.plan);
+      const prices = row.prices || {};
+      card.querySelector(".plan__per").textContent = PER[days];
+      // What the longer lengths save against paying month by month.
+      const save = card.querySelector(".plan__save");
+      const monthly = prices[30];
+      const percent = days > 30 && monthly && prices[days] ? Math.round((1 - prices[days] / ((monthly * days) / 30)) * 100) : 0;
+      save.hidden = percent < 1;
+      if (percent >= 1) save.textContent = `Save ${percent}% against monthly`;
+      const button = card.querySelector(".plan__button");
+      button.classList.remove("is-soon");
+      button.href = `checkout.html?plan=${encodeURIComponent(card.dataset.plan)}&days=${days}`;
+      button.textContent = button.dataset.label || (button.dataset.label = button.textContent);
+      const soon = (text) => {
+        button.removeAttribute("href");
+        button.classList.add("is-soon");
+        button.textContent = text;
+      };
+      if (mine && mine.plan === card.dataset.plan) button.textContent = "Renew";
+      else if (row.rank && row.rank < myRank) soon("Included in your plan");
+      if (row.on_sale === false) soon("Not on sale right now");
+      else if (prices[days] == null) soon("Not offered for this length");
+    });
+    fit();
+  };
+  render();
+  lengthButtons.forEach((button) =>
+    button.addEventListener("click", () => {
+      days = Number(button.dataset.days);
+      local.set("planLength", String(days));
+      render();
+    })
+  );
+
   if (document.fonts) document.fonts.ready.then(fit);
   window.addEventListener("resize", fit);
 
@@ -4222,14 +4183,19 @@ const foldText = (text) =>
   const planMessage = planForm.querySelector(".admin-message");
   const planBoxes = [...planForm.querySelectorAll(".admin-plan")];
   const planField = (box, name) => box.querySelector(`[name="${name}"]`);
+  const DAYS = PLAN_LENGTHS.map(([d]) => d);
   account
     .from("plans")
-    .select("id, price_irr, days, discount_percent, free_kinds, on_sale")
+    .select("id, discount_percent, free_kinds, on_sale, plan_prices(days, price_irr)")
     .then(({ data }) =>
       (data || []).forEach((row) => {
         const box = planBoxes.find((b) => b.dataset.plan === row.id);
         if (!box) return;
-        ["price_irr", "days", "discount_percent"].forEach((name) => (planField(box, name).value = row[name] ?? ""));
+        planField(box, "discount_percent").value = row.discount_percent ?? "";
+        (row.plan_prices || []).forEach((price) => {
+          const input = planField(box, `price_${price.days}`);
+          if (input) input.value = price.price_irr ?? "";
+        });
         box.querySelectorAll('[name="free"]').forEach((check) => (check.checked = row.free_kinds.includes(check.value)));
         planField(box, "on_sale").checked = row.on_sale;
       })
@@ -4241,7 +4207,7 @@ const foldText = (text) =>
     .lte("starts_at", new Date().toISOString())
     .gt("ends_at", new Date().toISOString())
     .then(({ data }) => {
-      const RANK = { basic: 1, premium: 2, mvp: 3 };
+      const RANK = { basic: 1, premium: 2, titanium: 3 };
       const best = {};
       (data || []).forEach((s) => {
         if (!best[s.user_id] || RANK[s.plan_id] > RANK[best[s.user_id]]) best[s.user_id] = s.plan_id;
@@ -4255,33 +4221,32 @@ const foldText = (text) =>
     event.preventDefault();
     const rows = planBoxes.map((box) => ({
       id: box.dataset.plan,
-      price_irr: number(planField(box, "price_irr")),
-      days: number(planField(box, "days")),
+      prices: DAYS.map((days) => ({ days, price_irr: number(planField(box, `price_${days}`)) })),
       discount_percent: number(planField(box, "discount_percent")) ?? 0,
       free_kinds: [...box.querySelectorAll('[name="free"]:checked')].map((check) => check.value),
       on_sale: planField(box, "on_sale").checked,
     }));
     const wrong = rows.find(
       (row) =>
-        (row.price_irr !== null && !(row.price_irr >= 10000)) ||
-        !(row.days >= 1 && row.days <= 400) ||
+        row.prices.some((price) => price.price_irr !== null && !(price.price_irr >= 10000)) ||
         !(row.discount_percent >= 0 && row.discount_percent <= 90)
     );
     if (wrong) {
       planMessage.classList.remove("is-ok");
-      planMessage.textContent = `${PLAN_NAMES[wrong.id]}: the price is at least 10,000 Rials (or empty), the length 1 to 400 days, the discount 0 to 90%.`;
+      planMessage.textContent = `${PLAN_NAMES[wrong.id]}: each price is at least 10,000 Rials (or empty), and the discount 0 to 90%.`;
       return;
     }
     planMessage.classList.add("is-ok");
     planMessage.textContent = "Saving…";
     const results = await Promise.all(
-      rows.map(({ id, ...row }) =>
-        account.from("plans").update({ ...row, updated_at: new Date().toISOString() }).eq("id", id)
-      )
+      rows.flatMap(({ id, prices, ...row }) => [
+        account.from("plans").update({ ...row, updated_at: new Date().toISOString() }).eq("id", id),
+        ...prices.map((price) => account.from("plan_prices").update({ price_irr: price.price_irr }).eq("plan_id", id).eq("days", price.days)),
+      ])
     );
     const failed = results.some((result) => result.error);
     planMessage.classList.toggle("is-ok", !failed);
-    planMessage.textContent = failed ? "Not saved. Check your connection and try again." : "Saved. The home page and checkout use the new plans.";
+    planMessage.textContent = failed ? "Not saved. Check your connection and try again." : "Saved. The home page and checkout use the new prices.";
   });
 
   // ---------- Orders ----------
@@ -4950,11 +4915,11 @@ const foldText = (text) =>
 })();
 
 // Checkout (checkout.html?id=<id>) — one work, for members; or a plan
-// (checkout.html?plan=basic|premium|mvp). The order is saved as "awaiting
-// payment"; the database fills in the title, price (less the member's plan
-// discount and any code) and email itself, so nothing here can change
-// what's charged. When online
-// payment is open, the member goes on to Zarinpal, which sends them back to
+// (checkout.html?plan=basic|premium|titanium&days=7|30|90|180|365). The
+// order is saved as "awaiting payment"; the database fills in the title,
+// price (less the member's plan discount and any code) and email itself, so
+// nothing here can change what's charged. When online payment is open, the
+// member goes on to Zarinpal, which sends them back to
 // checkout.html?order=<order id>&Authority=…&Status=OK|NOK.
 (async function checkoutPage() {
   const page = document.querySelector(".checkout");
@@ -5051,7 +5016,10 @@ const foldText = (text) =>
   const user = session.user;
   const { settings } = await site;
   const planId = params.get("plan");
-  plan = planId ? (settings.plans || []).find((p) => p.id === planId && p.on_sale && p.price_irr != null) || null : null;
+  plan = planId ? (settings.plans || []).find((p) => p.id === planId && p.on_sale && Object.keys(p.prices || {}).length) || null : null;
+  // The plan's length (checkout.html?plan=…&days=…): a month unless another is asked for.
+  let planDays = Number(params.get("days")) || 30;
+  if (plan && plan.prices[planDays] == null) planDays = plan.prices[30] != null ? 30 : Number(Object.keys(plan.prices)[0]);
   const id = params.get("id");
   const work = plan ? null : (await catalog).find((w) => w.id === id);
   if (!plan && (!work || !work.prices || work.prices.IRR == null)) return show(missing);
@@ -5084,11 +5052,34 @@ const foldText = (text) =>
     name.textContent = `${planName(plan.id)} plan`;
     name.removeAttribute("translate");
     const mine = membership && membership.plan === plan.id;
-    form.querySelector(".checkout-summary__edition").textContent = mine
-      ? `${plan.days} days, added after your current plan ends on ${dateText(membership.ends_at)}`
-      : `${plan.days} days, starting as soon as you pay`;
+    const edition = () =>
+      (form.querySelector(".checkout-summary__edition").textContent = mine
+        ? `${lengthName(planDays)}, added after your current plan ends on ${dateText(membership.ends_at)}`
+        : `${lengthName(planDays)}, starting as soon as you pay`);
+    edition();
     form.querySelector(".checkout-coupon").hidden = true;
-    rials = plan.price_irr;
+    rials = plan.prices[planDays];
+    // The length can be changed here too.
+    const lengthBox = document.createElement("label");
+    lengthBox.className = "checkout-length";
+    const lengthLabel = document.createElement("span");
+    lengthLabel.textContent = "Length";
+    const pick = document.createElement("select");
+    PLAN_LENGTHS.filter(([d]) => plan.prices[d] != null).forEach(([d, label]) => {
+      const option = new Option(`${t(label)} · ${money.IRR(plan.prices[d])}`, d);
+      pick.append(option);
+    });
+    pick.value = String(planDays);
+    lengthBox.append(lengthLabel, pick);
+    form.querySelector(".checkout-coupon").after(lengthBox);
+    pick.addEventListener("change", () => {
+      planDays = Number(pick.value);
+      rials = plan.prices[planDays];
+      form.querySelector('[data-slot="price"]').textContent = money.IRR(rials);
+      showTotal(rials);
+      edition();
+      history.replaceState(null, "", `checkout.html?plan=${encodeURIComponent(plan.id)}&days=${planDays}`);
+    });
     // A lower plan than the one running now would add nothing.
     const current = membership && (settings.plans || []).find((p) => p.id === membership.plan);
     if (current && current.rank > plan.rank) {
@@ -5231,7 +5222,7 @@ const foldText = (text) =>
     say("Placing your order…", true);
     const { data, error } = await account
       .from("orders")
-      .insert(plan ? { plan_id: plan.id, name, phone } : { work_id: work.id, name, phone, ...(coupon ? { coupon_code: coupon.code } : {}) })
+      .insert(plan ? { plan_id: plan.id, plan_days: planDays, name, phone } : { work_id: work.id, name, phone, ...(coupon ? { coupon_code: coupon.code } : {}) })
       .select("id, number")
       .single();
     if (error) {

@@ -48,7 +48,8 @@
   --text: #f5f3ef;
   --muted: #8e8c95;
   --accent: #ff7a1a;
-  --mvp: #3d8bff;
+  --titanium: #c3ccd5;
+  --titanium-metal: linear-gradient(115deg, #f1f4f7 0%, #b3bdc7 22%, #7b8793 42%, #dfe5ea 60%, #939eaa 80%, #eef2f5 100%);
 
   --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-logo: "Great Vibes", cursive;
@@ -593,18 +594,16 @@ main {
   transition: opacity 0.3s ease;
 }
 
-/* The glass cards sit in a layer right after the hero (js/main.js lines each
-   up with its panel), so neither the strips' clip nor the hero's curved
-   mask can cut one off. The one for the panel under the pointer opens. */
+/* The cards sit in a layer right after the hero (js/main.js lines each up
+   with its panel), so neither the strips' clip nor the hero's curved mask
+   can cut one off. The one for the panel under the pointer opens. */
 .hero-cards {
   position: relative;
   z-index: 6;
   height: 0;
 }
 
-/* Glass: clear, with a bright rim, a soft sheen, and (in Chromium) the
-   view behind bending at the rounded edges, via the SVG filter js/main.js
-   fits to the card (--glass). Elsewhere it's frosted glass. */
+/* A plain dark card, mostly see-through, with a hairline edge. */
 .hero__card {
   position: absolute;
   display: grid;
@@ -612,59 +611,18 @@ main {
   width: 380px;
   max-width: calc(100vw - 36px);
   padding: 18px 18px 16px;
-  border-radius: 22px;
-  isolation: isolate;
-  background:
-    linear-gradient(155deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03) 45%, rgba(255, 255, 255, 0.07)),
-    rgba(12, 12, 14, 0.22);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.55),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.12),
-    inset 0 0 22px rgba(255, 255, 255, 0.08),
-    0 24px 60px rgba(0, 0, 0, 0.35);
-  -webkit-backdrop-filter: blur(16px) saturate(1.5) brightness(1.05);
-  backdrop-filter: blur(16px) saturate(1.5) brightness(1.05);
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(12, 12, 14, 0.58);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateY(-10px) scale(0.97);
-  transform-origin: top left;
+  transform: translateY(-10px);
   transition:
     opacity 0.35s ease,
-    transform 0.55s var(--ease-out),
+    transform 0.5s var(--ease-out),
     visibility 0s linear 0.35s;
-}
-
-.hero__card.is-liquid {
-  -webkit-backdrop-filter: var(--glass) brightness(1.08);
-  backdrop-filter: var(--glass) brightness(1.08);
-}
-
-/* The rim: a thin edge that catches light at the top left and bottom right. */
-.hero__card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  padding: 1.2px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.12) 35%, rgba(255, 255, 255, 0.05) 60%, rgba(255, 255, 255, 0.5));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  pointer-events: none;
-}
-
-/* The sheen: a soft diagonal band of light across the top. */
-.hero__card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: radial-gradient(120% 60% at 20% 0%, rgba(255, 255, 255, 0.16), transparent 60%);
-  pointer-events: none;
 }
 
 .hero__card.is-open {
@@ -739,11 +697,9 @@ main {
   text-decoration: underline;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .hero__panel:hover .hero__tag,
-  .hero__panel:focus-within .hero__tag {
-    opacity: 0;
-  }
+/* The tag gives way to the open card. */
+.hero__panel.is-open .hero__tag {
+  opacity: 0;
 }
 
 /* Phones have no hover and narrow panels: just the tag; everything else is
@@ -1142,9 +1098,10 @@ main {
 
 /* ==========================================================================
    Section 5 — Subscriptions
-   Three boxes side by side: Basic, Premium (orange) and MVP (blue). The two
-   paid-up tiers are set apart by a lighter surface and a filled button,
-   nothing louder. Stacked on phones.
+   Three boxes side by side: Basic, Premium (orange) and Titanium (brushed
+   titanium). The two paid-up tiers are set apart by a lighter surface and a
+   filled button, nothing louder. Stacked on phones. Above them, buttons for
+   the length (7 days to a year) pick which prices show.
    ========================================================================== */
 
 .plans {
@@ -1153,12 +1110,72 @@ main {
   padding: 0 var(--gutter) 120px;
 }
 
-.plans__title {
+.plans__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
   margin: 0 0 20px;
+}
+
+.plans__title {
+  margin: 0;
   font: 500 13px/1 var(--font-body);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+/* Length: a row of pills; the chosen one is filled. */
+.plans__lengths {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.plans__length {
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: 500 14px/1 var(--font-body);
+  cursor: pointer;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.plans__length:hover {
+  color: var(--text);
+}
+
+.plans__length[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.plans__length[hidden] {
+  display: none;
+}
+
+/* What a longer length saves against paying month by month. */
+.plan__save {
+  align-self: flex-start;
+  margin: -10px 0 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(64, 196, 120, 0.14);
+  color: #5fd394;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.plan__save[hidden] {
+  display: none;
 }
 
 .plans__grid {
@@ -1177,9 +1194,16 @@ main {
   border: 1px solid transparent;
 }
 
-.plan--premium,
-.plan--mvp {
+.plan--premium {
   background: var(--surface-2);
+}
+
+/* Titanium: a faint brushed-metal sheen on the box, a metal name and button. */
+.plan--titanium {
+  background:
+    linear-gradient(160deg, rgba(210, 220, 230, 0.08), rgba(210, 220, 230, 0) 55%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px),
+    var(--surface-2);
 }
 
 .plan__name {
@@ -1191,9 +1215,16 @@ main {
   color: var(--accent);
 }
 
-.plan--mvp .plan__name,
-.plan--mvp .plan__check {
-  color: var(--mvp);
+.plan--titanium .plan__name {
+  width: fit-content;
+  background: var(--titanium-metal);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.plan--titanium .plan__check {
+  color: var(--titanium);
 }
 
 /* The member's current plan. */
@@ -1296,13 +1327,16 @@ main {
   text-shadow: none;
 }
 
-.plan--mvp .plan__button {
-  background: var(--mvp);
-  color: #04101f;
+.plan--titanium .plan__button {
+  background: var(--titanium-metal);
+  background-size: 200% 100%;
+  color: #14181c;
+  transition: background-position 0.8s var(--ease-out), text-shadow 0.4s;
 }
 
-.plan--mvp .plan__button:hover {
-  background: #62a3ff;
+.plan--titanium .plan__button:hover {
+  background-position: 100% 0;
+  color: #14181c;
   text-shadow: none;
 }
 
@@ -1323,8 +1357,8 @@ main {
   --light: 255, 122, 26;
 }
 
-.plan--mvp {
-  --light: 61, 139, 255;
+.plan--titanium {
+  --light: 205, 215, 226;
 }
 
 .plan::before,
@@ -1369,7 +1403,7 @@ main {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .plan--mvp {
+  .plan--titanium {
     grid-column: 1 / -1;
   }
 }
@@ -3438,6 +3472,18 @@ a.hero__panel {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* A plan's five prices in one row (two columns on narrow screens). */
+.admin-plan__prices {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+@media (max-width: 900px) {
+  .admin-plan__prices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 640px) {
   .admin-grid,
   .admin-grid--3 {
@@ -4735,7 +4781,7 @@ a.hero__panel {
 /* Payments */
 .plan__button.is-soon,
 .plan--premium .plan__button.is-soon,
-.plan--mvp .plan__button.is-soon {
+.plan--titanium .plan__button.is-soon {
   color: var(--muted);
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--line);
@@ -6002,6 +6048,34 @@ a.hero__panel {
   color: var(--muted);
 }
 
+/* A plan's length (plan checkout only). */
+.checkout-length {
+  display: grid;
+  gap: 8px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.checkout-length span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.checkout-length select {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: 500 15px var(--font-body);
+  color: var(--text);
+  background: var(--bg);
+}
+
+.checkout-length select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .checkout-coupon__row {
   display: flex;
   gap: 8px;
@@ -6147,10 +6221,10 @@ a.hero__panel {
   color: var(--accent);
 }
 
-.checkout-summary__plan.is-mvp,
-.order__thumb--plan.is-mvp {
-  background: rgba(61, 139, 255, 0.16);
-  color: var(--mvp);
+.checkout-summary__plan.is-titanium,
+.order__thumb--plan.is-titanium {
+  background: rgba(195, 204, 213, 0.14);
+  color: var(--titanium);
 }
 
 .plan-badge.is-basic::before {
@@ -6161,8 +6235,8 @@ a.hero__panel {
   background: var(--accent);
 }
 
-.plan-badge.is-mvp::before {
-  background: var(--mvp);
+.plan-badge.is-titanium::before {
+  background: var(--titanium-metal);
 }
 
 /* A work's price for the member, less their plan's discount (work.html). */
@@ -6180,8 +6254,8 @@ a.hero__panel {
   color: var(--accent);
 }
 
-.member-price.is-mvp strong {
-  color: var(--mvp);
+.member-price.is-titanium strong {
+  color: var(--titanium);
 }
 
 /* Admin: the three plans */
@@ -6208,8 +6282,8 @@ a.hero__panel {
   color: var(--accent);
 }
 
-.admin-plan[data-plan="mvp"] legend {
-  color: var(--mvp);
+.admin-plan[data-plan="titanium"] legend {
+  color: var(--titanium);
 }
 
 .admin-plan__members {

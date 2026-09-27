@@ -72,7 +72,7 @@
   </script>
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=54">
+  <link rel="stylesheet" href="css/style.css?v=55">
   <script>
     // Set the auth state before first paint so the header never flickers.
     // member    = signed in              -> profile chip, no CTA
@@ -166,12 +166,23 @@
       <div class="home-news__list"></div>
     </section>
 
-    <!-- Section 5: Subscriptions. Basic, Premium (orange) and MVP (blue),
-         from public.plans; prices follow the currency chosen above the work
-         cards, and the discount and free-viewing lines follow the plan's
-         settings in the admin panel. Buying one goes through checkout.html. -->
+    <!-- Section 5: Subscriptions. Basic, Premium (orange) and Titanium
+         (brushed titanium), from public.plans; the length buttons pick which
+         prices show (public.plan_prices), prices follow the currency chosen
+         above the work cards, and the discount and free-viewing lines follow
+         the plan's settings in the admin panel. Buying one goes through
+         checkout.html. -->
     <section class="plans" id="plans" aria-labelledby="plans-title">
-      <h2 class="plans__title" id="plans-title">Subscriptions</h2>
+      <div class="plans__head">
+        <h2 class="plans__title" id="plans-title">Subscriptions</h2>
+        <div class="plans__lengths" role="group" aria-label="Subscription length">
+          <button class="plans__length" type="button" data-days="7" aria-pressed="false">7 days</button>
+          <button class="plans__length" type="button" data-days="30" aria-pressed="true">1 month</button>
+          <button class="plans__length" type="button" data-days="90" aria-pressed="false">3 months</button>
+          <button class="plans__length" type="button" data-days="180" aria-pressed="false">6 months</button>
+          <button class="plans__length" type="button" data-days="365" aria-pressed="false">1 year</button>
+        </div>
+      </div>
       <div class="plans__grid">
         <article class="plan" data-plan="basic">
           <h3 class="plan__name">Basic</h3>
@@ -180,6 +191,7 @@
             <span class="plan__amounts" data-plan="basic"></span>
             <span class="plan__per">/ month</span>
           </div>
+          <p class="plan__save" hidden></p>
           <ul class="plan__list">
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-slot="free">Read every novel free in the online reader</span></li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-slot="discount">10% off every work in the store</span></li>
@@ -195,6 +207,7 @@
             <span class="plan__amounts" data-plan="premium"></span>
             <span class="plan__per">/ month</span>
           </div>
+          <p class="plan__save" hidden></p>
           <ul class="plan__list">
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Everything in Basic</li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-slot="free">Watch every animation free, and read every novel</span></li>
@@ -204,20 +217,21 @@
           <a class="plan__button" href="checkout.html?plan=premium">Go Premium</a>
         </article>
 
-        <article class="plan plan--mvp" data-plan="mvp">
-          <h3 class="plan__name">MVP</h3>
+        <article class="plan plan--titanium" data-plan="titanium">
+          <h3 class="plan__name">Titanium</h3>
           <p class="plan__blurb">Everything SauFox makes, at half price.</p>
           <div class="plan__price">
-            <span class="plan__amounts" data-plan="mvp"></span>
+            <span class="plan__amounts" data-plan="titanium"></span>
             <span class="plan__per">/ month</span>
           </div>
+          <p class="plan__save" hidden></p>
           <ul class="plan__list">
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Everything in Premium</li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-slot="free">Watch every film and animation free, and read every novel</span></li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-slot="discount">50% off every work in the store</span></li>
             <li><svg class="plan__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>No pre-orders needed: your price stays the same before and after release</li>
           </ul>
-          <a class="plan__button" href="checkout.html?plan=mvp">Become an MVP</a>
+          <a class="plan__button" href="checkout.html?plan=titanium">Go Titanium</a>
         </article>
       </div>
     </section>
@@ -274,7 +288,7 @@
     </div>
   </footer>
 
-  <script src="js/fa.js?v=54" defer></script>
-  <script src="js/main.js?v=54" defer></script>
+  <script src="js/fa.js?v=55" defer></script>
+  <script src="js/main.js?v=55" defer></script>
 </body>
 </html>

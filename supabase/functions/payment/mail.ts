@@ -29,8 +29,8 @@ export type Order = {
 };
 
 // Subscription orders: what they're called, and the row label.
-const PLAN_FA: Record<string, string> = { basic: "ساده", premium: "پرمیوم", mvp: "MVP" };
-const PLAN_EN: Record<string, string> = { basic: "Basic", premium: "Premium", mvp: "MVP" };
+const PLAN_FA: Record<string, string> = { basic: "ساده", premium: "پرمیوم", titanium: "تیتانیوم" };
+const PLAN_EN: Record<string, string> = { basic: "Basic", premium: "Premium", titanium: "Titanium" };
 const itemFa = (order: Order): [string, string] =>
   order.plan_id
     ? ["اشتراک", `اشتراک ${PLAN_FA[order.plan_id] || esc(order.plan_id)}`]

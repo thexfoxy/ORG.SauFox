@@ -228,16 +228,20 @@ nobody can log in.
 ## Subscriptions
 
 - Three plans in `public.plans` (everyone reads; admins change): Basic,
-  Premium (orange) and MVP (blue), each with a price in Rials, a length in
-  days (30), a discount on every work (10 / 25 / 50%), what its members
-  watch or read free (`free_kinds`: animation, film, novel) and whether
-  it's on sale. Admin panel → Subscriptions edits them and shows how many
-  members have each plan now.
-- Buying: the home page's plan buttons go to `checkout.html?plan=<id>`. The
-  order carries `plan_id`; the order trigger prices it from `plans` (no
-  discount codes), one unpaid plan order at a time, and refuses a plan
-  lower than the one running (SF003). Paying goes through Zarinpal like any
-  order.
+  Premium (orange) and Titanium (brushed titanium), each with a discount on
+  every work (10 / 25 / 50%), what its members watch or read free
+  (`free_kinds`: animation, film, novel) and whether it's on sale.
+- Each plan is sold for 7 days, 1, 3 or 6 months or a year, each at its own
+  price in `public.plan_prices` (plan, days, price; empty = not offered).
+  The home page has a length switch over the three plans and shows what
+  the longer lengths save against paying monthly. Admin panel →
+  Subscriptions edits every price, the discount and the free viewing, and
+  shows how many members have each plan now.
+- Buying: the plan buttons go to `checkout.html?plan=<id>&days=<days>`, where
+  the length can still be changed. The order carries `plan_id` and
+  `plan_days`; the order trigger prices it from `plan_prices` (no discount
+  codes), one unpaid plan order at a time, and refuses a plan lower than
+  the one running (SF003). Paying goes through Zarinpal like any order.
 - `subscriptions`: one row per paid plan order (trigger
   `orders_plan_events`), from payment for the plan's days, or after the
   same plan's current stretch when renewing. Cancelling the order in the
@@ -434,10 +438,8 @@ Home page:
       news post come first: their panel shows the work's art (or its cover),
       a "News" tag, and opens the post. With a mouse, the panel under the
       pointer widens to show its whole banner while the others narrow and
-      dim, and a glass card opens on it (in a layer after the hero, so it's
-      never cut off; its text is never shortened; in Chromium browsers the
-      view behind bends at its rounded rim through an SVG displacement
-      filter fitted to the card's size, elsewhere it's frosted glass): the post's date, title, summary and
+      dim, and a plain, see-through dark card opens on it (in a layer after
+      the hero, so it's never cut off, and its text is never shortened): the post's date, title, summary and
       work (or the work's kind, status and synopsis), the YouTube video's
       thumbnail (opens YouTube in a new tab; the post's video, else the
       work's), and a link on. Phones show just the tag. While there is only one
@@ -451,10 +453,11 @@ Home page:
       on and settles on a card). Currency buttons below (Auto cycles USD / EUR /
       Rials, or pin one). Each card has an image slider, a price strip and a
       status box. Data: the catalogue (`public.works`).
-- [x] 5. Subscriptions: Basic, Premium and MVP boxes, three across on wide
-      screens and stacked on phones. Prices follow the currency chosen above
-      the work cards. On hover each box gets a soft light that follows the
-      pointer (white on Basic, orange on Premium, blue on MVP). Buying one
+- [x] 5. Subscriptions: Basic, Premium and Titanium boxes, three across on
+      wide screens and stacked on phones, with a length switch (7 days to a
+      year) above. Prices follow the currency chosen above the work cards.
+      On hover each box gets a soft light that follows the pointer (white on
+      Basic, orange on Premium, silver on Titanium). Buying one
       goes through checkout (see Subscriptions).
 
 Title page (`work.html?id=<id>`):
