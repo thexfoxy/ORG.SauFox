@@ -512,7 +512,7 @@ main {
 
 @media (max-width: 700px) {
   main {
-    --hero-h: clamp(320px, 100vw, 460px);
+    --hero-h: 53vw;
   }
 }
 
@@ -6891,4 +6891,24 @@ a.hero__panel {
 .title-video {
   max-width: 420px;
   margin: 18px 0 0;
+}
+
+/* Phones: the artwork is shown whole. The frame takes the banner's own
+   16:9 shape (the home hero's main panel is ~95% of the width), the curved
+   cut-out is dropped, and the text starts below it instead of inside it. */
+@media (max-width: 700px) {
+  .hero,
+  .title-hero {
+    -webkit-mask: none;
+    mask: none;
+  }
+
+  .title-hero {
+    height: 56.25vw;
+  }
+
+  .slogan,
+  .title-head {
+    margin-top: 22px;
+  }
 }

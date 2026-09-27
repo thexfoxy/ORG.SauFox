@@ -691,7 +691,10 @@ const heroEdgeY = (() => {
   const P = [[1200, 520], [900, 520], [780, 370], [460, 370]];
   const at = (t, k) =>
     (1 - t) ** 3 * P[0][k] + 3 * (1 - t) ** 2 * t * P[1][k] + 3 * (1 - t) * t ** 2 * P[2][k] + t ** 3 * P[3][k];
+  // Phones drop the curve (css/style.css) so the artwork shows whole.
+  const phone = window.matchMedia("(max-width: 700px)");
   return (fraction) => {
+    if (phone.matches) return 520;
     const x = fraction * 1440;
     if (x <= 460) return 370;
     if (x >= 1200) return 520;
