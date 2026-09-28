@@ -160,6 +160,49 @@ a {
   outline-offset: 3px;
 }
 
+/* The page scrollbar: a slim dark track and a brushed-silver thumb with
+   rounded ends that warms to the site's orange while held or hovered.
+   Chrome, Edge and Safari use the ::-webkit-scrollbar parts; Firefox,
+   which has no such parts, gets thin silver-on-dark colours. */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0c;
+  border-inline-start: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, #6d6e74, #c9cad0 45%, #8b8c92) padding-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(90deg, #8a8b91, #e4e5ea 45%, #a6a7ad) padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background:
+    linear-gradient(90deg, #c2560f, var(--accent) 45%, #d9651a) padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: #0a0a0c;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: #9a9ba1 #0a0a0c;
+  }
+}
+
 /* ==========================================================================
    Section 1 — Header
    ========================================================================== */
