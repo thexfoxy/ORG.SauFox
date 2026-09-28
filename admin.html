@@ -11,7 +11,7 @@
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=84">
+  <link rel="stylesheet" href="css/style.css?v=85">
   <script>
     // Clean addresses: never ".html" in the address bar (GitHub Pages
     // serves /work for work.html), and the home page is just "/". Pages
@@ -86,6 +86,20 @@
         <p class="admin-orders__mail" data-slot="mail-problems" role="status" hidden></p>
         <ol class="admin-orders__list"></ol>
         <p class="admin-orders__empty" hidden>No orders yet.</p>
+      </section>
+
+      <!-- Support tickets from support.html: waiting ones first. -->
+      <section class="admin-support admin-group" id="support">
+        <h2 class="admin-rates__title">Support tickets <span class="admin-support__count" data-slot="support-new" hidden></span></h2>
+        <p class="admin-group__hint">Members open tickets on the Support page. Open one to read the conversation and reply as SauFox Entertainment; the member gets an email with your reply. A member&rsquo;s new message opens a closed ticket again, and you get an email for each.</p>
+        <div class="admin-support__filters">
+          <button class="admin-chip is-on" type="button" data-filter="open">Waiting for us</button>
+          <button class="admin-chip" type="button" data-filter="answered">Answered</button>
+          <button class="admin-chip" type="button" data-filter="closed">Closed</button>
+          <button class="admin-chip" type="button" data-filter="all">All</button>
+        </div>
+        <ol class="admin-support__list"></ol>
+        <p class="admin-support__empty" hidden>No tickets here.</p>
       </section>
 
       <!-- Discount codes for checkout (public.coupons). -->
@@ -694,7 +708,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=84" defer></script>
-  <script src="js/main.js?v=84" defer></script>
+  <script src="js/vendor/supabase.js?v=85" defer></script>
+  <script src="js/main.js?v=85" defer></script>
 </body>
 </html>

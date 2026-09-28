@@ -4218,6 +4218,391 @@ const foldText = (text) =>
 // Admin panel (admin.html) — add, edit, order, publish and delete works in
 // the Supabase catalogue. Only accounts in the admins table get in, and the
 // database refuses changes from anyone else anyway.
+// ---------- Support tickets (support.html, and the admin panel) ----------
+// A ticket belongs to one member; the studio's replies are marked staff.
+// Attachments sit in the private "support" bucket, in the ticket owner's
+// folder, and are shown through links that work for an hour.
+const TICKET_TOPICS = {
+  order: "An order",
+  account: "Account and sign-in",
+  technical: "Technical problem",
+  subscription: "Subscription",
+  other: "Something else",
+};
+const TICKET_STATUS = { open: "Waiting for us", answered: "Answered", closed: "Closed" };
+const SUPPORT_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
+const supportUpload = async (file, ownerId) => {
+  if (!SUPPORT_TYPES.includes(file.type)) throw new Error("Attach an image (JPG, PNG, WebP or GIF) or a PDF.");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Files can be up to 5 MB.");
+  const safe = (file.name.normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(-80) || "file").replace(/^_+/, "");
+  const path = `${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+  const { error } = await account.storage.from("support").upload(path, file, { contentType: file.type });
+  if (error) throw new Error("The file didn't upload. Try again.");
+  return { attachment: path, attachment_name: file.name.slice(0, 200) };
+};
+// A file input's chosen name beside it.
+const showFileName = (input, label, empty = "") =>
+  input.addEventListener("change", () => (label.textContent = input.files[0] ? input.files[0].name : t(empty)));
+// The conversation, oldest first. `when` formats a time.
+const ticketThread = async (list, messages, when) => {
+  const paths = messages.map((m) => m.attachment).filter(Boolean);
+  const links = {};
+  if (paths.length) {
+    const { data } = await account.storage.from("support").createSignedUrls(paths, 3600);
+    (data || []).forEach((d) => d.signedUrl && (links[d.path] = d.signedUrl));
+  }
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+  list.replaceChildren(
+    ...messages.map((m) => {
+      const item = make("li", m.staff ? "ticket-msg ticket-msg--staff" : "ticket-msg");
+      const head = make("div", "ticket-msg__head");
+      const who = make("strong", "ticket-msg__who", m.staff ? "SauFox Entertainment" : m.author_name || "Member");
+      who.translate = false;
+      head.append(who);
+      if (m.staff) head.append(make("span", "ticket-msg__tag", "Support"));
+      head.append(make("time", "ticket-msg__time", when(m.created_at)));
+      const body = make("p", "ticket-msg__body", m.body);
+      body.dir = "auto";
+      body.translate = false;
+      item.append(head, body);
+      const url = m.attachment && links[m.attachment];
+      if (url) {
+        const file = make("a", "ticket-msg__file");
+        file.href = url;
+        file.target = "_blank";
+        file.rel = "noopener";
+        if (/\.(jpe?g|png|webp|gif)$/i.test(m.attachment)) {
+          const img = make("img");
+          img.src = url;
+          img.alt = m.attachment_name || "";
+          img.loading = "lazy";
+          file.append(img);
+        } else file.append(make("span", "", `📎 ${m.attachment_name || "File"}`));
+        item.append(file);
+      }
+      return item;
+    })
+  );
+};
+
+// The member's page: their tickets, a new ticket, one ticket's thread.
+(async function supportPage() {
+  const page = document.querySelector(".support");
+  if (!page || !account) return;
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+  const status = page.querySelector(".support__status");
+  const newButton = page.querySelector(".support__new");
+  const listView = page.querySelector(".support__tickets");
+  const list = listView.querySelector(".ticket-list");
+  const empty = listView.querySelector(".support__empty");
+  const form = page.querySelector(".ticket-form");
+  const view = page.querySelector(".ticket");
+  const thread = view.querySelector(".ticket-thread");
+  const replyForm = view.querySelector(".ticket-reply");
+  const when = (iso) =>
+    new Date(iso).toLocaleString(LANG === "fa" ? "fa-IR" : "en-GB", {
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Tehran",
+    });
+
+  const session = await verifiedSession();
+  if (!session) {
+    const login = page.querySelector(".support__login");
+    login.hidden = false;
+    login.querySelector("a").addEventListener("click", (event) => {
+      event.preventDefault();
+      goLogin();
+    });
+    return;
+  }
+  const me = session.user.id;
+  const notify = (messageId) => payment({ action: "ticket-email", message_id: messageId }, session);
+
+  // ---------- Which view: list, new, or one ticket (?t=) ----------
+  let current = null;
+  let poll = 0;
+  const go = (params, push = true) => {
+    const query = new URLSearchParams(params).toString();
+    if (push) history.pushState(null, "", query ? `support?${query}` : "support");
+    route();
+  };
+  const route = () => {
+    clearInterval(poll);
+    const params = new URLSearchParams(location.search);
+    const id = params.get("t");
+    status.textContent = "";
+    listView.hidden = form.hidden = view.hidden = true;
+    newButton.hidden = Boolean(id) || params.has("new");
+    page.querySelector(".support__top").hidden = Boolean(id);
+    if (id) return openTicket(id);
+    if (params.has("new")) return openForm(params.get("order"));
+    listView.hidden = false;
+    loadList();
+  };
+  window.addEventListener("popstate", () => route());
+  newButton.addEventListener("click", () => go({ new: "" }));
+  view.querySelector(".ticket__back").addEventListener("click", (event) => {
+    event.preventDefault();
+    go({});
+  });
+
+  // ---------- The list ----------
+  const loadList = async () => {
+    const { data, error } = await account
+      .from("tickets")
+      .select("id, number, subject, category, status, member_unread, updated_at")
+      .eq("user_id", me)
+      .order("updated_at", { ascending: false });
+    if (error) return (status.textContent = t("Your tickets couldn't be loaded. Check your connection and reload the page."));
+    list.replaceChildren(
+      ...data.map((ticket) => {
+        const item = make("li", `ticket-row ticket-row--${ticket.status}${ticket.member_unread ? " is-unread" : ""}`);
+        const link = make("a", "ticket-row__link");
+        link.href = `support?t=${ticket.id}`;
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          go({ t: ticket.id });
+        });
+        const top = make("span", "ticket-row__top");
+        const number = make("span", "ticket-row__number", `#${digits(ticket.number)}`);
+        number.translate = false;
+        top.append(number, make("span", `ticket-badge ticket-badge--${ticket.status}`, TICKET_STATUS[ticket.status]));
+        if (ticket.member_unread) top.append(make("span", "ticket-row__new", "New reply"));
+        const subject = make("strong", "ticket-row__subject", ticket.subject);
+        subject.dir = "auto";
+        subject.translate = false;
+        const meta = make("span", "ticket-row__meta", `${t(TICKET_TOPICS[ticket.category] || ticket.category)} · ${when(ticket.updated_at)}`);
+        link.append(top, subject, meta);
+        item.append(link);
+        return item;
+      })
+    );
+    empty.hidden = data.length > 0;
+  };
+
+  // ---------- A new ticket ----------
+  const topicPick = form.querySelector('[name="category"]');
+  topicPick.replaceChildren(...Object.entries(TICKET_TOPICS).map(([value, label]) => new Option(t(label), value)));
+  const orderPick = form.querySelector('[name="order"]');
+  const formSay = (text, ok) => {
+    const m = form.querySelector(".auth__message");
+    m.textContent = t(text);
+    m.classList.toggle("is-ok", Boolean(ok));
+  };
+  const formFile = form.querySelector('[name="file"]');
+  showFileName(formFile, form.querySelector('[data-slot="file-name"]'), "Up to 5 MB");
+  let ordersLoaded = false;
+  const openForm = async (orderId) => {
+    form.hidden = false;
+    form.reset();
+    form.querySelector('[data-slot="file-name"]').textContent = t("Up to 5 MB");
+    formSay("");
+    if (!ordersLoaded) {
+      ordersLoaded = true;
+      const { data } = await account
+        .from("orders")
+        .select("id, number, title, plan_id, created_at")
+        .eq("user_id", me)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (data && data.length) {
+        orderPick.replaceChildren(
+          new Option("—", ""),
+          ...data.map((o) => new Option(`#${digits(o.number)} · ${o.plan_id ? t(`${PLAN_NAMES[o.plan_id] || o.plan_id}`) : o.title}`, o.id))
+        );
+        form.querySelector('[data-slot="order-field"]').hidden = false;
+      }
+    }
+    if (orderId && [...orderPick.options].some((o) => o.value === orderId)) {
+      orderPick.value = orderId;
+      topicPick.value = "order";
+    }
+    form.querySelector('[name="subject"]').focus();
+  };
+  form.querySelector('[data-action="cancel"]').addEventListener("click", () => go({}));
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const subject = form.subject.value.trim();
+    const body = form.body.value.trim();
+    if (subject.length < 3) return formSay("Give your ticket a short subject.");
+    if (!body) return formSay("Write your message.");
+    const send = form.querySelector('[type="submit"]');
+    send.disabled = true;
+    formSay("Sending…", true);
+    try {
+      const file = formFile.files[0] ? await supportUpload(formFile.files[0], me) : {};
+      const { data: ticket, error } = await account
+        .from("tickets")
+        .insert({ category: topicPick.value, subject, order_id: orderPick.value || null })
+        .select("id")
+        .single();
+      if (error)
+        throw new Error(
+          error.code === "SF006"
+            ? "You have 5 tickets still open. Close one you don't need, or write in it instead."
+            : error.code === "SF004"
+              ? "Wait a minute before opening another ticket."
+              : "Not sent. Check your connection and try again."
+        );
+      const { data: message } = await account
+        .from("ticket_messages")
+        .insert({ ticket_id: ticket.id, body, ...file })
+        .select("id")
+        .single();
+      if (message) notify(message.id);
+      go({ t: ticket.id });
+    } catch (e) {
+      formSay(e.message);
+    } finally {
+      send.disabled = false;
+    }
+  });
+
+  // ---------- One ticket ----------
+  // (Text boxes are left out of the page translation.)
+  replyForm.body.placeholder = t("Write your reply…");
+  const replyFile = replyForm.querySelector('[name="file"]');
+  const replyName = replyForm.querySelector('[data-slot="file-name"]');
+  showFileName(replyFile, replyName);
+  const replySay = (text, ok) => {
+    const m = replyForm.querySelector(".auth__message");
+    m.textContent = t(text);
+    m.classList.toggle("is-ok", Boolean(ok));
+  };
+  const closeButton = replyForm.querySelector('[data-action="close-ticket"]');
+  const showTicket = (ticket) => {
+    current = ticket;
+    view.querySelector('[data-slot="number"]').textContent = `${t("Ticket")} #${digits(ticket.number)}`;
+    view.querySelector('[data-slot="subject"]').textContent = ticket.subject;
+    const meta = view.querySelector('[data-slot="meta"]');
+    meta.replaceChildren(
+      make("span", `ticket-badge ticket-badge--${ticket.status}`, TICKET_STATUS[ticket.status]),
+      make("span", "", t(TICKET_TOPICS[ticket.category] || ticket.category)),
+      make("span", "", `${t("Opened")} ${when(ticket.created_at)}`)
+    );
+    replyForm.querySelector(".ticket-reply__closed").hidden = ticket.status !== "closed";
+    closeButton.hidden = ticket.status === "closed";
+  };
+  const loadThread = async () => {
+    const { data } = await account
+      .from("ticket_messages")
+      .select("id, staff, author_name, body, attachment, attachment_name, created_at")
+      .eq("ticket_id", current.id)
+      .order("created_at");
+    if (data && data.length !== thread.children.length) await ticketThread(thread, data, when);
+  };
+  const openTicket = async (id) => {
+    const { data: ticket } = await account
+      .from("tickets")
+      .select("id, number, subject, category, status, member_unread, created_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (!ticket) {
+      status.textContent = t("This ticket isn't here. It may belong to another account.");
+      listView.hidden = false;
+      return loadList();
+    }
+    view.hidden = false;
+    thread.replaceChildren();
+    showTicket(ticket);
+    await loadThread();
+    if (ticket.member_unread) account.from("tickets").update({ member_unread: false }).eq("id", ticket.id).then(() => {});
+    // New replies show up while the page is open.
+    poll = setInterval(async () => {
+      if (document.hidden || !current) return;
+      const { data } = await account.from("tickets").select("id, number, subject, category, status, member_unread, created_at").eq("id", current.id).maybeSingle();
+      if (!data) return;
+      showTicket(data);
+      await loadThread();
+      if (data.member_unread) account.from("tickets").update({ member_unread: false }).eq("id", data.id).then(() => {});
+    }, 30000);
+  };
+  replyForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const body = replyForm.body.value.trim();
+    if (!body) return replySay("Write your message.");
+    const send = replyForm.querySelector('[type="submit"]');
+    send.disabled = true;
+    replySay("Sending…", true);
+    try {
+      const file = replyFile.files[0] ? await supportUpload(replyFile.files[0], me) : {};
+      const { data: message, error } = await account
+        .from("ticket_messages")
+        .insert({ ticket_id: current.id, body, ...file })
+        .select("id")
+        .single();
+      if (error)
+        throw new Error(
+          error.code === "SF004"
+            ? "Wait a few seconds before sending again."
+            : error.code === "SF007"
+              ? "This ticket is full. Please open a new one."
+              : "Not sent. Check your connection and try again."
+        );
+      notify(message.id);
+      replyForm.reset();
+      replyName.textContent = "";
+      replySay("");
+      showTicket({ ...current, status: "open" });
+      await loadThread();
+    } catch (e) {
+      replySay(e.message);
+    } finally {
+      send.disabled = false;
+    }
+  });
+  closeButton.addEventListener("click", async () => {
+    // Press twice: the first press asks.
+    if (!closeButton.dataset.armed) {
+      closeButton.dataset.armed = "1";
+      closeButton.textContent = t("Close it?");
+      setTimeout(() => {
+        delete closeButton.dataset.armed;
+        closeButton.textContent = t("Close ticket");
+      }, 4000);
+      return;
+    }
+    closeButton.disabled = true;
+    const { error } = await account.from("tickets").update({ status: "closed" }).eq("id", current.id);
+    closeButton.disabled = false;
+    delete closeButton.dataset.armed;
+    closeButton.textContent = t("Close ticket");
+    if (error) return replySay("Not changed. Try again.");
+    showTicket({ ...current, status: "closed" });
+  });
+
+  route(false);
+})();
+
+// Profile: "Support tickets", with how many have an unread reply.
+(async function supportBadge() {
+  const badge = document.querySelector(".profile-support__badge");
+  if (!badge || !account) return;
+  const session = await verifiedSession();
+  if (!session) return;
+  const { count } = await account
+    .from("tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", session.user.id)
+    .eq("member_unread", true);
+  if (!count) return;
+  badge.textContent = digits(count);
+  badge.hidden = false;
+})();
+
 (async function adminPage() {
   const page = document.querySelector(".admin");
   if (!page) return;
@@ -5732,6 +6117,145 @@ const foldText = (text) =>
     reviewList.replaceChildren(...reviews.map((r) => reviewRow(r, titles)));
     noReviews.hidden = reviews.length > 0;
   });
+
+  // ---------- Support tickets ----------
+  const supportBox = page.querySelector(".admin-support");
+  const ticketList = supportBox.querySelector(".admin-support__list");
+  const noTickets = supportBox.querySelector(".admin-support__empty");
+  const newCount = supportBox.querySelector('[data-slot="support-new"]');
+  let ticketFilter = "open";
+  const ticketRow = (ticket) => {
+    const row = make("li", `admin-ticket${ticket.studio_unread ? " is-unread" : ""}`);
+    const head = make("button", "admin-ticket__head");
+    head.type = "button";
+    const title = make("strong", "", `#${ticket.number} · ${ticket.subject}`);
+    title.dir = "auto";
+    head.append(
+      title,
+      make(
+        "span",
+        "",
+        `${ticket.name || "Member"} <${ticket.email}> · ${TICKET_TOPICS[ticket.category] || ticket.category} · ${TICKET_STATUS[ticket.status]} · ${whenText(ticket.updated_at)}`
+      )
+    );
+    const body = make("div", "admin-ticket__body");
+    body.hidden = true;
+    head.addEventListener("click", async () => {
+      body.hidden = !body.hidden;
+      if (body.hidden || body.dataset.ready) return;
+      body.dataset.ready = "1";
+      await fillTicket(ticket, row, body);
+    });
+    row.append(head, body);
+    return row;
+  };
+  const fillTicket = async (ticket, row, body) => {
+    if (ticket.order_id) {
+      const { data: order } = await account.from("orders").select("number, title, status, amount_irr").eq("id", ticket.order_id).maybeSingle();
+      if (order) body.append(make("p", "admin-ticket__order", `Order #${order.number} · ${order.title} · ${order.status} · ${order.amount_irr.toLocaleString("en-US")} Rials`));
+    }
+    const thread = make("ol", "ticket-thread ticket-thread--admin");
+    body.append(thread);
+    const loadThread = async () => {
+      const { data } = await account
+        .from("ticket_messages")
+        .select("id, staff, author_name, body, attachment, attachment_name, created_at")
+        .eq("ticket_id", ticket.id)
+        .order("created_at");
+      await ticketThread(thread, data || [], whenText);
+    };
+    await loadThread();
+    if (ticket.studio_unread) {
+      await account.from("tickets").update({ studio_unread: false }).eq("id", ticket.id);
+      ticket.studio_unread = false;
+      row.classList.remove("is-unread");
+      countNew();
+    }
+    const reply = make("textarea", "admin-review__reply");
+    reply.rows = 4;
+    reply.maxLength = 5000;
+    reply.dir = "auto";
+    reply.placeholder = "Reply as SauFox Entertainment";
+    const file = make("input");
+    file.type = "file";
+    file.accept = SUPPORT_TYPES.join(",");
+    const note = make("span", "admin-order__note");
+    const send = make("button", "admin-button admin-button--primary", "Send reply");
+    send.type = "button";
+    send.addEventListener("click", async () => {
+      const text = reply.value.trim();
+      if (!text) return (note.textContent = "Write the reply first.");
+      send.disabled = true;
+      note.textContent = "Sending…";
+      try {
+        const attached = file.files[0] ? await supportUpload(file.files[0], ticket.user_id) : {};
+        const { data: message, error } = await account
+          .from("ticket_messages")
+          .insert({ ticket_id: ticket.id, body: text, ...attached })
+          .select("id")
+          .single();
+        if (error) throw new Error("Not sent. Try again.");
+        const mailed = await payment({ action: "ticket-email", message_id: message.id }, session);
+        note.textContent = mailed.sent ? "Sent; the member was emailed." : "Sent. (The email didn't go out; they'll see it on the site.)";
+        reply.value = "";
+        file.value = "";
+        ticket.status = "answered";
+        toggle.textContent = "Close ticket";
+        await loadThread();
+      } catch (e) {
+        note.textContent = e.message;
+      } finally {
+        send.disabled = false;
+      }
+    });
+    const toggle = make("button", "admin-button", ticket.status === "closed" ? "Reopen" : "Close ticket");
+    toggle.type = "button";
+    toggle.addEventListener("click", async () => {
+      const next = ticket.status === "closed" ? "open" : "closed";
+      toggle.disabled = true;
+      const { error } = await account.from("tickets").update({ status: next }).eq("id", ticket.id);
+      toggle.disabled = false;
+      if (error) return (note.textContent = "Not changed. Try again.");
+      ticket.status = next;
+      toggle.textContent = next === "closed" ? "Reopen" : "Close ticket";
+      note.textContent = next === "closed" ? "Closed." : "Open again.";
+    });
+    const actions = make("div", "admin-review__actions");
+    actions.append(file, send, toggle, note);
+    body.append(reply, actions);
+  };
+  const countNew = async () => {
+    const { count } = await account.from("tickets").select("id", { count: "exact", head: true }).eq("studio_unread", true);
+    newCount.textContent = count ? `${count} new` : "";
+    newCount.hidden = !count;
+  };
+  const loadTickets = async () => {
+    let query = account
+      .from("tickets")
+      .select("id, number, user_id, name, email, category, subject, order_id, status, studio_unread, updated_at")
+      .order("studio_unread", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(100);
+    if (ticketFilter !== "all") query = query.eq("status", ticketFilter);
+    const { data, error } = await query;
+    if (error) {
+      noTickets.textContent = "Tickets couldn't be loaded. Reload the page to try again.";
+      noTickets.hidden = false;
+      return;
+    }
+    ticketList.replaceChildren(...data.map(ticketRow));
+    noTickets.hidden = data.length > 0;
+  };
+  supportBox.querySelectorAll("[data-filter]").forEach((chip) =>
+    chip.addEventListener("click", () => {
+      supportBox.querySelectorAll("[data-filter]").forEach((c) => c.classList.toggle("is-on", c === chip));
+      ticketFilter = chip.dataset.filter;
+      loadTickets();
+    })
+  );
+  loadTickets();
+  countNew();
+  if (location.hash === "#support") setTimeout(() => supportBox.scrollIntoView(), 300);
 
   // ---------- Files for buyers ----------
   // The file goes straight from this browser into the R2 bucket, through a

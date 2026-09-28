@@ -361,6 +361,32 @@ nobody can log in.
   password protection. The retired `ip-probe` function only answers "Gone"
   and can be deleted there.
 
+## Support portal
+
+- `support.html` (footer → Support, profile → Support tickets with an
+  unread badge, Help & FAQ): a signed-in member's tickets (newest activity
+  first, "New reply" on unread ones), a New ticket form (topic, one of
+  their orders if they like, subject, message, one image or PDF up to 5 MB)
+  and one ticket's conversation (`?t=<id>`), with a reply box and Close.
+  A new message opens a closed ticket again; the page checks for replies
+  every 30 seconds while a ticket is open.
+- Tables `tickets` (number from 1001, topic, subject, order, status
+  open / answered / closed, member_unread, studio_unread) and
+  `ticket_messages` (staff marks the studio's replies). Triggers fill in
+  who and when, keep members to closing their ticket or marking it read,
+  and set the status from the last message. Limits: 5 unfinished tickets
+  per member, a minute between new tickets, 10 seconds between messages,
+  200 messages per ticket.
+- Attachments: private bucket `support`, in the ticket owner's folder;
+  members see only theirs, admins all; shown through one-hour links.
+- Emails (Edge Function `payment`, action `ticket-email`, by the message's
+  author within 10 minutes): the studio's reply goes to the member with a
+  link to the ticket; a member's message goes to the studio (reply-to the
+  member).
+- Admin panel → Support tickets: filters (Waiting for us, Answered,
+  Closed, All), unread first with a count; open one to read it, reply (with
+  a file), close or reopen. Emails link to `admin.html#support`.
+
 ## Ratings and reviews
 
 - `reviews` table: any number of comments per member per work, but one rated

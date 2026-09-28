@@ -48,16 +48,22 @@
       setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
     })();
   </script>
-  <title>SauFox Entertainment</title>
-  <meta name="description" content="A release from SauFox Entertainment.">
+  <title>Support · SauFox Entertainment</title>
+  <meta name="description" content="Support tickets for SauFox Entertainment members: orders, accounts and anything else.">
   <link rel="icon" href="assets/favicon.png" type="image/png" sizes="64x64">
   <link rel="icon" href="assets/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <meta name="theme-color" content="#0f0f11">
+  <meta name="robots" content="noindex">
+  <link rel="canonical" href="https://saufoxentertainment.ir/support">
+  <link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/support">
+  <link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/support?lang=fa">
+  <link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/support">
   <meta property="og:site_name" content="SauFox Entertainment">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="SauFox Entertainment">
-  <meta property="og:description" content="A release from SauFox Entertainment.">
+  <meta property="og:title" content="Support · SauFox Entertainment">
+  <meta property="og:description" content="Support tickets for SauFox Entertainment members: orders, accounts and anything else.">
+  <meta property="og:url" content="https://saufoxentertainment.ir/support">
   <meta property="og:image" content="https://saufoxentertainment.ir/assets/og.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -99,115 +105,85 @@
     </div>
   </header>
 
-  <!-- One page for every work in js/content.js: work.html?id=<id>.
-       js/main.js (titlePage) fills it in; sections without data stay
-       hidden. -->
-  <main class="title-page">
-    <section class="title-hero" aria-hidden="true">
-      <span class="title-hero__art"></span>
-    </section>
-
-    <section class="title-head">
-      <p class="title-head__kicker"></p>
-      <h1 class="title-head__name" translate="no"></h1>
-    </section>
-
-    <section class="title-main">
-      <div class="title-poster">
-        <img alt="">
+  <!-- Support portal: a member's tickets, a new ticket, and one ticket's
+       conversation with the studio (?t=<id>). js/main.js (supportPage)
+       runs it; the database keeps each member to their own tickets. -->
+  <main class="support">
+    <div class="support__top">
+      <div>
+        <p class="doc__kicker">Support</p>
+        <h1 class="support__title">How can we help?</h1>
+        <p class="support__lead">Open a ticket about an order, your account or anything else. We answer here, and let you know by email. Quick answers are in <a href="faq">Help &amp; FAQ</a>.</p>
       </div>
+      <button class="support__new" type="button" hidden>New ticket</button>
+    </div>
 
-      <div class="title-body">
-        <dl class="title-facts"></dl>
+    <p class="support__login" hidden><a href="login">Log in</a> <span>to see your tickets or open a new one.</span></p>
+    <p class="support__status" role="status"></p>
 
-        <div class="title-actions">
-          <button class="title-button title-button--play" type="button" data-action="trailer" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 8 5.5z"/></svg>
-            <span>Watch trailer</span>
-          </button>
-          <span class="title-button title-button--soon" data-slot="trailer-soon" hidden></span>
-          <button class="title-button title-button--list" type="button" data-action="my-list" aria-pressed="false" hidden>
-            <svg class="icon-add" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-            <svg class="icon-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span>My List</span>
-          </button>
-          <a class="title-button title-button--buy" data-action="buy" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2.2l2.3 11h11l2-8H7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="19.5" r="1.5" fill="currentColor"/><circle cx="17" cy="19.5" r="1.5" fill="currentColor"/></svg>
-            <span>Buy</span>
-          </a>
-          <span class="title-button title-button--soon" data-slot="buy-soon" hidden>Purchases open soon</span>
-          <button class="title-button title-button--notify" type="button" data-action="notify" aria-pressed="false" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span>Notify me</span>
-          </button>
-        </div>
+    <!-- Their tickets, most recent activity first. -->
+    <section class="support__tickets" aria-labelledby="tickets-title" hidden>
+      <h2 class="support__heading" id="tickets-title">Your tickets</h2>
+      <ol class="ticket-list"></ol>
+      <p class="support__empty" hidden>No tickets yet. When you need us, press &ldquo;New ticket&rdquo;.</p>
+    </section>
 
-        <div class="countdown" hidden>
-          <p class="countdown__label"></p>
-          <div class="countdown__units">
-            <span class="countdown__unit"><b data-unit="days">0</b><small>Days</small></span>
-            <span class="countdown__unit"><b data-unit="hours">0</b><small>Hours</small></span>
-            <span class="countdown__unit"><b data-unit="minutes">0</b><small>Minutes</small></span>
-            <span class="countdown__unit"><b data-unit="seconds">0</b><small>Seconds</small></span>
-          </div>
-        </div>
-
-        <p class="title-synopsis" hidden></p>
+    <!-- A new ticket. -->
+    <form class="ticket-form" novalidate hidden>
+      <h2 class="support__heading">New ticket</h2>
+      <div class="ticket-form__grid">
+        <label class="ticket-field">
+          <span>Topic</span>
+          <select name="category" required></select>
+        </label>
+        <label class="ticket-field" data-slot="order-field" hidden>
+          <span>Order <small>optional</small></span>
+          <select name="order"></select>
+        </label>
       </div>
-    </section>
-
-    <section class="title-section title-gallery" aria-labelledby="gallery-title" hidden>
-      <h2 class="title-section__heading" id="gallery-title">Gallery</h2>
-      <div class="title-gallery__grid"></div>
-    </section>
-
-    <!-- Cast & crew: everyone who made the work, with a photo, in two groups
-         (works.credits, set in the admin panel). js/main.js fills it in. -->
-    <section class="title-section title-credits" aria-labelledby="credits-title" hidden>
-      <h2 class="title-section__heading" id="credits-title">Cast &amp; crew <span class="title-credits__count" data-slot="credits-count"></span></h2>
-      <div class="title-credits__groups"></div>
-    </section>
-
-    <!-- Ratings and reviews (comments only until the work is released).
-         js/main.js (reviews) fills it in; the database keeps one review
-         per member and works out who bought the work. -->
-    <section class="title-section title-reviews" id="reviews" aria-labelledby="reviews-title" hidden>
-      <h2 class="title-section__heading" id="reviews-title">Ratings &amp; reviews</h2>
-      <div class="reviews__summary" hidden>
-        <div class="reviews__score">
-          <div data-slot="score"></div>
-          <small data-slot="count"></small>
-        </div>
-        <ol class="reviews__bars" aria-label="Ratings by stars"></ol>
+      <label class="ticket-field">
+        <span>Subject</span>
+        <input name="subject" type="text" maxlength="150" autocomplete="off" dir="auto" required>
+      </label>
+      <label class="ticket-field">
+        <span>Message</span>
+        <textarea name="body" rows="7" maxlength="5000" autocomplete="off" dir="auto" required></textarea>
+      </label>
+      <label class="ticket-attach">
+        <input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf">
+        <span class="ticket-attach__button">Attach a screenshot or PDF</span>
+        <span class="ticket-attach__name" data-slot="file-name">Up to 5 MB</span>
+      </label>
+      <div class="ticket-form__foot">
+        <p class="auth__message" role="status" aria-live="polite"></p>
+        <button class="review-form__cancel" type="button" data-action="cancel">Cancel</button>
+        <button class="review-form__submit" type="submit">Send ticket</button>
       </div>
+    </form>
 
-      <form class="review-form" novalidate hidden>
-        <h3 class="review-form__title">Your review</h3>
-        <button class="review-form__rate" type="button" hidden></button>
-        <textarea name="body" rows="4" maxlength="2000" autocomplete="off" placeholder="What did you think?"></textarea>
-        <div class="review-form__foot">
+    <!-- One ticket: the conversation, a reply box, and Close. -->
+    <section class="ticket" hidden>
+      <a class="ticket__back" href="support">&larr; <span>All tickets</span></a>
+      <div class="ticket__head">
+        <p class="doc__kicker" data-slot="number"></p>
+        <h2 class="ticket__subject" data-slot="subject" dir="auto" translate="no"></h2>
+        <p class="ticket__meta" data-slot="meta"></p>
+      </div>
+      <ol class="ticket-thread"></ol>
+      <form class="ticket-reply" novalidate>
+        <p class="ticket-reply__closed" hidden>This ticket is closed. Write below if you need us again, and it opens again.</p>
+        <textarea name="body" rows="4" maxlength="5000" autocomplete="off" dir="auto" placeholder="Write your reply…"></textarea>
+        <div class="ticket-form__foot">
+          <label class="ticket-attach ticket-attach--small">
+            <input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf">
+            <span class="ticket-attach__button">Attach</span>
+            <span class="ticket-attach__name" data-slot="file-name"></span>
+          </label>
           <p class="auth__message" role="status" aria-live="polite"></p>
-          <button class="review-form__submit" type="submit">Post review</button>
+          <button class="review-form__cancel" type="button" data-action="close-ticket">Close ticket</button>
+          <button class="review-form__submit" type="submit">Send</button>
         </div>
       </form>
-      <p class="reviews__login" hidden><a href="login">Log in</a> <span>to rate and review.</span></p>
-
-      <label class="reviews__sort">
-        <span>Sort by</span>
-        <select data-slot="sort">
-          <option value="newest">Newest</option>
-          <option value="helpful">Most helpful</option>
-        </select>
-      </label>
-      <ol class="reviews__list"></ol>
-      <p class="reviews__empty" hidden>No reviews yet. Be the first.</p>
-      <button class="reviews__more" type="button" hidden>Show more</button>
-    </section>
-
-    <section class="title-missing" hidden>
-      <h1 class="title-head__name">We couldn&rsquo;t find that work</h1>
-      <p>It may have moved or been renamed.</p>
-      <a class="empty__button" href="/">Back to all works</a>
     </section>
   </main>
 
@@ -261,20 +237,6 @@
       <button class="lang-switch" type="button" data-lang-switch translate="no">فارسی</button>
     </div>
   </footer>
-
-  <!-- Full-size stills and the trailer player. -->
-  <div class="viewer" role="dialog" aria-modal="true" aria-label="Viewer" hidden>
-    <button class="viewer__close" type="button" aria-label="Close">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </button>
-    <button class="viewer__step viewer__step--prev" type="button" aria-label="Previous image">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <div class="viewer__stage"></div>
-    <button class="viewer__step viewer__step--next" type="button" aria-label="Next image">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-  </div>
 
   <script src="js/vendor/supabase.js?v=85" defer></script>
   <script src="js/fa.js?v=85" defer></script>

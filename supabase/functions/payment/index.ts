@@ -11,6 +11,9 @@
 //   processing: in progress, completed: done), once each
 // POST { action: "email-test" }                 admins
 //   -> { ok } or { error }  sends a sample receipt to the studio address
+// POST { action: "ticket-email", message_id }     the message's author
+//   -> { sent }  a support message: the studio's reply goes to the member,
+//   a member's message (new ticket or follow-up) to the studio
 // POST { action: "retry-emails", order_id? }     admins (one order), or the
 //   database every 15 minutes with the x-retry-key header (all orders)
 //   -> { sent, failed }  sends the emails that didn't go out before, and
@@ -35,7 +38,7 @@
 // from the database (public.zarinpal_call), whose IP stays the same; the
 // admin panel shows it.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { alertEmail, mailReady, paidEmail, placedEmail, planEndingEmail, send, stageEmail, STUDIO, studioEmail, type Order } from "./mail.ts";
+import { alertEmail, mailReady, paidEmail, placedEmail, planEndingEmail, send, stageEmail, STUDIO, studioEmail, ticketReplyEmail, ticketStudioEmail, type Order } from "./mail.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
@@ -253,6 +256,30 @@ Deno.serve(async (req) => {
   } catch {
     return reply({ error: "bad_request" }, 400);
   }
+  // ---------- Support ticket emails ----------
+  if (body.action === "ticket-email") {
+    const user = await caller(req);
+    if (!user) return reply({ error: "signed_out" }, 401);
+    const { data: message } = await db
+      .from("ticket_messages")
+      .select("id, ticket_id, user_id, staff, body, author_name, attachment_name, created_at")
+      .eq("id", String(body.message_id || ""))
+      .maybeSingle();
+    // Only its author, and only while it's fresh (no re-sending old ones).
+    if (!message || message.user_id !== user.id || Date.now() - Date.parse(message.created_at) > 10 * 60 * 1000)
+      return reply({ error: "not_found" }, 404);
+    const { data: ticket } = await db
+      .from("tickets")
+      .select("id, number, subject, category, email, name")
+      .eq("id", message.ticket_id)
+      .maybeSingle();
+    if (!ticket || !mailReady()) return reply({ sent: false });
+    const { count } = await db.from("ticket_messages").select("id", { count: "exact", head: true }).eq("ticket_id", ticket.id);
+    const mail = message.staff ? ticketReplyEmail(ticket, message) : ticketStudioEmail(ticket, message, (count || 0) <= 1);
+    later(send(mail).catch((e) => console.error("ticket email", (e as Error).message)));
+    return reply({ sent: true });
+  }
+
   // ---------- Test email (admin panel) ----------
   if (body.action === "email-test") {
     const user = await caller(req);

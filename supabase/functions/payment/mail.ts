@@ -286,6 +286,66 @@ export const studioEmail = (order: Order, event: "placed" | "paid") => {
   };
 };
 
+// ---------- Support tickets ----------
+export type Ticket = { id: string; number: number; subject: string; category: string; email: string; name: string };
+export type TicketMessage = { body: string; author_name: string; attachment_name?: string | null };
+const CATEGORY_EN: Record<string, string> = {
+  order: "An order",
+  account: "Account and sign-in",
+  technical: "Technical problem",
+  subscription: "Subscription",
+  other: "Something else",
+};
+const excerpt = (text: string) => {
+  const one = text.replace(/\s+/g, " ").trim();
+  return one.length > 600 ? `${one.slice(0, 600)}…` : one;
+};
+const quote = (text: string, rtl: boolean) =>
+  `<div dir="auto" style="margin:14px 0 0;padding:12px 14px;border-${rtl ? "right" : "left"}:3px solid #ff7a1a;background:#111114;border-radius:8px;color:#f5f3ef;font-size:14px;line-height:1.8;white-space:pre-wrap;">${esc(excerpt(text))}</div>`;
+
+// To the member: the studio answered their ticket.
+export const ticketReplyEmail = (ticket: Ticket, message: TicketMessage) => {
+  const link = `${SITE}/support.html?t=${encodeURIComponent(ticket.id)}`;
+  const fa =
+    hello(ticket.name, true) +
+    `<p style="margin:0;">به تیکت <b>${faNum(ticket.number)}#</b> با موضوع «<span dir="auto">${esc(ticket.subject)}</span>» پاسخ دادیم:</p>` +
+    quote(message.body, true);
+  const en =
+    hello(ticket.name, false) +
+    `<p style="margin:0;">We've replied to ticket <b>#${ticket.number}</b>, &ldquo;${esc(ticket.subject)}&rdquo;:</p>` +
+    quote(message.body, false);
+  return {
+    to: ticket.email,
+    subject: `پاسخ به تیکت ${faNum(ticket.number)} | Reply to ticket #${ticket.number}`,
+    html: page(
+      fa,
+      en,
+      button(link, "دیدن و پاسخ دادن", "View and reply"),
+      "لطفاً پاسختان را در سایت، در همان تیکت بنویسید.",
+      "Please reply on the site, in the ticket itself."
+    ),
+  };
+};
+
+// To the studio: a new ticket, or the member wrote again.
+export const ticketStudioEmail = (ticket: Ticket, message: TicketMessage, first: boolean) => {
+  const list: [string, string][] = [
+    ["Ticket", `#${ticket.number}`],
+    ["Topic", esc(CATEGORY_EN[ticket.category] || ticket.category)],
+    ["Subject", esc(ticket.subject)],
+    ["From", `${esc(ticket.name)} &lt;<a href="mailto:${esc(ticket.email)}" style="color:#ff7a1a;">${esc(ticket.email)}</a>&gt;`],
+    ...(message.attachment_name ? ([["Attachment", esc(message.attachment_name)]] as [string, string][]) : []),
+  ];
+  const fa = `<p style="margin:0;color:#f5f3ef;font-weight:700;">${first ? "یک تیکت پشتیبانی تازه باز شد." : "مشتری به تیکت پاسخ داد."}</p>`;
+  const en = `<p style="margin:0;">${first ? "A new support ticket." : "The member wrote again."}</p>` + rows(list, false) + quote(message.body, false);
+  return {
+    to: STUDIO,
+    replyTo: ticket.email,
+    subject: `[SauFox] ${first ? "تیکت تازه" : "پاسخ مشتری"} ${faNum(ticket.number)} | ${first ? "New ticket" : "Reply"} #${ticket.number}: ${ticket.subject}`,
+    html: page(fa, en, button(`${SITE}/admin.html#support`, "پنل مدیریت", "Admin panel")),
+  };
+};
+
 // ---------- To a member who asked to be told: out now / trailer ----------
 export const alertEmail = (email: string, work: { id: string; title: string }, event: "released" | "trailer") => {
   const out = event === "released";
