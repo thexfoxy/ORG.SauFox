@@ -939,10 +939,10 @@ const heroEdgeY = (() => {
     panel.classList.toggle("has-news", Boolean(post));
     const i = Number(panel.dataset.index);
     // The featured panel has its card (or the eye button) instead of a tag.
-    panel.querySelector(".hero__tag").hidden = !post || (i === 0 && count > 1);
+    panel.querySelector(".hero__tag").hidden = !post || i === 0;
     const next = card(work, post);
     // The featured work's card stays open, with an eye button to hide it.
-    if (i === 0 && count > 1) {
+    if (i === 0) {
       next.classList.add("is-pinned");
       const hide = make("button", "hero__eye");
       hide.type = "button";
@@ -1075,11 +1075,11 @@ const heroEdgeY = (() => {
   // unless it's been hidden.
   const showCards = () => {
     cards.forEach((box, i) => {
-      const open = i === 0 && count > 1 ? pinned : i === hovered;
+      const open = i === 0 ? pinned : i === hovered;
       box.classList.toggle("is-open", open);
       panels[i].classList.toggle("is-open", open);
     });
-    peek.hidden = count < 2 || pinned;
+    peek.hidden = pinned;
     // A hovered strip's card covers its neighbours' tags; they step aside.
     hero.classList.toggle("is-hovering", hovered > 0);
   };

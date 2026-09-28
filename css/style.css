@@ -160,46 +160,87 @@ a {
   outline-offset: 3px;
 }
 
-/* The page scrollbar: a slim dark track and a brushed-silver thumb with
-   rounded ends that warms to the site's orange while held or hovered.
-   Chrome, Edge and Safari use the ::-webkit-scrollbar parts; Firefox,
-   which has no such parts, gets thin silver-on-dark colours. */
+/* The page scrollbar: a thin laser. The thumb is a hot white-orange core
+   line with an orange glow fading out on both sides (drawn as a gradient,
+   since a scrollbar can't cast a shadow outside itself); a faint guide
+   line runs down the dark track. Brighter on hover, fully lit while
+   dragged. Firefox gets thin orange-on-dark colours. */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0c;
-  border-inline-start: 1px solid rgba(255, 255, 255, 0.04);
+  background:
+    linear-gradient(90deg, transparent calc(50% - 0.5px), rgba(255, 255, 255, 0.06) calc(50% - 0.5px), rgba(255, 255, 255, 0.06) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    #09090b;
+}
+
+::-webkit-scrollbar-track:horizontal {
+  background:
+    linear-gradient(180deg, transparent calc(50% - 0.5px), rgba(255, 255, 255, 0.06) calc(50% - 0.5px), rgba(255, 255, 255, 0.06) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    #09090b;
 }
 
 ::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
   border-radius: 999px;
-  background:
-    linear-gradient(90deg, #6d6e74, #c9cad0 45%, #8b8c92) padding-box;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 122, 26, 0.12) 18%,
+    rgba(255, 122, 26, 0.45) 34%,
+    #ffb070 44%,
+    #fff3e6 50%,
+    #ffb070 56%,
+    rgba(255, 122, 26, 0.45) 66%,
+    rgba(255, 122, 26, 0.12) 82%,
+    transparent 100%
+  );
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background:
-    linear-gradient(90deg, #8a8b91, #e4e5ea 45%, #a6a7ad) padding-box;
+::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 122, 26, 0.12) 18%,
+    rgba(255, 122, 26, 0.45) 34%,
+    #ffb070 44%,
+    #fff3e6 50%,
+    #ffb070 56%,
+    rgba(255, 122, 26, 0.45) 66%,
+    rgba(255, 122, 26, 0.12) 82%,
+    transparent 100%
+  );
 }
 
+::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:active {
-  background:
-    linear-gradient(90deg, #c2560f, var(--accent) 45%, #d9651a) padding-box;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 122, 26, 0.08) 0%,
+    rgba(255, 122, 26, 0.3) 18%,
+    rgba(255, 140, 50, 0.7) 34%,
+    #ffc795 44%,
+    #ffffff 50%,
+    #ffc795 56%,
+    rgba(255, 140, 50, 0.7) 66%,
+    rgba(255, 122, 26, 0.3) 82%,
+    rgba(255, 122, 26, 0.08) 100%
+  );
+}
+
+::-webkit-scrollbar-button {
+  display: none;
 }
 
 ::-webkit-scrollbar-corner {
-  background: #0a0a0c;
+  background: #09090b;
 }
 
 @supports not selector(::-webkit-scrollbar) {
   html {
     scrollbar-width: thin;
-    scrollbar-color: #9a9ba1 #0a0a0c;
+    scrollbar-color: #ff8a33 #09090b;
   }
 }
 
