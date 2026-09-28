@@ -6156,6 +6156,80 @@ const ticketThread = async (list, messages, when) => {
       newCount.hidden = !count;
     });
 
+  // ---------- The admin team: the owner adds and removes admins ----------
+  const teamForm = page.querySelector(".admin-team__form");
+  const teamList = page.querySelector(".admin-team__list");
+  const teamSay = (text, ok) => {
+    const note = teamForm.querySelector(".admin-message");
+    note.textContent = text;
+    note.classList.toggle("is-ok", Boolean(ok));
+  };
+  const TEAM_ERRORS = {
+    SF020: "Only the owner can do this.",
+    SF021: "No SauFox account uses that email. Ask them to sign up on the site first.",
+    SF022: "They're already an admin.",
+    SF023: "The owner can't be removed.",
+  };
+  const loadTeam = async () => {
+    const { data: team, error } = await account.rpc("admin_team");
+    if (error) return;
+    const owner = team.some((a) => a.role === "owner" && a.user_id === session.user.id);
+    teamForm.hidden = !owner;
+    teamList.replaceChildren(
+      ...team.map((a) => {
+        const row = make("li", "admin-coupon");
+        const main = make("div", "admin-coupon__main");
+        const name = make("strong", "", a.name || a.email.split("@")[0]);
+        const email = make("span", "selectable", a.email);
+        email.dir = "ltr";
+        main.append(name, email);
+        const side = make("div", "admin-file__side");
+        side.append(make("span", a.role === "owner" ? "admin-team__role is-owner" : "admin-team__role", a.role === "owner" ? "Owner" : "Admin"));
+        if (owner && a.role !== "owner") {
+          const remove = make("button", "admin-button admin-button--danger", "Remove");
+          remove.type = "button";
+          remove.addEventListener("click", async () => {
+            // Two clicks, so a slip doesn't take someone's access away.
+            if (!remove.dataset.armed) {
+              remove.dataset.armed = "1";
+              remove.textContent = "Remove access?";
+              setTimeout(() => {
+                delete remove.dataset.armed;
+                remove.textContent = "Remove";
+              }, 4000);
+              return;
+            }
+            remove.disabled = true;
+            const { error: failed } = await account.rpc("admin_remove", { p_user: a.user_id });
+            if (failed) {
+              remove.disabled = false;
+              return teamSay(TEAM_ERRORS[failed.code] || "Not removed. Try again.");
+            }
+            teamSay(`${a.email} is no longer an admin.`, true);
+            loadTeam();
+          });
+          side.append(remove);
+        }
+        row.append(main, side);
+        return row;
+      })
+    );
+  };
+  teamForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const email = teamForm.elements.email.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return teamSay("Enter their email address.");
+    const button = teamForm.querySelector('[type="submit"]');
+    button.disabled = true;
+    const { error } = await account.rpc("admin_add", { p_email: email });
+    button.disabled = false;
+    if (error) return teamSay(TEAM_ERRORS[error.code] || "Not added. Try again.");
+    teamForm.reset();
+    teamSay(`${email} is now an admin. They'll see the panel next time they sign in.`, true);
+    loadTeam();
+  });
+  loadTeam();
+
   // ---------- Files for buyers ----------
   // The file goes straight from this browser into the R2 bucket, through a
   // link the library function signs; then the build is saved here.

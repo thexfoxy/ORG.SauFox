@@ -11,7 +11,7 @@
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=89">
+  <link rel="stylesheet" href="css/style.css?v=90">
   <script>
     // Clean addresses: never ".html" in the address bar (GitHub Pages
     // serves /work for work.html), and the home page is just "/". Pages
@@ -94,6 +94,25 @@
         <h2 class="admin-rates__title">Support tickets <span class="admin-support__count" data-slot="support-new" hidden></span></h2>
         <p class="admin-group__hint">Members&rsquo; tickets are answered in the Support desk on the customer portal: a chat with every conversation, live. Sign in there with this same account.</p>
         <a class="admin-button admin-button--primary" href="https://portal.saufoxentertainment.ir/#/desk" target="_blank" rel="noopener">Open the support desk</a>
+      </section>
+
+      <!-- The admin team (public.admins): the owner adds and removes admins
+           by email; the database checks it's the owner. -->
+      <section class="admin-team admin-group">
+        <h2 class="admin-rates__title">Admin team</h2>
+        <p class="admin-group__hint">Everyone here can use this panel and the support desk. Only the owner can add or remove admins.</p>
+        <form class="admin-team__form" novalidate hidden>
+          <label class="admin-field">
+            <span>Add an admin by email</span>
+            <span class="admin-coupons__code admin-team__add">
+              <input name="email" type="email" dir="ltr" autocomplete="off" placeholder="name@example.com" required>
+              <button class="admin-button admin-button--primary" type="submit">Add admin</button>
+            </span>
+          </label>
+          <p class="admin-group__hint">They need a SauFox account first (they sign up on the site). To get into the panel they sign in with Google or an email code, not a password alone.</p>
+          <p class="admin-message" role="status" aria-live="polite"></p>
+        </form>
+        <ol class="admin-coupons__list admin-team__list"></ol>
       </section>
 
       <!-- Discount codes for checkout (public.coupons). -->
@@ -703,6 +722,6 @@
   </main>
 
   <script src="js/vendor/supabase.js?v=89" defer></script>
-  <script src="js/main.js?v=89" defer></script>
+  <script src="js/main.js?v=90" defer></script>
 </body>
 </html>

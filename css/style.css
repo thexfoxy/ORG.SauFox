@@ -4026,6 +4026,7 @@ a.hero__panel {
 .admin input[type="text"],
 .admin input[type="number"],
 .admin input[type="datetime-local"],
+.admin input[type="email"],
 .admin select,
 .admin textarea {
   width: 100%;
@@ -7240,6 +7241,31 @@ a.hero__panel {
   font-size: 15px;
   letter-spacing: 0.05em;
   color: var(--text);
+}
+
+/* Admin: the team. */
+.admin-team__form {
+  display: grid;
+  gap: 6px;
+  max-width: 560px;
+}
+
+.admin-team__add input {
+  text-transform: none;
+}
+
+.admin-team__role {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.admin-team__role.is-owner {
+  color: #1a0d04;
+  background: linear-gradient(135deg, #f3d27a, #e6b84a);
 }
 
 /* ---------- Subscriptions: plan tiles in checkout and orders, the profile badge ---------- */

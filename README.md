@@ -79,7 +79,12 @@ Sign-up, login and profiles use the Supabase project `saufox-entertainment`
   Rials) and maintenance mode (with an optional note in each language), set
   in the admin panel. Everyone reads it; only admins change it.
 - `public.admins`: accounts allowed into the admin panel. The check lives
-  in `private.is_admin()`, outside the API.
+  in `private.is_admin()`, outside the API. `role` is `owner` (one, the
+  first admin) or `admin`. Nobody writes the table directly: the owner adds
+  and removes admins by email in the panel's "Admin team" section, through
+  `admin_add(email)` and `admin_remove(user)`, which check
+  `private.is_owner()` (verified sign-in included); the owner can't be
+  removed. Admins see the team with `admin_team()`.
 - Storage bucket `works` (public, 5 MB, JPEG / PNG / WebP): artwork uploaded
   from the admin panel, in `<work id>/`. Only admins can write.
 - `public.profiles`: one row per member (name, currency, avatar_url),
