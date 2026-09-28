@@ -139,6 +139,16 @@ const FA = {
   "Language": "زبان",
   "Open a ticket": "باز کردن تیکت",
   Member: "کاربر",
+  "Support desk": "میز پشتیبانی",
+  "Reply as SauFox Entertainment…": "پاسخ به‌عنوان ساوفاکس…",
+  Reopen: "باز کردن دوباره",
+  "Closed. A reply opens it again.": "بسته شده. با پاسخ دادن دوباره باز می‌شود.",
+  Back: "بازگشت",
+  You: "شما",
+  New: "تازه",
+  "Search name, email, subject or #": "جست‌وجوی نام، ایمیل، عنوان یا شماره",
+  "Pick a conversation.": "یک گفتگو را انتخاب کنید.",
+  "This ticket isn't here.": "این تیکت پیدا نشد.",
 };
 const faDigits = (text) => String(text).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
 const digits = (text) => (LANG === "fa" ? faDigits(text) : String(text));
@@ -206,6 +216,9 @@ const ICONS = {
   help: "M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18zM9.5 9a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.5V14M12 17.2v.1",
   back: "M15 5l-7 7 7 7",
   out: "M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11",
+  desk: "M4 5h16v11H9l-5 4zM8 9h8M8 12h5",
+  clip: "M20 11.5 12.4 19a5 5 0 0 1-7.1-7.1l8-8a3.4 3.4 0 0 1 4.8 4.8l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3",
+  send: "M4 12 20 4l-4 16-4-7zM12 13l8-9",
 };
 const icon = (name) => {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -290,6 +303,7 @@ let poll = 0;
 
 const shell = () => {
   const nav = [
+    ...(me.admin ? [["#/desk", "desk", "Support desk"]] : []),
     ["#/", "home", "Overview"],
     ["#/tickets", "tickets", "Tickets"],
     ["#/new", "plus", "New ticket"],
@@ -311,7 +325,13 @@ const shell = () => {
         h(
           "nav.side__nav",
           nav.map(([href, name, label]) =>
-            h("a.side__link", { href, dataset: { route: href } }, icon(name), h("span", t(label)), name === "tickets" ? h("b.side__count", { hidden: true }) : null)
+            h(
+              "a.side__link",
+              { href, dataset: { route: href } },
+              icon(name),
+              h("span", t(label)),
+              name === "tickets" ? h("b.side__count", { hidden: true }) : name === "desk" ? h("b.side__count.side__count--desk", { hidden: true }) : null
+            )
           )
         ),
         h(
@@ -359,11 +379,18 @@ const setWhere = (label) => {
   });
 };
 const unreadCount = async () => {
+  const show = (el, n) => {
+    if (!el) return;
+    el.textContent = digits(n || 0);
+    el.hidden = !n;
+  };
   const { count } = await db.from("tickets").select("id", { count: "exact", head: true }).eq("user_id", me.id).eq("member_unread", true);
-  const badge = document.querySelector(".side__count");
-  if (!badge) return;
-  badge.textContent = digits(count || 0);
-  badge.hidden = !count;
+  show(document.querySelector(".side__count:not(.side__count--desk)"), count);
+  if (me.admin) {
+    const { count: desk } = await db.from("tickets").select("id", { count: "exact", head: true }).eq("studio_unread", true);
+    show(document.querySelector(".side__count--desk"), desk);
+    document.title = (desk ? `(${digits(desk)}) ` : "") + t("Customer portal · SauFox Entertainment");
+  }
 };
 const badge = (status) => h(`span.badge.badge--${status}`, t(STATUS[status]));
 const orderTitle = (o) =>
@@ -487,11 +514,12 @@ views.tickets = async (view) => {
   draw();
 };
 
-const uploadFile = async (file) => {
+// Into the ticket owner's folder (an admin replying uploads to the member's).
+const uploadFile = async (file, owner = me.id) => {
   if (!TYPES.includes(file.type)) throw new Error(t("Attach an image (JPG, PNG, WebP or GIF) or a PDF."));
   if (file.size > 5 * 1024 * 1024) throw new Error(t("Files can be up to 5 MB."));
   const safe = (file.name.normalize("NFKD").replace(/[^\w.-]+/g, "_").slice(-80) || "file").replace(/^_+/, "");
-  const path = `${me.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+  const path = `${owner}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
   const { error } = await db.storage.from("support").upload(path, file, { contentType: file.type });
   if (error) throw new Error(t("The file didn't upload. Try again."));
   return { attachment: path, attachment_name: file.name.slice(0, 200) };
@@ -577,110 +605,206 @@ views.newTicket = async (view, params) => {
   subject.focus();
 };
 
-const thread = async (list, messages) => {
-  const paths = messages.map((m) => m.attachment).filter(Boolean);
-  const links = {};
-  if (paths.length) {
-    const { data } = await db.storage.from("support").createSignedUrls(paths, 3600);
+// ---------- The chat (a member's ticket, and the admins' desk) ----------
+// Bubbles on two sides (yours on the far side), a day line between days,
+// and the box at the bottom: Enter sends, Shift+Enter starts a new line.
+// New messages arrive live (Supabase Realtime), with a check every 20
+// seconds as well in case the connection drops.
+const dayOf = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Tehran" });
+const dayLabel = (iso) =>
+  new Date(iso).toLocaleDateString(LANG === "fa" ? "fa-IR" : "en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Tehran" });
+const timeOf = (iso) =>
+  new Date(iso).toLocaleTimeString(LANG === "fa" ? "fa-IR" : "en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tehran" });
+const initials = (name) =>
+  (name || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+const MSG_FIELDS = "id, staff, author_name, body, attachment, attachment_name, created_at";
+const TICKET_FIELDS = "id, number, user_id, name, email, subject, category, status, member_unread, studio_unread, created_at, updated_at, order_id";
+
+// Draws the messages; `staffSide` is true on the desk (the studio's own
+// replies go on the far side there, the member's on the member's page).
+const drawMessages = async (list, messages, staffSide, links) => {
+  const want = messages.map((m) => m.attachment).filter((path) => path && !links[path]);
+  if (want.length) {
+    const { data } = await db.storage.from("support").createSignedUrls(want, 3600);
     (data || []).forEach((d) => d.signedUrl && (links[d.path] = d.signedUrl));
   }
-  list.replaceChildren(
-    ...messages.map((m) => {
-      const url = m.attachment && links[m.attachment];
-      return h(
-        `li.msg${m.staff ? ".msg--staff" : ""}`,
+  const items = [];
+  let day = "";
+  messages.forEach((m, i) => {
+    if (dayOf(m.created_at) !== day) {
+      day = dayOf(m.created_at);
+      items.push(h("li.chat__day", h("span", dayLabel(m.created_at))));
+    }
+    const mine = staffSide ? m.staff : !m.staff;
+    const next = messages[i + 1];
+    const last = !next || next.staff !== m.staff || dayOf(next.created_at) !== day;
+    const url = m.attachment && links[m.attachment];
+    items.push(
+      h(
+        `li.bubble${mine ? ".bubble--mine" : ""}${m.staff ? ".bubble--staff" : ""}${last ? ".bubble--last" : ""}`,
+        !mine && last
+          ? m.staff
+            ? h("img.bubble__face", { src: "assets/logo.webp", alt: "" })
+            : h("span.bubble__face.bubble__face--text", initials(m.author_name))
+          : h("span.bubble__gap"),
         h(
-          "div.msg__head",
-          m.staff ? h("img.msg__mark", { src: "assets/logo.webp", alt: "" }) : null,
-          h("strong", { translate: "no" }, m.staff ? "SauFox Entertainment" : m.author_name || t("Member")),
-          m.staff ? h("span.msg__tag", t("Support")) : null,
-          h("time", when(m.created_at))
-        ),
-        h("p.msg__body", { dir: "auto", translate: "no" }, m.body),
-        url
-          ? h(
-              "a.msg__file",
-              { href: url, target: "_blank", rel: "noopener" },
-              /\.(jpe?g|png|webp|gif)$/i.test(m.attachment) ? h("img", { src: url, alt: m.attachment_name || "", loading: "lazy" }) : `📎 ${m.attachment_name || "File"}`
-            )
-          : null
-      );
-    })
-  );
+          "div.bubble__box",
+          !mine && (i === 0 || messages[i - 1].staff !== m.staff) ? h("strong.bubble__who", { translate: "no" }, m.staff ? "SauFox Entertainment" : m.author_name || t("Member")) : null,
+          h("p.bubble__text", { dir: "auto", translate: "no" }, m.body),
+          url
+            ? h(
+                "a.bubble__file",
+                { href: url, target: "_blank", rel: "noopener" },
+                /\.(jpe?g|png|webp|gif)$/i.test(m.attachment) ? h("img", { src: url, alt: m.attachment_name || "", loading: "lazy" }) : `📎 ${m.attachment_name || "File"}`
+              )
+            : null,
+          h("time.bubble__time", timeOf(m.created_at))
+        )
+      )
+    );
+  });
+  const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+  list.replaceChildren(...items);
+  if (atBottom || list.dataset.fresh !== "0") list.scrollTop = list.scrollHeight;
+  list.dataset.fresh = "0";
 };
 
-views.ticket = async (view, params, id) => {
-  setWhere(t("Tickets"));
-  const FIELDS = "id, number, subject, category, status, member_unread, created_at, order_id";
-  const { data: ticket } = await db.from("tickets").select(FIELDS).eq("id", id).maybeSingle();
-  if (!ticket) {
-    view.replaceChildren(h("div.panel.empty", h("p", t("This ticket isn't here. It may belong to another account."))));
-    return;
-  }
+// One ticket's conversation, drawn into `root`. `staffSide` for the desk.
+// Returns a stop() that ends its live updates.
+const chat = (root, ticket, { staffSide, onChange }) => {
   let current = ticket;
-  const head = h("section.ticket-head");
-  const list = h("ol.thread");
-  const closedNote = h("p.note", t("This ticket is closed. Write below if you need us again, and it opens again."));
-  const body = h("textarea", { rows: 4, maxLength: 5000, autocomplete: "off", dir: "auto", placeholder: t("Write your reply…") });
-  const file = fileField();
-  const note = h("p.note", { role: "status" });
-  const send = h("button.button.button--primary", { type: "submit" }, t("Send"));
-  const close = h("button.button.button--quiet", { type: "button" }, t("Close ticket"));
-  const drawHead = () => {
-    head.replaceChildren(
-      h("a.back", { href: "#/tickets" }, icon("back"), t("Tickets")),
-      h("p.kicker", `${t("Ticket")} #${digits(current.number)}`),
-      h("h1.ticket-head__title", { dir: "auto", translate: "no" }, current.subject),
-      h("p.ticket-head__meta", badge(current.status), h("span", t(TOPICS[current.category] || current.category)), h("span", t("Opened {date}", { date: when(current.created_at) })))
-    );
-    closedNote.hidden = current.status !== "closed";
-    close.hidden = current.status === "closed";
+  let count = -1;
+  const links = {};
+  const list = h("ol.chat__list", { "aria-live": "polite" });
+  const head = h("header.chat__head");
+  const closedNote = h("p.chat__closed");
+  const input = h("textarea.chat__input", {
+    rows: 1,
+    maxLength: 5000,
+    autocomplete: "off",
+    dir: "auto",
+    placeholder: t(staffSide ? "Reply as SauFox Entertainment…" : "Write your reply…"),
+  });
+  const fileInput = h("input", { type: "file", accept: TYPES.join(","), hidden: true });
+  const fileName = h("span.chat__file-name");
+  const attach = h("button.chat__attach", { type: "button", title: t("Attach"), "aria-label": t("Attach"), onclick: () => fileInput.click() }, icon("clip"));
+  const send = h("button.chat__send", { type: "submit", title: t("Send"), "aria-label": t("Send") }, icon("send"));
+  const note = h("p.chat__note", { role: "status" });
+  const toggle = h("button.button.button--quiet.chat__toggle", { type: "button" });
+  fileInput.addEventListener("change", () => (fileName.textContent = fileInput.files[0] ? `📎 ${fileInput.files[0].name}` : ""));
+
+  const grow = () => {
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
   };
-  const load = async () => {
-    const { data } = await db
-      .from("ticket_messages")
-      .select("id, staff, author_name, body, attachment, attachment_name, created_at")
-      .eq("ticket_id", current.id)
-      .order("created_at");
-    if (data && data.length !== list.children.length) await thread(list, data);
+  input.addEventListener("input", grow);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  const drawHead = () => {
+    const who = staffSide
+      ? h(
+          "div.chat__who",
+          h("span.chat__avatar", initials(current.name)),
+          h("div", h("strong", { translate: "no" }, current.name || t("Member")), h("a.chat__mail", { href: `mailto:${current.email}`, dir: "ltr", translate: "no" }, current.email))
+        )
+      : null;
+    head.replaceChildren(
+      staffSide ? h("a.chat__back", { href: "#/desk", "aria-label": t("Back") }, icon("back")) : h("a.chat__back", { href: "#/tickets", "aria-label": t("Back") }, icon("back")),
+      h(
+        "div.chat__title",
+        who,
+        h("p.chat__subject", h("b", `#${digits(current.number)}`), " ", h("span", { dir: "auto", translate: "no" }, current.subject)),
+        h("p.chat__meta", badge(current.status), h("span", t(TOPICS[current.category] || current.category)))
+      ),
+      toggle
+    );
+    toggle.textContent = current.status === "closed" ? t("Reopen") : t("Close ticket");
+    toggle.hidden = !staffSide && current.status === "closed";
+    closedNote.textContent = t(staffSide ? "Closed. A reply opens it again." : "This ticket is closed. Write below if you need us again, and it opens again.");
+    closedNote.hidden = current.status !== "closed";
+  };
+  const orderLine = h("p.chat__order");
+  if (staffSide && current.order_id)
+    db.from("orders")
+      .select("number, title, plan_id, plan_days, status, amount_irr")
+      .eq("id", current.order_id)
+      .maybeSingle()
+      .then(({ data: o }) => {
+        if (o) orderLine.textContent = `${t("Order")} #${digits(o.number)} · ${orderTitle(o)} · ${t(ORDER_STATUS[o.status] || o.status)} · ${rials(o.amount_irr)}`;
+      });
+
+  const load = async (force) => {
+    const { data } = await db.from("ticket_messages").select(MSG_FIELDS).eq("ticket_id", current.id).order("created_at");
+    if (!data || (!force && data.length === count)) return;
+    count = data.length;
+    await drawMessages(list, data, staffSide, links);
+  };
+  const refreshTicket = async () => {
+    const { data } = await db.from("tickets").select(TICKET_FIELDS).eq("id", current.id).maybeSingle();
+    if (!data) return;
+    current = data;
+    drawHead();
+    markRead();
+    if (onChange) onChange(current);
   };
   const markRead = () => {
-    if (!current.member_unread) return;
-    current.member_unread = false;
-    db.from("tickets").update({ member_unread: false }).eq("id", current.id).then(unreadCount);
+    const field = staffSide ? "studio_unread" : "member_unread";
+    if (!current[field]) return;
+    current[field] = false;
+    db.from("tickets")
+      .update({ [field]: false })
+      .eq("id", current.id)
+      .then(() => {
+        unreadCount();
+        if (onChange) onChange(current);
+      });
   };
-  close.addEventListener("click", async () => {
-    if (!close.dataset.armed) {
-      close.dataset.armed = "1";
-      close.textContent = t("Close it?");
+
+  toggle.addEventListener("click", async () => {
+    const next = current.status === "closed" ? "open" : "closed";
+    if (next === "closed" && !toggle.dataset.armed) {
+      toggle.dataset.armed = "1";
+      toggle.textContent = t("Close it?");
       setTimeout(() => {
-        delete close.dataset.armed;
-        close.textContent = t("Close ticket");
+        delete toggle.dataset.armed;
+        drawHead();
       }, 4000);
       return;
     }
-    close.disabled = true;
-    const { error } = await db.from("tickets").update({ status: "closed" }).eq("id", current.id);
-    close.disabled = false;
-    delete close.dataset.armed;
-    close.textContent = t("Close ticket");
+    delete toggle.dataset.armed;
+    toggle.disabled = true;
+    const { error } = await db.from("tickets").update({ status: next }).eq("id", current.id);
+    toggle.disabled = false;
     if (error) return (note.textContent = t("Not changed. Try again."));
-    current = { ...current, status: "closed" };
+    current = { ...current, status: next };
     drawHead();
+    if (onChange) onChange(current);
   });
+
   const form = h(
-    "form.panel.form.reply",
+    "form.chat__form",
     {
       novalidate: true,
       onsubmit: async (e) => {
         e.preventDefault();
-        const b = body.value.trim();
-        if (!b) return (note.textContent = t("Write your message."));
+        const body = input.value.trim();
+        if (!body) return input.focus();
         send.disabled = true;
-        note.textContent = t("Sending…");
+        note.textContent = "";
         try {
-          const attached = file.input.files[0] ? await uploadFile(file.input.files[0]) : {};
-          const { data: message, error } = await db.from("ticket_messages").insert({ ticket_id: current.id, body: b, ...attached }).select("id").single();
+          const attached = fileInput.files[0] ? await uploadFile(fileInput.files[0], current.user_id || me.id) : {};
+          const { data: message, error } = await db.from("ticket_messages").insert({ ticket_id: current.id, body, ...attached }).select("id").single();
           if (error)
             throw new Error(
               t(
@@ -692,37 +816,185 @@ views.ticket = async (view, params, id) => {
               )
             );
           notify(message.id);
-          form.reset();
-          file.input.dispatchEvent(new Event("change"));
-          note.textContent = "";
-          current = { ...current, status: "open" };
-          drawHead();
-          await load();
+          input.value = "";
+          grow();
+          fileInput.value = "";
+          fileName.textContent = "";
+          list.dataset.fresh = "1";
+          await load(true);
+          await refreshTicket();
         } catch (err) {
           note.textContent = err.message;
         } finally {
           send.disabled = false;
+          input.focus();
         }
       },
     },
     closedNote,
-    body,
-    h("div.form__foot", file.el, note, close, send)
+    note,
+    h("div.chat__bar", attach, fileInput, input, send),
+    fileName
   );
-  view.replaceChildren(head, list, form);
+
+  root.replaceChildren(h("section.chat" + (staffSide ? ".chat--desk" : ""), head, staffSide ? orderLine : null, list, form));
   drawHead();
-  await load();
-  markRead();
-  // New replies show up while it's open.
-  poll = setInterval(async () => {
-    if (document.hidden) return;
-    const { data } = await db.from("tickets").select(FIELDS).eq("id", current.id).maybeSingle();
-    if (!data) return;
-    current = data;
-    drawHead();
-    await load();
-    markRead();
-  }, 30000);
+  load(true).then(markRead);
+  grow();
+
+  // Live: new messages and status changes for this ticket.
+  const channel = db
+    .channel(`ticket-${current.id}-${Math.random().toString(36).slice(2, 7)}`)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "ticket_messages", filter: `ticket_id=eq.${current.id}` }, () => load().then(refreshTicket))
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "tickets", filter: `id=eq.${current.id}` }, () => refreshTicket())
+    .subscribe();
+  const timer = setInterval(() => !document.hidden && load().then(() => count && refreshTicket()), 20000);
+  return () => {
+    clearInterval(timer);
+    db.removeChannel(channel);
+  };
+};
+
+let stopChat = null;
+views.ticket = async (view, params, id) => {
+  setWhere(t("Tickets"));
+  const { data: ticket } = await db.from("tickets").select(TICKET_FIELDS).eq("id", id).maybeSingle();
+  if (!ticket) {
+    view.replaceChildren(h("div.panel.empty", h("p", t("This ticket isn't here. It may belong to another account."))));
+    return;
+  }
+  view.classList.add("view--chat");
+  stopChat = chat(view, ticket, { staffSide: false });
+};
+
+// ---------- The admins' support desk (#/desk, #/desk/<id>) ----------
+views.desk = async (view, params, id) => {
+  if (!me.admin) return (location.hash = "#/");
+  setWhere(t("Support desk"));
+  view.classList.add("view--desk");
+  let filter = store.get("deskFilter") || "open";
+  let query = "";
+  let tickets = [];
+  const lastOf = {};
+  const listBox = h("div.desk__rows");
+  const pane = h("div.desk__pane");
+  const chips = h("div.chips.chips--small");
+  const search = h("input.search", {
+    type: "search",
+    placeholder: t("Search name, email, subject or #"),
+    "aria-label": t("Search tickets"),
+    oninput: (e) => {
+      query = e.target.value.trim().toLowerCase();
+      drawList();
+    },
+  });
+  const drawChips = () =>
+    chips.replaceChildren(
+      ...[
+        ["open", "Waiting for us"],
+        ["answered", "Answered"],
+        ["closed", "Closed"],
+        ["all", "All"],
+      ].map(([f, label]) =>
+        h(
+          "button.chip" + (f === filter ? ".is-on" : ""),
+          {
+            type: "button",
+            onclick: () => {
+              filter = f;
+              store.set("deskFilter", f);
+              loadList();
+            },
+          },
+          t(label)
+        )
+      )
+    );
+  const drawList = () => {
+    const shown = tickets.filter(
+      (tk) =>
+        !query ||
+        [tk.name, tk.email, tk.subject, `#${tk.number}`, String(tk.number)].some((v) => String(v || "").toLowerCase().includes(query))
+    );
+    listBox.replaceChildren(
+      ...(shown.length
+        ? shown.map((tk) => {
+            const last = lastOf[tk.id];
+            return h(
+              `a.conv${tk.studio_unread ? ".is-unread" : ""}${tk.id === id ? ".is-here" : ""}`,
+              { href: `#/desk/${tk.id}` },
+              h("span.conv__avatar", initials(tk.name)),
+              h(
+                "span.conv__main",
+                h("span.conv__top", h("strong", { translate: "no" }, tk.name || t("Member")), h("time", when(tk.updated_at))),
+                h("span.conv__subject", { dir: "auto", translate: "no" }, `#${digits(tk.number)} · ${tk.subject}`),
+                h(
+                  "span.conv__last",
+                  { dir: "auto", translate: "no" },
+                  last ? `${last.staff ? `${t("You")}: ` : ""}${last.body.replace(/\s+/g, " ").slice(0, 90)}` : ""
+                )
+              ),
+              tk.studio_unread ? h("span.conv__dot", { "aria-label": t("New") }) : null
+            );
+          })
+        : [h("div.empty", h("p", t("Nothing here.")))])
+    );
+  };
+  const loadList = async () => {
+    drawChips();
+    let q = db.from("tickets").select(TICKET_FIELDS).order("studio_unread", { ascending: false }).order("updated_at", { ascending: false }).limit(200);
+    if (filter !== "all") q = q.eq("status", filter);
+    const { data } = await q;
+    tickets = data || [];
+    const ids = tickets.map((tk) => tk.id);
+    if (ids.length) {
+      const { data: msgs } = await db
+        .from("ticket_messages")
+        .select("ticket_id, staff, body, created_at")
+        .in("ticket_id", ids.slice(0, 100))
+        .order("created_at", { ascending: false })
+        .limit(400);
+      (msgs || []).forEach((m) => (lastOf[m.ticket_id] ||= m));
+    }
+    drawList();
+  };
+
+  view.replaceChildren(
+    h(
+      "div.desk" + (id ? ".desk--open" : ""),
+      h("aside.desk__list", h("div.desk__tools", h("h1.desk__title", t("Support desk")), chips, search), listBox),
+      pane
+    )
+  );
+  await loadList();
+  if (id) {
+    const { data: ticket } = await db.from("tickets").select(TICKET_FIELDS).eq("id", id).maybeSingle();
+    if (!ticket) pane.replaceChildren(h("div.empty", h("p", t("This ticket isn't here."))));
+    else
+      stopChat = chat(pane, ticket, {
+        staffSide: true,
+        onChange: (next) => {
+          const i = tickets.findIndex((tk) => tk.id === next.id);
+          if (i >= 0) tickets[i] = { ...tickets[i], ...next };
+          drawList();
+        },
+      });
+  } else pane.replaceChildren(h("div.desk__empty", h("img", { src: "assets/logo.webp", alt: "" }), h("p", t("Pick a conversation."))));
+
+  // The list stays live too: a new ticket or message moves it up.
+  const channel = db
+    .channel(`desk-${Math.random().toString(36).slice(2, 7)}`)
+    .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, () => loadList())
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "ticket_messages" }, (e) => {
+      if (e.new) lastOf[e.new.ticket_id] = e.new;
+      loadList();
+    })
+    .subscribe();
+  const prevStop = stopChat;
+  stopChat = () => {
+    if (prevStop) prevStop();
+    db.removeChannel(channel);
+  };
 };
 
 const orderRow = (o) =>
@@ -774,15 +1046,19 @@ views.help = async (view) => {
 // ---------- Routing: #/, #/tickets, #/tickets/<id>, #/new?order=, #/orders, #/help ----------
 const route = async () => {
   clearInterval(poll);
+  if (stopChat) stopChat();
+  stopChat = null;
   const [path, query = ""] = (location.hash.replace(/^#/, "") || "/").split("?");
   const params = new URLSearchParams(query);
   const view = document.getElementById("view");
   if (!view) return;
+  view.className = "view";
   view.replaceChildren(h("div.loading", h("span")));
   window.scrollTo(0, 0);
   const parts = path.split("/").filter(Boolean);
   try {
     if (!parts.length) await views.overview(view);
+    else if (parts[0] === "desk") await views.desk(view, params, parts[1]);
     else if (parts[0] === "tickets" && parts[1]) await views.ticket(view, params, parts[1]);
     else if (parts[0] === "tickets") await views.tickets(view);
     else if (parts[0] === "new") await views.newTicket(view, params);
@@ -814,6 +1090,8 @@ const route = async () => {
     email: user.email,
     name: (profile && profile.name) || (user.email || "").split("@")[0],
     avatar: profile && profile.avatar_url,
+    // Admins also get the support desk (the database decides what they see).
+    admin: Boolean((await db.from("admins").select("user_id").eq("user_id", user.id).maybeSingle()).data),
   };
   document.body.classList.remove("is-booting");
   shell();
@@ -823,6 +1101,12 @@ const route = async () => {
     if (after && /^#\/[\w/?=&.-]*$/.test(after)) history.replaceState(null, "", location.pathname + location.search + after);
   }
   window.addEventListener("hashchange", route);
+  // An admin lands on the desk.
+  if (me.admin && (!location.hash || location.hash === "#/") && !handed) history.replaceState(null, "", "#/desk");
   route();
   unreadCount();
+  // Unread counts stay current.
+  db.channel("counts")
+    .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, () => unreadCount())
+    .subscribe();
 })();

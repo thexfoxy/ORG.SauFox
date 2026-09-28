@@ -397,9 +397,10 @@ nobody can log in.
   author within 10 minutes): the studio's reply goes to the member with a
   link to the ticket; a member's message goes to the studio (reply-to the
   member).
-- Admin panel → Support tickets: filters (Waiting for us, Answered,
-  Closed, All), unread first with a count; open one to read it, reply (with
-  a file), close or reopen. Emails link to `admin.html#support`.
+- Tickets are answered in the Support desk on the customer portal (a live
+  chat; see `portal/README.md`). Admin panel → Support tickets shows how
+  many are waiting and opens the desk; `admin.html#support` (the link in
+  the studio's emails) goes straight there.
 
 ## Ratings and reviews
 

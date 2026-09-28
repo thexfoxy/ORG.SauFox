@@ -9,6 +9,18 @@ rule are shared with it.
   sidebar, and the views `#/`, `#/tickets`, `#/tickets/<id>`,
   `#/new?order=<id>`, `#/orders`, `#/help`), `js/supabase.js` (supabase-js,
   MIT, see `js/supabase.LICENSE`), `assets/` (fonts, logos, icons), `CNAME`.
+- Tickets are a chat: bubbles on two sides, a line between days, a box at
+  the bottom (Enter sends, Shift+Enter is a new line, a paper clip
+  attaches), live through Supabase Realtime (`tickets` and
+  `ticket_messages` are in the `supabase_realtime` publication; each change
+  only reaches those the row-level security lets read it), with a 20-second
+  check as well.
+- Admins (a row in `admins`) also get the Support desk (`#/desk`,
+  `#/desk/<id>`), and land there: every conversation on one side (unread
+  first with a dot, the last message, filters and search), the chat on the
+  other, with the member's name and email, their order, and Close / Reopen.
+  An admin's message is marked staff by the database and emailed to the
+  member. On phones the list and the chat take turns.
 - English and Persian (`FA` in `portal.js`; the choice is kept per site).
 
 ## Signing in

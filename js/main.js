@@ -6143,144 +6143,18 @@ const ticketThread = async (list, messages, when) => {
     noReviews.hidden = reviews.length > 0;
   });
 
-  // ---------- Support tickets ----------
-  const supportBox = page.querySelector(".admin-support");
-  const ticketList = supportBox.querySelector(".admin-support__list");
-  const noTickets = supportBox.querySelector(".admin-support__empty");
-  const newCount = supportBox.querySelector('[data-slot="support-new"]');
-  let ticketFilter = "open";
-  const ticketRow = (ticket) => {
-    const row = make("li", `admin-ticket${ticket.studio_unread ? " is-unread" : ""}`);
-    const head = make("button", "admin-ticket__head");
-    head.type = "button";
-    const title = make("strong", "", `#${ticket.number} · ${ticket.subject}`);
-    title.dir = "auto";
-    head.append(
-      title,
-      make(
-        "span",
-        "",
-        `${ticket.name || "Member"} <${ticket.email}> · ${TICKET_TOPICS[ticket.category] || ticket.category} · ${TICKET_STATUS[ticket.status]} · ${whenText(ticket.updated_at)}`
-      )
-    );
-    const body = make("div", "admin-ticket__body");
-    body.hidden = true;
-    head.addEventListener("click", async () => {
-      body.hidden = !body.hidden;
-      if (body.hidden || body.dataset.ready) return;
-      body.dataset.ready = "1";
-      await fillTicket(ticket, row, body);
+  // ---------- Support tickets: answered on the portal's desk ----------
+  // The studio's emails link to admin.html#support, which goes on there.
+  if (location.hash === "#support") location.replace("https://portal.saufoxentertainment.ir/#/desk");
+  const newCount = page.querySelector('.admin-support [data-slot="support-new"]');
+  account
+    .from("tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("studio_unread", true)
+    .then(({ count }) => {
+      newCount.textContent = count ? `${count} new` : "";
+      newCount.hidden = !count;
     });
-    row.append(head, body);
-    return row;
-  };
-  const fillTicket = async (ticket, row, body) => {
-    if (ticket.order_id) {
-      const { data: order } = await account.from("orders").select("number, title, status, amount_irr").eq("id", ticket.order_id).maybeSingle();
-      if (order) body.append(make("p", "admin-ticket__order", `Order #${order.number} · ${order.title} · ${order.status} · ${order.amount_irr.toLocaleString("en-US")} Rials`));
-    }
-    const thread = make("ol", "ticket-thread ticket-thread--admin");
-    body.append(thread);
-    const loadThread = async () => {
-      const { data } = await account
-        .from("ticket_messages")
-        .select("id, staff, author_name, body, attachment, attachment_name, created_at")
-        .eq("ticket_id", ticket.id)
-        .order("created_at");
-      await ticketThread(thread, data || [], whenText);
-    };
-    await loadThread();
-    if (ticket.studio_unread) {
-      await account.from("tickets").update({ studio_unread: false }).eq("id", ticket.id);
-      ticket.studio_unread = false;
-      row.classList.remove("is-unread");
-      countNew();
-    }
-    const reply = make("textarea", "admin-review__reply");
-    reply.rows = 4;
-    reply.maxLength = 5000;
-    reply.dir = "auto";
-    reply.placeholder = "Reply as SauFox Entertainment";
-    const file = make("input");
-    file.type = "file";
-    file.accept = SUPPORT_TYPES.join(",");
-    const note = make("span", "admin-order__note");
-    const send = make("button", "admin-button admin-button--primary", "Send reply");
-    send.type = "button";
-    send.addEventListener("click", async () => {
-      const text = reply.value.trim();
-      if (!text) return (note.textContent = "Write the reply first.");
-      send.disabled = true;
-      note.textContent = "Sending…";
-      try {
-        const attached = file.files[0] ? await supportUpload(file.files[0], ticket.user_id) : {};
-        const { data: message, error } = await account
-          .from("ticket_messages")
-          .insert({ ticket_id: ticket.id, body: text, ...attached })
-          .select("id")
-          .single();
-        if (error) throw new Error("Not sent. Try again.");
-        const mailed = await payment({ action: "ticket-email", message_id: message.id }, session);
-        note.textContent = mailed.sent ? "Sent; the member was emailed." : "Sent. (The email didn't go out; they'll see it on the site.)";
-        reply.value = "";
-        file.value = "";
-        ticket.status = "answered";
-        toggle.textContent = "Close ticket";
-        await loadThread();
-      } catch (e) {
-        note.textContent = e.message;
-      } finally {
-        send.disabled = false;
-      }
-    });
-    const toggle = make("button", "admin-button", ticket.status === "closed" ? "Reopen" : "Close ticket");
-    toggle.type = "button";
-    toggle.addEventListener("click", async () => {
-      const next = ticket.status === "closed" ? "open" : "closed";
-      toggle.disabled = true;
-      const { error } = await account.from("tickets").update({ status: next }).eq("id", ticket.id);
-      toggle.disabled = false;
-      if (error) return (note.textContent = "Not changed. Try again.");
-      ticket.status = next;
-      toggle.textContent = next === "closed" ? "Reopen" : "Close ticket";
-      note.textContent = next === "closed" ? "Closed." : "Open again.";
-    });
-    const actions = make("div", "admin-review__actions");
-    actions.append(file, send, toggle, note);
-    body.append(reply, actions);
-  };
-  const countNew = async () => {
-    const { count } = await account.from("tickets").select("id", { count: "exact", head: true }).eq("studio_unread", true);
-    newCount.textContent = count ? `${count} new` : "";
-    newCount.hidden = !count;
-  };
-  const loadTickets = async () => {
-    let query = account
-      .from("tickets")
-      .select("id, number, user_id, name, email, category, subject, order_id, status, studio_unread, updated_at")
-      .order("studio_unread", { ascending: false })
-      .order("updated_at", { ascending: false })
-      .limit(100);
-    if (ticketFilter !== "all") query = query.eq("status", ticketFilter);
-    const { data, error } = await query;
-    if (error) {
-      noTickets.textContent = "Tickets couldn't be loaded. Reload the page to try again.";
-      noTickets.hidden = false;
-      return;
-    }
-    ticketList.replaceChildren(...data.map(ticketRow));
-    noTickets.hidden = data.length > 0;
-  };
-  supportBox.querySelectorAll("[data-filter]").forEach((chip) =>
-    chip.addEventListener("click", () => {
-      supportBox.querySelectorAll("[data-filter]").forEach((c) => c.classList.toggle("is-on", c === chip));
-      ticketFilter = chip.dataset.filter;
-      loadTickets();
-    })
-  );
-  loadTickets();
-  countNew();
-  if (location.hash === "#support") setTimeout(() => supportBox.scrollIntoView(), 300);
 
   // ---------- Files for buyers ----------
   // The file goes straight from this browser into the R2 bucket, through a
