@@ -85,15 +85,18 @@
       inset: 0;
       z-index: 0;
       background:
-        radial-gradient(60% 55% at 70% 30%, rgba(255, 122, 26, 0.5), transparent 70%),
-        radial-gradient(55% 50% at 20% 75%, rgba(255, 60, 0, 0.32), transparent 72%),
+        radial-gradient(55% 50% at 62% 40%, rgba(255, 122, 26, 0.42), transparent 72%),
+        radial-gradient(50% 46% at 22% 78%, rgba(255, 60, 0, 0.26), transparent 74%),
         #07070a;
     }
-    .dlx__canvas { position: absolute; inset: 0; z-index: 1; display: block; width: 100%; height: 100%; }
+    .dlx__canvas { position: absolute; inset: 0; z-index: 1; display: block; width: 100%; height: 100%; opacity: 0.92; }
+    /* Foreground darkening: melts the shader into the frame and lifts the
+       controls, echoing the site's background gradient. */
     .dlx__vignette {
       position: absolute; inset: 0; z-index: 2; pointer-events: none;
-      background: radial-gradient(120% 120% at 50% 45%, transparent 52%, rgba(0,0,0,0.5) 100%);
-      -webkit-mask: none;
+      background:
+        radial-gradient(115% 100% at 50% 48%, transparent 34%, rgba(7,7,10,0.5) 72%, rgba(5,5,8,0.9) 100%),
+        linear-gradient(180deg, rgba(7,7,10,0.6) 0%, transparent 22%, transparent 72%, rgba(6,6,9,0.62) 100%);
     }
     .dlx__grain {
       position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0.04; mix-blend-mode: overlay;
@@ -165,8 +168,8 @@
       backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       box-shadow: 0 0 0 1px rgba(255,122,26,0.25), 0 18px 50px -16px rgba(255,90,0,0.7), inset 0 1px 0 rgba(255,255,255,0.18);
       overflow: hidden; isolation: isolate;
-      animation: rise-in 1s cubic-bezier(.22,1,.36,1) 0.24s both, btn-breathe 3.6s ease-in-out 1.2s infinite;
-      transition: transform .5s cubic-bezier(.34,1.4,.64,1), box-shadow .35s, border-color .3s;
+      animation: rise-in 1s cubic-bezier(.22,1,.36,1) 0.24s both, btn-breathe 4s ease-in-out 1.4s infinite;
+      transition: transform .6s cubic-bezier(.16,1,.3,1), box-shadow .6s cubic-bezier(.16,1,.3,1), border-color .5s;
     }
     /* rotating conic neon ring */
     .dlbtn::before {
@@ -179,13 +182,20 @@
     /* pointer glow */
     .dlbtn::after {
       content: ""; position: absolute; inset: 0; z-index: -1;
-      background: radial-gradient(160px circle at var(--mx, 50%) var(--my, 50%), rgba(255,180,120,0.35), transparent 60%);
-      opacity: 0; transition: opacity .3s;
+      background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(255,185,125,0.4), transparent 62%);
+      opacity: 0; transition: opacity .5s cubic-bezier(.16,1,.3,1);
     }
-    .dlbtn:hover { transform: translateY(-4px); border-color: rgba(255,190,130,0.8); box-shadow: 0 0 0 1px rgba(255,122,26,0.4), 0 26px 66px -14px rgba(255,90,0,0.9), inset 0 1px 0 rgba(255,255,255,0.25); }
+    /* Pause the breathing on hover so the smooth hover shadow can take over. */
+    .dlbtn:hover {
+      transform: translateY(-5px) scale(1.02);
+      border-color: rgba(255,195,140,0.85);
+      box-shadow: 0 0 0 1px rgba(255,122,26,0.45), 0 30px 74px -14px rgba(255,90,0,0.95), inset 0 1px 0 rgba(255,255,255,0.28);
+      animation-play-state: paused;
+    }
     .dlbtn:hover::after { opacity: 1; }
-    .dlbtn:active { transform: translateY(-1px) scale(0.985); }
-    .dlbtn__ic { width: 26px; height: 26px; flex: none; fill: #fff; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4)); }
+    .dlbtn:hover .dlbtn__ic { transform: translateY(2px); }
+    .dlbtn:active { transform: translateY(-2px) scale(0.99); transition-duration: .18s; }
+    .dlbtn__ic { width: 26px; height: 26px; flex: none; fill: #fff; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4)); transition: transform .6s cubic-bezier(.16,1,.3,1); }
     @keyframes spin { to { transform: rotate(1turn); } }
     @keyframes rise-in { from { opacity: 0; transform: translateY(22px); } }
     @keyframes btn-breathe {
@@ -258,27 +268,34 @@
         "precision highp float;",
         "uniform vec2 u_res; uniform float u_t;",
         "float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}",
-        "float noise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);",
+        // Quintic interpolation — smoother than cubic, no lattice banding.
+        "float noise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*f*(f*(f*6.-15.)+10.);",
         " float a=hash(i),b=hash(i+vec2(1,0)),c=hash(i+vec2(0,1)),d=hash(i+vec2(1,1));",
         " return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}",
-        "float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=a*noise(p);p*=2.02;a*=.5;}return s;}",
+        "float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<6;i++){s+=a*noise(p);p=p*2.02+vec2(1.3,-0.7);a*=.5;}return s;}",
         "void main(){",
         " vec2 uv=(gl_FragCoord.xy-.5*u_res)/u_res.y;",
-        " float t=u_t*0.05;",
-        " vec2 q=vec2(fbm(uv*1.5+vec2(0.,t)),fbm(uv*1.5+vec2(3.2,-t)));",
-        " vec2 r=vec2(fbm(uv*1.5+q*1.8+vec2(1.7,9.2)+t*0.6),fbm(uv*1.5+q*1.8+vec2(8.3,2.8)-t*0.5));",
-        " float f=fbm(uv*1.4+r*1.6);",
-        " float glow=smoothstep(0.15,1.05,f+ r.x*0.5);",
-        " vec3 base=vec3(0.03,0.028,0.038);",
-        " vec3 amber=vec3(1.0,0.478,0.102);",
-        " vec3 hot=vec3(1.0,0.33,0.0);",
-        " vec3 col=base;",
-        " col=mix(col,hot*0.45,smoothstep(0.2,0.9,r.y));",
-        " col=mix(col,amber,glow*0.7);",
-        " col+=amber*pow(glow,3.2)*0.45;",
+        " float t=u_t*0.045;",
+        " vec2 q=vec2(fbm(uv*1.25+vec2(0.,t)),fbm(uv*1.25+vec2(3.2,-t)));",
+        " vec2 r=vec2(fbm(uv*1.25+q*1.6+vec2(1.7,9.2)+t*0.5),fbm(uv*1.25+q*1.6+vec2(8.3,2.8)-t*0.4));",
+        " float f=fbm(uv*1.2+r*1.5);",
+        // Wide, soft ramps so nothing reads as a hard edge.
+        " float flow=smoothstep(0.02,1.2,f+r.x*0.4);",
         " float d=length(uv*vec2(u_res.x/u_res.y,1.0));",
-        " col*=1.0-0.5*smoothstep(0.5,1.45,d);",
-        " col+=(hash(gl_FragCoord.xy+u_t)-0.5)*0.02;",
+        // Smooth centre->edge mask: the light gathers in the middle and melts
+        // into darkness toward the frame, like the site's background gradient.
+        " float mask=smoothstep(1.4,0.1,d);",
+        " vec3 base=vec3(0.021,0.019,0.028);",
+        " vec3 amber=vec3(1.0,0.48,0.12);",
+        " vec3 hot=vec3(1.0,0.34,0.02);",
+        " vec3 col=base;",
+        " col=mix(col,hot*0.5,smoothstep(0.05,1.0,r.y)*mask);",
+        " col=mix(col,amber,flow*mask*0.8);",
+        " col+=amber*flow*flow*mask*0.3;",
+        " col*=mix(0.22,1.0,mask);",
+        " col=max(col,base*0.55);",
+        // Ordered dither removes 8-bit banding in the dark falloff.
+        " col+=(hash(gl_FragCoord.xy+fract(u_t))-0.5)*(1.7/255.0);",
         " gl_FragColor=vec4(col,1.0);",
         "}"
       ].join("\n");
