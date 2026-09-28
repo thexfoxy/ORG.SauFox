@@ -145,9 +145,15 @@ export const placedEmail = (order: Order, payable: boolean) => {
 };
 
 // ---------- To the buyer: payment receipt ----------
-export const paidEmail = (order: Order, released: boolean, planEnds?: string | null) => {
+export const paidEmail = (order: Order, released: boolean, planEnds?: string | null, licenseCode?: string | null) => {
   const when = order.paid_at || new Date().toISOString();
   const plan = Boolean(order.plan_id);
+  const keyRow = licenseCode
+    ? `<p style="margin:18px 0 0;padding:14px 16px;border:1px solid #2a2a2f;border-radius:10px;background:#151518;">` +
+      `<span style="display:block;font-size:12px;color:#8e8c95;letter-spacing:.08em;">کلید بازی · GAME KEY</span>` +
+      `<span dir="ltr" style="display:block;margin-top:6px;font:600 20px/1.4 monospace;letter-spacing:.12em;color:#ff7a1a;">${esc(licenseCode)}</span>` +
+      `</p>`
+    : "";
   const fa =
     hello(order.name, true) +
     `<p style="margin:0;">پرداخت شما انجام شد. این رسید را نگه دارید.</p>` +
@@ -162,12 +168,15 @@ export const paidEmail = (order: Order, released: boolean, planEnds?: string | n
       ],
       true
     ) +
+    keyRow +
     `<p style="margin:16px 0 0;">${
       plan
         ? `اشتراک شما فعال شد${planEnds ? ` و تا ${whenDayFa(planEnds)} اعتبار دارد` : ""}. تخفیف اشتراک در خریدهای بعدی خودبه‌خود حساب می‌شود.`
-        : released
-          ? "این اثر حالا در «کتابخانه»ی پروفایل شماست."
-          : "این اثر در روز انتشار به «کتابخانه»ی پروفایل شما اضافه می‌شود."
+        : licenseCode
+          ? "این کلید یک‌بارمصرف است. آن را در لانچر ساوفاکس وارد کنید تا بازی به کتابخانه‌تان اضافه و دانلود شود. کلید در پروفایل شما هم هست."
+          : released
+            ? "این اثر حالا در «کتابخانه»ی پروفایل شماست."
+            : "این اثر در روز انتشار به «کتابخانه»ی پروفایل شما اضافه می‌شود."
     }</p>`;
   const en =
     hello(order.name, false) +
@@ -183,12 +192,15 @@ export const paidEmail = (order: Order, released: boolean, planEnds?: string | n
       ],
       false
     ) +
+    keyRow +
     `<p style="margin:16px 0 0;">${
       plan
         ? `Your plan is active${planEnds ? ` until ${whenDayEn(planEnds)}` : ""}. Its discount comes off your next purchases by itself.`
-        : released
-          ? "It&rsquo;s in the Library in your profile now."
-          : "It will appear in the Library in your profile on release day."
+        : licenseCode
+          ? "This key works once. Enter it in the SauFox launcher to add the game to your library and download it. The key is in your profile too."
+          : released
+            ? "It&rsquo;s in the Library in your profile now."
+            : "It will appear in the Library in your profile on release day."
     }</p>`;
   return {
     to: order.email,

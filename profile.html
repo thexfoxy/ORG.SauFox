@@ -57,7 +57,7 @@
   <meta name="robots" content="noindex">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=94">
+  <link rel="stylesheet" href="css/style.css?v=95">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -114,10 +114,24 @@
       </div>
 
       <div class="profile-panel" id="panel-library" role="tabpanel" aria-labelledby="tab-library">
-        <div class="empty">
-          <p class="empty__title">Your library is empty</p>
-          <p class="empty__text">Games, films, animations and novels you buy or unlock with a subscription will appear here.</p>
-          <a class="empty__button" href="/">Browse works</a>
+        <!-- Redeem a game key (a purchase, or one someone gave you). -->
+        <form class="redeem" novalidate>
+          <div class="redeem__row">
+            <label class="redeem__field">
+              <span>Have a game key?</span>
+              <input name="code" type="text" dir="ltr" autocomplete="off" spellcheck="false" placeholder="SFOX-XXXX-XXXX-XXXX-XXXX" maxlength="24">
+            </label>
+            <button class="redeem__button" type="submit">Add to library</button>
+          </div>
+          <p class="redeem__message" role="status" aria-live="polite"></p>
+        </form>
+
+        <div class="library-body">
+          <div class="empty">
+            <p class="empty__title">Your library is empty</p>
+            <p class="empty__text">Games, films, animations and novels you buy or unlock with a subscription will appear here.</p>
+            <a class="empty__button" href="/">Browse works</a>
+          </div>
         </div>
       </div>
 
@@ -297,7 +311,7 @@
   </footer>
 
   <script src="js/vendor/supabase.js?v=89" defer></script>
-  <script src="js/fa.js?v=93" defer></script>
-  <script src="js/main.js?v=93" defer></script>
+  <script src="js/fa.js?v=94" defer></script>
+  <script src="js/main.js?v=94" defer></script>
 </body>
 </html>

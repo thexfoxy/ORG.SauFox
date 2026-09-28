@@ -5639,6 +5639,123 @@ a.hero__panel {
   display: none;
 }
 
+/* A game's key under its card. */
+.library-key {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.library-key__code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font: 600 12px/1.4 monospace;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: ltr;
+}
+
+.library-key__copy {
+  flex: none;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 8px;
+  font: 600 11px/1 var(--font-body);
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.library-key__copy:hover {
+  background: #2a2a2f;
+}
+
+/* Redeem a key, at the top of the Library tab. */
+.redeem {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.redeem__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.redeem__field {
+  display: grid;
+  flex: 1 1 260px;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.redeem__field input {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: 600 15px/1 monospace;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  background: var(--bg);
+  text-transform: uppercase;
+}
+
+.redeem__field input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.redeem__button {
+  height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--radius);
+  font: 600 14px/1 var(--font-body);
+  color: #1a0d04;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.redeem__button:hover {
+  background: #ff8c3a;
+}
+
+.redeem__button:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.redeem__message {
+  margin: 0;
+  font-size: 13px;
+  color: #ff8a7a;
+}
+
+.redeem__message:empty {
+  display: none;
+}
+
+.redeem__message.is-ok {
+  color: var(--green, #57d6a3);
+}
+
 /* Admin: files for buyers. */
 .admin-files__progress {
   width: 100%;

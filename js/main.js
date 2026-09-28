@@ -2510,13 +2510,36 @@ const signedInGoHome = async (user) => {
     });
     return button;
   };
-  const showLibrary = async (userId) => {
-    const { data, error } = await account
-      .from("orders")
-      .select("work_id, test, paid_at")
-      .eq("user_id", userId)
-      .in("status", ["paid", "processing", "completed"])
-      .order("paid_at", { ascending: false });
+  // A game's key, shown under its card, with a button to copy it.
+  const keyLine = (code) => {
+    const wrap = document.createElement("div");
+    wrap.className = "library-key";
+    const value = document.createElement("code");
+    value.className = "library-key__code selectable";
+    value.textContent = code;
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "library-key__copy";
+    copy.textContent = t("Copy");
+    copy.setAttribute("aria-label", t("Copy key"));
+    copy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(code);
+        copy.textContent = t("Copied");
+        setTimeout(() => (copy.textContent = t("Copy")), 1500);
+      } catch (e) {
+        const range = document.createRange();
+        range.selectNodeContents(value);
+        const sel = getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    });
+    wrap.append(value, copy);
+    return wrap;
+  };
+  const showLibrary = async () => {
+    const { data, error } = await account.rpc("my_licenses");
     if (error || !data.length) return;
     const works = await catalog;
     // Only files of owned works come back (row-level security).
@@ -2526,26 +2549,28 @@ const signedInGoHome = async (user) => {
       .eq("published", true)
       .order("created_at", { ascending: false });
     const cards = data
-      .map((order) => {
-        const work = works.find((w) => w.id === order.work_id);
+      .map((lic) => {
+        const work = works.find((w) => w.id === lic.work_id);
         if (!work) return null;
         const card = posterCard(work);
         const note = document.createElement("span");
         note.className = "poster-card__note";
         note.textContent =
-          (work.status === "released" ? "Yours" : "Pre-ordered · arrives on release day") + (order.test ? " · test" : "");
+          (work.status === "released" ? "Yours" : "Pre-ordered · arrives on release day") + (lic.mine ? "" : " · gift");
         card.append(note);
+        const item = document.createElement("div");
+        item.className = "library-item";
+        item.append(card, keyLine(lic.code));
         // The newest file for each platform.
         const files = (builds || [])
           .filter((b) => b.work_id === work.id)
           .filter((b, i, all) => all.findIndex((other) => other.platform === b.platform) === i);
-        if (!files.length) return card;
-        const item = document.createElement("div");
-        item.className = "library-item";
-        const problem = document.createElement("span");
-        problem.className = "library-item__problem";
-        problem.setAttribute("role", "status");
-        item.append(card, ...files.map(downloadButton), problem);
+        if (files.length) {
+          const problem = document.createElement("span");
+          problem.className = "library-item__problem";
+          problem.setAttribute("role", "status");
+          item.append(...files.map(downloadButton), problem);
+        }
         return item;
       })
       .filter(Boolean);
@@ -2553,8 +2578,35 @@ const signedInGoHome = async (user) => {
     const grid = document.createElement("div");
     grid.className = "poster-grid";
     grid.append(...cards);
-    document.getElementById("panel-library").replaceChildren(grid);
+    (document.querySelector(".library-body") || document.getElementById("panel-library")).replaceChildren(grid);
   };
+
+  // Redeeming a key from the library tab.
+  const redeem = document.querySelector(".redeem");
+  if (redeem) {
+    const REDEEM_ERRORS = {
+      SF030: "Log in again to add a key.",
+      SF031: "That key isn't valid. Check it and try again.",
+      SF032: "That key is already on another account.",
+    };
+    const message = redeem.querySelector(".redeem__message");
+    redeem.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const code = redeem.elements.code.value.trim();
+      if (code.replace(/[^A-Za-z0-9]/g, "").length < 8) return (message.textContent = t("Enter your game key."));
+      const button = redeem.querySelector(".redeem__button");
+      button.disabled = true;
+      message.classList.remove("is-ok");
+      const { data, error } = await account.rpc("redeem_license", { p_code: code });
+      button.disabled = false;
+      if (error) return (message.textContent = t(REDEEM_ERRORS[error.code] || "That key couldn't be added. Try again."));
+      const row = data && data[0];
+      message.classList.add("is-ok");
+      message.textContent = row && row.already ? t("That game is already in your library.") : t("Added to your library.");
+      redeem.reset();
+      showLibrary();
+    });
+  }
 
   // ---------- Orders ----------
   const ORDER_STATUS = {
@@ -2712,7 +2764,7 @@ const signedInGoHome = async (user) => {
 
   showMyList(user.id);
   showOrders(user.id);
-  showLibrary(user.id);
+  showLibrary();
   // The member's plan, beside their email.
   myMembership().then((mine) => {
     if (!mine) return;

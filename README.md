@@ -457,6 +457,30 @@ nobody can log in.
   trigger skips its own nested updates (`pg_trigger_depth() > 1`) so these
   counts can't reassign or unhide a review.
 
+## Licenses (game keys)
+
+- Every paid game order gets a one-time key (`licenses`, code
+  `SFOX-XXXX-XXXX-XXXX-XXXX`). A trigger (`private.order_license`) makes it
+  when an order for a work — not a plan — reaches paid/processing/completed,
+  once per order; a backfill covers earlier orders. The key is in the paid
+  receipt email and in the profile's Library tab.
+- Redeeming: `redeem_license(code)` binds the game to the caller's account
+  (`redeemed_by`); a key works once, and once someone else redeems it the
+  buyer can't take it back (SF032). `my_licenses()` lists the caller's games
+  (bought, or redeemed) with each key. Both need a verified sign-in (SF030),
+  the same rule as the rest of the site. Nobody writes `licenses` or
+  `license_devices` from the client — only the payment/library functions and
+  these `security definer` functions do — so there are no write policies,
+  only read.
+- Ownership for downloads is the license now, not the order: the effective
+  owner is whoever redeemed the key, else the buyer (unless they gave it
+  away). So a gifted key downloads for the person who redeemed it.
+- Profile → Library: "Have a game key?" adds one; each game shows its key
+  with a Copy button and its download buttons.
+- `license_devices` (per-computer, a device hash and last-seen) is ready for
+  the launcher to activate a key on a limited number of machines
+  (`max_devices`, default 3); the launcher itself is a separate repo.
+
 ## Library: files and the launcher
 
 - Files buyers download (game builds now; films and novels later) are in a

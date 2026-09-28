@@ -121,7 +121,9 @@ const emailOnce = async (orderId: string, kind: Stage) => {
       await send(paidEmail(order, true, sub?.ends_at));
     } else if (kind === "paid") {
       const { data: work } = await db.from("works").select("status").eq("id", order.work_id).maybeSingle();
-      await send(paidEmail(order, work?.status === "released"));
+      // The game's license key, so the buyer can add it in the launcher.
+      const { data: lic } = await db.from("licenses").select("code").eq("order_id", order.id).maybeSingle();
+      await send(paidEmail(order, work?.status === "released", null, lic?.code));
     } else await send(stageEmail(order, kind));
   } catch (e) {
     const message = (e as Error).message;
@@ -292,7 +294,7 @@ Deno.serve(async (req) => {
       phone: "09000000000", ref_id: "000000000000", card_pan: "6037-99**-****-0000", paid_at: now, created_at: now, test: true,
     };
     try {
-      const { via, resendError } = await send(paidEmail(sample, true));
+      const { via, resendError } = await send(paidEmail(sample, true, null, "SFOX-TEST-KEY0-0000-0000"));
       return reply({ ok: true, to: STUDIO, via, resend_error: resendError?.slice(0, 200) });
     } catch (e) {
       return reply({ error: "send_failed", detail: (e as Error).message.slice(0, 200) });

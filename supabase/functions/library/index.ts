@@ -94,14 +94,18 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!build || (!build.published && !admin)) return reply({ error: "not_found" }, 404);
     if (!admin) {
-      const { data: owned } = await db
-        .from("orders")
-        .select("id")
-        .eq("user_id", user.id)
+      // Owns the work if a non-revoked license for it is theirs — bought
+      // (user_id, not gifted away) or redeemed (redeemed_by).
+      const { data: licenses } = await db
+        .from("licenses")
+        .select("user_id, redeemed_by")
         .eq("work_id", build.work_id)
-        .in("status", ["paid", "processing", "completed"])
-        .limit(1);
-      if (!owned?.length) return reply({ error: "not_owned" }, 403);
+        .eq("revoked", false)
+        .or(`user_id.eq.${user.id},redeemed_by.eq.${user.id}`);
+      const owned = (licenses || []).some(
+        (l) => l.redeemed_by === user.id || (l.user_id === user.id && !l.redeemed_by),
+      );
+      if (!owned) return reply({ error: "not_owned" }, 403);
       const { count } = await db
         .from("downloads")
         .select("id", { count: "exact", head: true })
