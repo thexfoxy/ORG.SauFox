@@ -398,7 +398,7 @@ nobody can log in.
   (`work.html?id=…`) there too. `robots.txt` keeps the admin, checkout,
   profile and status pages out; login and profile also say `noindex`.
 - The home page carries the studio's details as schema.org data.
-- Icons: `assets/favicon.svg`, `assets/apple-touch-icon.png`.
+- Icons (from the square SAUFOX mark in `assets/logo.webp`, on the site's near-black): `assets/favicon.png` (tab), `assets/icon-192.png`, `assets/apple-touch-icon.png`.
 - Google Search Console: add the domain property `saufoxentertainment.ir`,
   verify with the TXT record it gives (Cloudflare DNS), then submit
   `https://saufoxentertainment.ir/sitemap.xml`.
