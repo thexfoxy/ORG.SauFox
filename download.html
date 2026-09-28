@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en" data-auth="new">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Clean addresses: never ".html" in the address bar (GitHub Pages
+    // serves /download for download.html), and the home page is just "/".
+    (function () {
+      if (window.top !== window.self) {
+        document.documentElement.style.display = "none";
+        try { window.top.location = window.location.href; } catch (e) {}
+        return;
+      }
+      try {
+        var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+        var fresh = nav && (nav.type === "reload" || nav.type === "back_forward");
+        var p = location.pathname, c = p.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
+        var hash = fresh ? "" : location.hash;
+        if (c !== p || hash !== location.hash) history.replaceState(history.state, "", c + location.search + hash);
+        if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      } catch (e) {}
+    })();
+  </script>
+  <script>
+    // Language: the visitor's choice, else Persian if their browser prefers it.
+    (function () {
+      var lang = "en";
+      try {
+        var asked = /[?&]lang=(fa|en)(&|$)/.exec(location.search);
+        if (asked) lang = asked[1];
+        if (asked) localStorage.setItem("saufox.lang", lang);
+        else lang = localStorage.getItem("saufox.lang") ||
+          ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
+      } catch (e) {}
+      if (lang !== "fa") return;
+      var root = document.documentElement;
+      root.lang = "fa";
+      root.dir = "rtl";
+      root.classList.add("i18n-pending");
+      setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
+    })();
+  </script>
+  <title>Download the launcher · SauFox Entertainment</title>
+  <meta name="description" content="Download the SauFox launcher for Windows — your whole library in one place, with one-click install and play.">
+  <link rel="icon" href="assets/favicon.png" type="image/png" sizes="64x64">
+  <link rel="icon" href="assets/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta name="theme-color" content="#0f0f11">
+  <link rel="canonical" href="https://saufoxentertainment.ir/download">
+  <link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/download">
+  <link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/download?lang=fa">
+  <link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/download">
+  <meta property="og:site_name" content="SauFox Entertainment">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Download the launcher · SauFox Entertainment">
+  <meta property="og:description" content="Your whole SauFox library in one place. Download the launcher for Windows.">
+  <meta property="og:url" content="https://saufoxentertainment.ir/download">
+  <meta property="og:image" content="https://saufoxentertainment.ir/assets/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css?v=98">
+  <script>
+    (function () {
+      var state = "new";
+      try {
+        if (localStorage.getItem("saufox.session")) state = "member";
+        else if (localStorage.getItem("saufox.hasAccount")) state = "returning";
+      } catch (e) {}
+      document.documentElement.dataset.auth = state;
+    })();
+  </script>
+  <style>
+    /* A special, self-contained page: a cyberpunk-lit download hero on top of
+       the site's dark orange look. Scoped to .dl so it touches nothing else. */
+    .dl {
+      --neon: #ff7a1a;
+      --neon-2: #ff5a00;
+      --cyan: #34e6ff;
+      position: relative;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: clamp(28px, 5vw, 60px) 22px 90px;
+      overflow: hidden;
+    }
+    .dl__aura {
+      position: absolute;
+      inset: -20% -10% auto -10%;
+      height: 70%;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(45% 60% at 78% 8%, rgba(255, 122, 26, 0.35), transparent 70%),
+        radial-gradient(40% 55% at 12% 20%, rgba(52, 230, 255, 0.16), transparent 70%);
+      filter: blur(20px);
+    }
+    .dl__grid-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: 44px 44px;
+      -webkit-mask-image: radial-gradient(90% 60% at 50% 0%, #000 20%, transparent 75%);
+      mask-image: radial-gradient(90% 60% at 50% 0%, #000 20%, transparent 75%);
+    }
+    .dl__hero {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: clamp(24px, 4vw, 54px);
+      align-items: center;
+    }
+    .dl__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border: 1px solid rgba(255, 122, 26, 0.4);
+      border-radius: 999px;
+      background: rgba(255, 122, 26, 0.08);
+      color: var(--neon);
+      font: 700 12px/1 "Barlow Condensed", system-ui, sans-serif;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .dl__badge svg { width: 15px; height: 15px; fill: currentColor; }
+    .dl__title {
+      margin: 16px 0 12px;
+      font-size: clamp(34px, 6vw, 58px);
+      line-height: 1.02;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .dl__title b { color: var(--neon); }
+    .dl__lead {
+      margin: 0 0 26px;
+      max-width: 46ch;
+      font-size: clamp(15px, 1.6vw, 18px);
+      color: #cfccc6;
+      line-height: 1.7;
+    }
+    .dl__cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px 18px;
+    }
+    .dl__btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 28px;
+      border-radius: 15px;
+      border: 0;
+      font: 700 17px/1 var(--ui, system-ui), sans-serif;
+      color: #1a0e04;
+      background: linear-gradient(120deg, #ffb35e, var(--neon) 45%, var(--neon-2));
+      box-shadow: 0 14px 40px -12px rgba(255, 122, 26, 0.8);
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.45s cubic-bezier(.34,1.4,.64,1), box-shadow 0.3s;
+    }
+    .dl__btn:hover { transform: translateY(-3px); box-shadow: 0 22px 54px -12px rgba(255, 122, 26, 0.95); }
+    .dl__btn:active { transform: translateY(0) scale(0.98); }
+    .dl__btn svg { width: 22px; height: 22px; fill: currentColor; }
+    .dl__btn::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.5) 50%, transparent 60%);
+      transform: translateX(-120%);
+      animation: dl-sheen 3.4s ease-in-out infinite;
+    }
+    @keyframes dl-sheen { 0%,60% { transform: translateX(-120%); } 85%,100% { transform: translateX(120%); } }
+    .dl__sub {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 13px;
+      color: #9b988f;
+    }
+    .dl__sub b { color: #e9e6e0; font-weight: 700; }
+    .dl__reqs { margin-top: 22px; font-size: 13px; color: #86837c; }
+
+    /* The floating "app window" mockup */
+    .dl__art { position: relative; z-index: 1; }
+    .dl__win {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: linear-gradient(180deg, rgba(22,22,28,0.9), rgba(12,12,16,0.9));
+      box-shadow: 0 50px 120px -40px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,122,26,0.14);
+      animation: dl-float 7s ease-in-out infinite;
+    }
+    @keyframes dl-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .dl__winbar {
+      display: flex; align-items: center; gap: 7px;
+      padding: 11px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      background: rgba(10,10,13,0.6);
+    }
+    .dl__winbar i { width: 10px; height: 10px; border-radius: 50%; background: #3a3a42; }
+    .dl__winbar i:nth-child(1) { background: #ff5f57; }
+    .dl__winbar i:nth-child(2) { background: #febc2e; }
+    .dl__winbar i:nth-child(3) { background: #28c840; }
+    .dl__winbar span { margin-inline-start: auto; font: 700 10px/1 "Barlow Condensed",sans-serif; letter-spacing: 3px; color: var(--neon); }
+    .dl__winbody { display: grid; grid-template-columns: 54px 1fr; min-height: 250px; }
+    .dl__winrail { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 16px 0; background: rgba(255,255,255,0.02); border-inline-end: 1px solid rgba(255,255,255,0.06); }
+    .dl__winrail b { width: 26px; height: 26px; border-radius: 8px; background: rgba(255,255,255,0.08); }
+    .dl__winrail b.on { background: linear-gradient(120deg, var(--neon), var(--neon-2)); box-shadow: 0 6px 16px -6px var(--neon); }
+    .dl__wincards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 16px; }
+    .dl__wincard { aspect-ratio: 3/4; border-radius: 10px; background: linear-gradient(160deg, rgba(255,122,26,0.16), rgba(255,255,255,0.03)); border: 1px solid rgba(255,255,255,0.07); position: relative; overflow: hidden; }
+    .dl__wincard::after { content:""; position:absolute; inset:auto 0 0 0; height:34%; background: linear-gradient(0deg, rgba(0,0,0,0.5), transparent); }
+    .dl__wincard:nth-child(2) { background: linear-gradient(160deg, rgba(52,230,255,0.16), rgba(255,255,255,0.03)); }
+    .dl__wincard:nth-child(5) { background: linear-gradient(160deg, rgba(255,77,157,0.16), rgba(255,255,255,0.03)); }
+
+    /* Feature + steps */
+    .dl__features { position: relative; z-index: 1; margin-top: clamp(50px, 8vw, 90px); display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+    .dl__feat { padding: 22px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); transition: border-color 0.25s, transform 0.4s cubic-bezier(.22,1,.36,1); }
+    .dl__feat:hover { border-color: rgba(255,122,26,0.35); transform: translateY(-4px); }
+    .dl__feat-ic { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; background: rgba(255,122,26,0.12); color: var(--neon); margin-bottom: 14px; }
+    .dl__feat-ic svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+    .dl__feat h3 { margin: 0 0 6px; font-size: 16px; color: #fff; }
+    .dl__feat p { margin: 0; font-size: 13.5px; color: #a5a29b; line-height: 1.6; }
+
+    .dl__steps { position: relative; z-index: 1; margin-top: clamp(46px, 7vw, 80px); }
+    .dl__steps h2 { font-size: clamp(22px, 3vw, 30px); color: #fff; margin: 0 0 22px; }
+    .dl__steplist { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; counter-reset: st; }
+    .dl__step { position: relative; padding: 22px 22px 22px 22px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); }
+    .dl__step::before { counter-increment: st; content: counter(st); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; font-weight: 800; color: #1a0e04; background: linear-gradient(120deg, #ffb35e, var(--neon)); margin-bottom: 12px; }
+    .dl__step h4 { margin: 0 0 5px; font-size: 15px; color: #fff; }
+    .dl__step p { margin: 0; font-size: 13.5px; color: #a5a29b; line-height: 1.6; }
+
+    @media (max-width: 820px) {
+      .dl__hero { grid-template-columns: 1fr; }
+      .dl__art { order: -1; max-width: 460px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .dl__btn::after, .dl__win { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="profile-chip" href="profile" aria-label="Profile">
+        <span class="profile-chip__avatar">
+          <img src="assets/avatar-default.svg" alt="">
+        </span>
+        <span class="profile-chip__label">Profile</span>
+      </a>
+
+      <a class="brand" href="/" aria-label="SauFox Entertainment">
+        <span class="brand__text"><img src="assets/wordmark.webp" alt="SauFox" width="1012" height="360"></span>
+        <span class="brand__blur" aria-hidden="true"><img src="assets/wordmark.webp" alt="" width="1012" height="360"></span>
+      </a>
+
+      <a class="cta cta--login" href="login" data-animate-letters data-hover-text="Welcome Back">Login</a>
+      <a class="cta cta--signup" href="login#signup" data-animate-letters data-hover-text="Sign Up Now">Wanna create an account?</a>
+    </div>
+  </header>
+
+  <main class="dl">
+    <span class="dl__aura" aria-hidden="true"></span>
+    <span class="dl__grid-bg" aria-hidden="true"></span>
+
+    <!-- English -->
+    <div data-only="en" translate="no">
+      <section class="dl__hero">
+        <div>
+          <span class="dl__badge">
+            <svg viewBox="0 0 24 24"><path d="M3 5.5 10 4.4v7.1H3V5.5Zm8-1.2L21 3v9h-10V4.3ZM3 12.5h7v7.1L3 18.5v-6Zm8 0h10v9l-10-1.3v-7.7Z"/></svg>
+            For Windows 10 &amp; 11
+          </span>
+          <h1 class="dl__title">The SauFox <b>launcher</b>, on your PC.</h1>
+          <p class="dl__lead">Your whole SauFox library in one beautiful place. Install with one click, keep games up to date, and jump straight in — no browser, no fuss.</p>
+          <div class="dl__cta-row">
+            <a class="dl__btn" href="https://github.com/thexfoxy/Launcher.SauFox/releases/latest/download/SauFox-Setup.exe">
+              <svg viewBox="0 0 24 24"><path d="M12 3v10.6l3.3-3.3 1.4 1.4L12 17.4 7.3 11.7l1.4-1.4L12 13.6V3h0ZM5 19h14v2H5z"/></svg>
+              Download for Windows
+            </a>
+            <span class="dl__sub"><b>SauFox-Setup.exe</b><span>Latest version · 64-bit</span></span>
+          </div>
+          <p class="dl__reqs">Windows 10 or 11 (64-bit). Free — you only pay for the games you buy on the website.</p>
+        </div>
+        <div class="dl__art">
+          <div class="dl__win" aria-hidden="true">
+            <div class="dl__winbar"><i></i><i></i><i></i><span>SAUFOX</span></div>
+            <div class="dl__winbody">
+              <div class="dl__winrail"><b class="on"></b><b></b><b></b></div>
+              <div class="dl__wincards"><span class="dl__wincard"></span><span class="dl__wincard"></span><span class="dl__wincard"></span><span class="dl__wincard"></span><span class="dl__wincard"></span><span class="dl__wincard"></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="dl__features">
+        <div class="dl__feat">
+          <span class="dl__feat-ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/></svg></span>
+          <h3>Your whole library</h3>
+          <p>Every game you own or unlock, gathered in one place and ready to play.</p>
+        </div>
+        <div class="dl__feat">
+          <span class="dl__feat-ic"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke-linecap="round"/></svg></span>
+          <h3>One-click install</h3>
+          <p>Download straight from our servers and start playing — updates come to you.</p>
+        </div>
+        <div class="dl__feat">
+          <span class="dl__feat-ic"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <h3>Safe &amp; keyed</h3>
+          <p>A one-time key ties each game to your account. Files stay protected.</p>
+        </div>
+        <div class="dl__feat">
+          <span class="dl__feat-ic"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5m2-2v5h-5M20 12a8 8 0 0 1-14 5m-2 2v-5h5"/></svg></span>
+          <h3>Always current</h3>
+          <p>The launcher keeps itself and your games on the newest version automatically.</p>
+        </div>
+      </section>
+
+      <section class="dl__steps">
+        <h2>Up and running in three steps</h2>
+        <div class="dl__steplist">
+          <div class="dl__step"><h4>Download &amp; run</h4><p>Grab SauFox-Setup.exe and open it. It installs the launcher on your PC in seconds.</p></div>
+          <div class="dl__step"><h4>Sign in</h4><p>Open the launcher, choose Sign in, and allow it in your browser with your SauFox account.</p></div>
+          <div class="dl__step"><h4>Install &amp; play</h4><p>Your games appear in the library. Hit Install, then Play. Buy new ones right from the store.</p></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Persian -->
+    <div data-only="fa">
+      <section class="dl__hero">
+        <div>
+          <span class="dl__badge">
+            <svg viewBox="0 0 24 24"><path d="M3 5.5 10 4.4v7.1H3V5.5Zm8-1.2L21 3v9h-10V4.3ZM3 12.5h7v7.1L3 18.5v-6Zm8 0h10v9l-10-1.3v-7.7Z"/></svg>
+            برای ویندوز ۱۰ و ۱۱
+          </span>
+          <h1 class="dl__title">لانچر <b>ساوفاکس</b>، روی کامپیوتر شما.</h1>
+          <p class="dl__lead">کل کتابخانه‌ی ساوفاکس شما، یک‌جا و زیبا. با یک کلیک نصب کنید، بازی‌ها را به‌روز نگه دارید و مستقیم وارد بازی شوید — بدون مرورگر، بدون دردسر.</p>
+          <div class="dl__cta-row">
+            <a class="dl__btn" href="https://github.com/thexfoxy/Launcher.SauFox/releases/latest/download/SauFox-Setup.exe">
+              <svg viewBox="0 0 24 24"><path d="M12 3v10.6l3.3-3.3 1.4 1.4L12 17.4 7.3 11.7l1.4-1.4L12 13.6V3h0ZM5 19h14v2H5z"/></svg>
+              دانلود برای ویندوز
+            </a>
+            <span class="dl__sub"><b dir="ltr">SauFox-Setup.exe</b><span>آخرین نسخه · ۶۴ بیتی</span></span>
+          </div>
+          <p class="dl__reqs">ویندوز ۱۰ یا ۱۱ (۶۴ بیتی). رایگان — فقط بابت بازی‌هایی که در سایت می‌خرید پول می‌دهید.</p>
+        </div>
+        <div class="dl__art">
+          <div class="dl__win" aria-hidden="true">
+            <div class="dl__winbar"><i></i><i></i><i></i><span>SAUFOX</span></div>
+            <div class="dl__winbody">
+              <div class="dl__winrail"><b class="on"></b><b></b><b></b></div>
+              <div class="dl__wincards"><span class="dl__wincard"></span><span class="dl__wincard"></span><span class="dl__wincard"></span><span class="dl__wincard"></span><span class="dl__wincard"></span><span class="dl__wincard"></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="dl__features">
+        <div class="dl__feat">
+          <span class="dl__feat-ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/></svg></span>
+          <h3>کل کتابخانه‌ی شما</h3>
+          <p>هر بازی‌ای که دارید یا فعال می‌کنید، یک‌جا و آماده‌ی اجرا.</p>
+        </div>
+        <div class="dl__feat">
+          <span class="dl__feat-ic"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke-linecap="round"/></svg></span>
+          <h3>نصب با یک کلیک</h3>
+          <p>مستقیم از سرورهای ما دانلود کنید و بازی را شروع کنید — به‌روزرسانی‌ها خودشان می‌آیند.</p>
+        </div>
+        <div class="dl__feat">
+          <span class="dl__feat-ic"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <h3>امن و کلیددار</h3>
+          <p>یک کلید یک‌بارمصرف هر بازی را به حساب شما گره می‌زند و فایل‌ها محافظت می‌شوند.</p>
+        </div>
+        <div class="dl__feat">
+          <span class="dl__feat-ic"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5m2-2v5h-5M20 12a8 8 0 0 1-14 5m-2 2v-5h5"/></svg></span>
+          <h3>همیشه به‌روز</h3>
+          <p>لانچر خودش و بازی‌هایتان را به‌طور خودکار روی آخرین نسخه نگه می‌دارد.</p>
+        </div>
+      </section>
+
+      <section class="dl__steps">
+        <h2>در سه قدم آماده‌ی بازی</h2>
+        <div class="dl__steplist">
+          <div class="dl__step"><h4>دانلود و اجرا</h4><p>فایل SauFox-Setup.exe را بگیرید و اجرا کنید. در چند ثانیه لانچر روی کامپیوترتان نصب می‌شود.</p></div>
+          <div class="dl__step"><h4>ورود</h4><p>لانچر را باز کنید، Sign in را بزنید و در مرورگر با حساب ساوفاکس تأیید کنید.</p></div>
+          <div class="dl__step"><h4>نصب و بازی</h4><p>بازی‌هایتان در کتابخانه ظاهر می‌شوند. Install و بعد Play را بزنید. بازی‌های تازه را هم از همان فروشگاه بخرید.</p></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <div class="site-footer__brand">
+        <a class="site-footer__logo" href="/" aria-label="SauFox Entertainment"><img src="assets/logo.webp" alt="SauFox" width="480" height="533"></a>
+        <div class="site-footer__seals"><a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=7933711&Code=bmrlXpeqo3ruMStc0SYwA5DAULWrzjwZ'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=7933711&Code=bmrlXpeqo3ruMStc0SYwA5DAULWrzjwZ' alt='' style='cursor:pointer' code='bmrlXpeqo3ruMStc0SYwA5DAULWrzjwZ'></a></div>
+      </div>
+
+      <nav class="site-footer__col" aria-label="Studio">
+        <h2>Studio</h2>
+        <a href="browse">All works</a>
+        <a href="download">Windows launcher</a>
+        <a href="news">News</a>
+        <a href="about">About us</a>
+        <a href="about#contact">Contact</a>
+        <a href="faq">Help &amp; FAQ</a>
+        <a href="https://portal.saufoxentertainment.ir/">Support</a>
+        <a href="/#plans">Subscriptions</a>
+      </nav>
+
+      <nav class="site-footer__col" aria-label="Legal">
+        <h2>Legal</h2>
+        <a href="terms">Terms of use</a>
+        <a href="privacy">Privacy policy</a>
+      </nav>
+
+      <div class="site-footer__col">
+        <h2>Contact</h2>
+        <a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a>
+        <a class="selectable" href="tel:+985133409142" dir="ltr">+98 51 3340 9142</a>
+        <a class="selectable" href="tel:+989301053524" dir="ltr">+98 930 105 3524</a>
+        <div class="social-links">
+          <a href="https://www.instagram.com/saufox.entertainment" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.3" cy="6.7" r="1.2" fill="currentColor"/></svg>
+          </a>
+          <a href="https://t.me/saufoxentertainment" target="_blank" rel="noopener" aria-label="Telegram">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.4 3.6 2.9 10.8c-1 .4-1 1.7.1 2l4.6 1.4 1.8 5.5c.3.8 1.2 1 1.8.5l2.6-2.4 4.9 3.6c.7.5 1.6.1 1.8-.7l3.1-15c.2-1-.8-1.7-1.7-1.3zM9.7 14.2l-.4 3.7-1.3-4.2 9.3-6.5-7.6 7z"/></svg>
+          </a>
+          <a href="https://x.com/saufoxent" target="_blank" rel="noopener" aria-label="X">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.7 3h3.1l-6.8 7.8L22 21h-6.3l-4.9-6.4L5.2 21H2.1l7.3-8.3L1.8 3h6.4l4.4 5.9L17.7 3zm-1.1 16.2h1.7L7.2 4.7H5.4l11.2 14.5z"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="site-footer__bottom">
+      <p>&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+      <button class="lang-switch" type="button" data-lang-switch translate="no">فارسی</button>
+    </div>
+  </footer>
+
+  <script src="js/fa.js?v=98" defer></script>
+  <script src="js/main.js?v=98" defer></script>
+</body>
+</html>

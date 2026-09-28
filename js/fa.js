@@ -14,6 +14,7 @@ const FA = {
   "Wanna create an account?": "حساب کاربری می‌خوای؟",
   "Sign Up Now": "همین حالا ثبت‌نام کن",
   "Studio": "استودیو",
+  "Windows launcher": "لانچر ویندوز",
   "About us": "درباره‌ی ما",
   "Contact": "تماس",
   "Subscriptions": "اشتراک‌ها",
