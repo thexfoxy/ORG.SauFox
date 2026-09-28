@@ -434,8 +434,11 @@ in a browser can still be captured by a determined visitor.
 Built one section at a time from the hand-drawn sketches.
 
 Home page:
-- [x] 1. Header: the SAUFOX wordmark in its own colours and texture (assets/wordmark.webp, transparent) in the centre (on desktop, the part under the Behind it, a WebGL backdrop (headerShader): slow dark-silver smoke with faint orange embers and a warm light under the mouse; half resolution, ~30 fps, paused in hidden tabs, still for reduced motion.
-      mouse softly blurs); the right side depends on the visitor:
+- [x] 1. Header: the SAUFOX wordmark in its own colours and texture (assets/wordmark.webp, transparent) in the centre (on desktop, the part under the
+      mouse softly blurs); behind it, a WebGL backdrop (headerShader): slow
+      dark-silver smoke with faint orange embers and a warm light under the
+      mouse (half resolution, ~30 fps, paused in hidden tabs, still for
+      reduced motion); the right side depends on the visitor:
       - first visit or no account: "Wanna create an account?"
       - has an account but signed out: "Login"
       - signed in: no button; on the left a pinched profile button (straight
