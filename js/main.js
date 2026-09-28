@@ -2992,14 +2992,6 @@ const signedInGoHome = async (user) => {
   kicker.append(work.kind, " \u00b7 ", make("b", "", STATUS[work.status] || ""));
   page.querySelector(".title-head__name").textContent = work.title;
 
-  // Poster
-  const poster = page.querySelector(".title-poster img");
-  if (work.images[0]) {
-    poster.src = work.images[0];
-    poster.alt = `${work.title} poster`;
-    setCoverScore(page.querySelector(".title-poster"), work.score, work.reviews);
-  } else page.querySelector(".title-poster").hidden = true;
-
   // Facts
   const prices = work.prices ? Object.keys(money).filter((code) => work.prices[code] != null) : [];
   const facts = [
@@ -3433,7 +3425,6 @@ const scoreOf = (score, className = "score", whole = false) => {
   // "Your rating" opens a box of ten stars; rating needs no written review.
   let box = null;
   const showAverage = (score, count) => {
-    setCoverScore(document.querySelector(".title-poster"), score, count);
     if (!box) return;
     const average = box.querySelector(".title-rating__average");
     average.hidden = !count;

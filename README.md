@@ -680,3 +680,12 @@ Profile page (`profile.html`):
       the home page. All of it is saved to the member's account.
 - [ ] Later: a cover image above the profile that subscribers can set
       themselves, once there are more works to choose from.
+
+## Title page stage
+
+`work.html` opens on the work's key art across the whole width (`hero_url`),
+fading to dark from the reading side (right in Persian, left in English).
+The kind and status, name, ratings, facts, actions, trailer countdown and
+synopsis are written on the dark part in white, without boxes. On phones
+the art shows whole (16:9) on top and fades down into the text. The 3:4
+poster is no longer shown on this page (it stays on cards and shelves).
