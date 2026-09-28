@@ -8461,3 +8461,68 @@ a.hero__panel {
     animation: none;
   }
 }
+
+/* The gallery on the stage: stills in the lower corner on the art's side
+   (left in Persian, right in English), glass frames over the key art.
+   Narrower screens: under the text instead. */
+.title-stage .title-gallery {
+  position: absolute;
+  bottom: clamp(28px, 4vw, 56px);
+  inset-inline-end: max(var(--gutter), calc((100vw - 1440px) / 2 + var(--gutter)));
+  width: min(40%, 560px);
+  animation: stage-rise 1s var(--ease-out) 0.35s both;
+}
+
+.title-stage .title-gallery .title-section__heading {
+  margin-bottom: 10px;
+  color: rgba(255, 255, 255, 0.72);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+}
+
+.title-stage .title-gallery__grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.title-stage .title-gallery__item {
+  border-radius: 10px;
+  background: rgba(15, 15, 17, 0.4);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 12px 30px rgba(0, 0, 0, 0.45);
+  transition: transform 0.45s var(--ease-out), box-shadow 0.45s var(--ease-out);
+}
+
+.title-stage .title-gallery__item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+/* More than six: the rest a scroll away, the row keeps its size. */
+.title-stage .title-gallery__grid {
+  max-height: calc((min(40vw, 560px) - 16px) / 3 * 9 / 16 * 2 + 8px);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+@media (max-width: 1000px) {
+  .title-stage {
+    flex-wrap: wrap;
+  }
+
+  .title-stage .title-gallery {
+    position: static;
+    width: 100%;
+    padding: 0 var(--gutter) 40px;
+  }
+
+  .title-stage .title-gallery__grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 700px) {
+  .title-stage .title-gallery__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

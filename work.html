@@ -66,7 +66,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=93">
+  <link rel="stylesheet" href="css/style.css?v=94">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -154,12 +154,14 @@
         <p class="title-synopsis" dir="auto" hidden></p>
       </div>
       </div>
+
+      <!-- The stills, on the art's side of the stage, low down. -->
+      <div class="title-gallery" aria-labelledby="gallery-title" role="region" hidden>
+        <h2 class="title-section__heading" id="gallery-title">Gallery</h2>
+        <div class="title-gallery__grid"></div>
+      </div>
     </section>
 
-    <section class="title-section title-gallery" aria-labelledby="gallery-title" hidden>
-      <h2 class="title-section__heading" id="gallery-title">Gallery</h2>
-      <div class="title-gallery__grid"></div>
-    </section>
 
     <!-- Cast & crew: everyone who made the work, with a photo, in two groups
          (works.credits, set in the admin panel). js/main.js fills it in. -->
