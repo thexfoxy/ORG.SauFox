@@ -815,7 +815,7 @@ gl_FragColor=vec4(c,1.);}`;
 // Not on the pages where it would get in the way (sign-in, checkout, the
 // admin panel, status pages).
 (function portalNotice() {
-  if (/\/(login|checkout|admin|launcher|status|portal-signin|support|404)(\.html)?$/.test(location.pathname)) return;
+  if (/\/(login|checkout|admin|launcher|download|status|portal-signin|support|404)(\.html)?$/.test(location.pathname)) return;
   if (document.querySelector(".status, .admin")) return;
   try {
     if (sessionStorage.getItem("saufox.portal-notice")) return;
