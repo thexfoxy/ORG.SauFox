@@ -325,6 +325,18 @@ nobody can log in.
   days (after 3 failures in a run, usually the day's sending limit, the
   rest wait for the next run).
 
+## Customer portal (portal.saufoxentertainment.ir)
+
+- The code lives in `portal/` (see `portal/README.md`) and is published from
+  its own repository, `Portal.SauFox`, on the subdomain. Same Supabase
+  project: tickets, orders and rules are shared.
+- `portal-signin.html` (js/main.js `portalSignin`) signs the portal in with
+  the account signed in here: a one-time sign-in from the `library`
+  function (`launcher-token`) goes to the fixed portal address as
+  `#signin=…`, and the portal makes its own session from it.
+- Until the subdomain is live, `support.html` stays the support page; after
+  that, the site's Support links and the ticket emails point to the portal.
+
 ## Clean addresses and fresh pages
 
 - The address bar never shows ".html": GitHub Pages serves `/work` for

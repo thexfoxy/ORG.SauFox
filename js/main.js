@@ -6736,8 +6736,37 @@ const ticketThread = async (list, messages, when) => {
 // Status page (404.html, status.html?reason=…) — page not found, no access,
 // maintenance, can't reach the server, or a general error. Maintenance and
 // outages check again by themselves and go back when the site is up.
+// portal-signin.html: sends the signed-in member on to the customer portal
+// with a one-time sign-in (the same kind the launcher gets). The portal's
+// address is fixed here, so the code can't be sent anywhere else.
+(async function portalSignin() {
+  const page = document.querySelector(".portal-page");
+  if (!page) return;
+  const PORTAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+    ? `${location.protocol}//${location.hostname}:8767/`
+    : "https://portal.saufoxentertainment.ir/";
+  const title = page.querySelector(".status__title");
+  const text = page.querySelector(".status__text");
+  const actions = page.querySelector(".status__actions");
+  const session = await verifiedSession();
+  if (!session) return goLogin();
+  const answer = await callFunction("library", { action: "launcher-token" }, session);
+  if (!answer || !answer.token_hash) {
+    title.textContent = t("The portal couldn't be opened");
+    text.textContent = t("Check your connection and try again.");
+    const again = document.createElement("button");
+    again.className = "status__button";
+    again.type = "button";
+    again.textContent = t("Try again");
+    again.addEventListener("click", () => location.reload());
+    actions.replaceChildren(again);
+    return;
+  }
+  location.replace(`${PORTAL}#signin=${encodeURIComponent(answer.token_hash)}`);
+})();
+
 (function statusPage() {
-  const page = document.querySelector(".status:not(.launcher-page)");
+  const page = document.querySelector(".status:not(.launcher-page):not(.portal-page)");
   if (!page) return;
 
   const params = new URLSearchParams(location.search);

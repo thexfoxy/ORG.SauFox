@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Never inside another site's frame (clickjacking); the language before
+    // first paint (the visitor's choice, else Persian if the browser prefers
+    // it).
+    (function () {
+      if (window.top !== window.self) {
+        document.documentElement.style.display = "none";
+        try { window.top.location = window.location.href; } catch (e) {}
+        return;
+      }
+      var lang = "en";
+      try {
+        lang = localStorage.getItem("saufox.portal.lang") ||
+          ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
+      } catch (e) {}
+      if (lang === "fa") {
+        document.documentElement.lang = "fa";
+        document.documentElement.dir = "rtl";
+      }
+    })();
+  </script>
+  <title>Customer portal · SauFox Entertainment</title>
+  <meta name="description" content="Your SauFox Entertainment account: support tickets, orders and help.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0b0b0d">
+  <link rel="icon" href="assets/favicon.png" type="image/png" sizes="64x64">
+  <link rel="icon" href="assets/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="portal.css?v=1">
+</head>
+<body>
+  <!-- SauFox customer portal. Everything here is drawn by portal.js: the
+       sign-in screen, or the app (sidebar, top bar, and one view at a time,
+       picked by the address: #/, #/tickets, #/tickets/<id>, #/new,
+       #/orders, #/help). -->
+  <div class="boot" aria-hidden="true"><img src="assets/logo.webp" alt="" width="64" height="71"></div>
+  <div id="app"></div>
+
+  <script src="js/supabase.js?v=1" defer></script>
+  <script src="portal.js?v=1" defer></script>
+</body>
+</html>
