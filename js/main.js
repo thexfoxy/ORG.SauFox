@@ -2772,9 +2772,11 @@ const signedInGoHome = async (user) => {
     const badge = head.querySelector(".plan-badge");
     badge.textContent = `${planName(mine.plan)} plan · until ${dateText(mine.ends_at)}`;
     badge.classList.add(`is-${mine.plan}`);
-    const link = head.querySelector('a[href="index.html#plans"]');
-    link.href = `checkout.html?plan=${encodeURIComponent(mine.plan)}`;
-    link.textContent = "Renew";
+    const link = head.querySelector("a");
+    if (link) {
+      link.href = `checkout.html?plan=${encodeURIComponent(mine.plan)}`;
+      link.textContent = "Renew";
+    }
   });
   // Admins get a way into the admin panel: shown at once if this browser
   // knows them as an admin, then confirmed by the database.
