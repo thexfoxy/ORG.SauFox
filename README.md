@@ -498,8 +498,16 @@ nobody can log in.
   `GET` from `https://saufoxentertainment.ir` for uploads from the admin
   panel. Until the secrets are set, downloads and uploads say so and
   nothing else changes.
-- Admin panel → Files for buyers: upload, publish, delete. Profile →
-  Library shows a download button for the newest file of each platform.
+- Admin panel → Files for buyers: upload, publish, delete. On upload the
+  browser also stores the file's SHA-256 (`builds.sha256`) for files up to
+  1.5 GB, so the launcher can check a download arrived whole; bigger files
+  skip it and the launcher checks the size instead. Profile → Library shows
+  a download button for the newest file of each platform.
+- The desktop launcher is a separate repo, `Launcher.SauFox` (Tauri): it
+  signs in through the one-time launcher token below, lists the account's
+  games (`my_licenses` + `builds`), registers the computer against a key
+  (`activate_device`), downloads from a `library` `download` link and
+  installs, then launches the game. See that repo's README.
 - Launcher sign-in: the launcher listens on `http://127.0.0.1:<port>`, opens
   `https://saufoxentertainment.ir/launcher.html?port=<port>&state=<random,
   16-128 of A-Z a-z 0-9 _ ->` in the browser, and after the member allows

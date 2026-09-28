@@ -6583,6 +6583,20 @@ const ticketThread = async (list, messages, when) => {
       fileSubmit.disabled = false;
       return fileSay("The upload failed. Check the bucket's CORS settings and your connection, then try again.");
     }
+    // A checksum, so the launcher can tell a download arrived whole. Big
+    // files (over 1.5 GB) are left without one — the browser can't hash
+    // them without running out of memory — and the launcher checks the
+    // size instead.
+    let sha256 = null;
+    if (file.size <= 1.5e9 && crypto.subtle) {
+      try {
+        fileSay("Checking the file…", true);
+        const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+        sha256 = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+      } catch (e) {
+        sha256 = null;
+      }
+    }
     const { error } = await account.from("builds").insert({
       work_id: fileWork.value,
       platform: filePlatform.value,
@@ -6590,6 +6604,7 @@ const ticketThread = async (list, messages, when) => {
       file_key: answer.key,
       file_name: file.name,
       size_bytes: file.size,
+      sha256,
       published: filePublished.checked,
     });
     fileSubmit.disabled = false;
