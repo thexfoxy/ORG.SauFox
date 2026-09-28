@@ -11,7 +11,23 @@
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=80">
+  <link rel="stylesheet" href="css/style.css?v=81">
+  <script>
+    // Clean addresses: never ".html" in the address bar (GitHub Pages
+    // serves /work for work.html), and the home page is just "/". Pages
+    // start at the top: the browser doesn't bring back the old scroll
+    // position, and a reload or Back forgets any "#section" too.
+    (function () {
+      try {
+        var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+        var fresh = nav && (nav.type === "reload" || nav.type === "back_forward");
+        var p = location.pathname, c = p.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
+        var hash = fresh ? "" : location.hash;
+        if (c !== p || hash !== location.hash) history.replaceState(history.state, "", c + location.search + hash);
+        if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      } catch (e) {}
+    })();
+  </script>
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -22,14 +38,14 @@
 <body>
   <header class="site-header">
     <div class="site-header__inner">
-      <a class="profile-chip" href="profile.html" aria-label="Profile">
+      <a class="profile-chip" href="profile" aria-label="Profile">
         <span class="profile-chip__avatar">
           <img src="assets/avatar-default.svg" alt="">
         </span>
         <span class="profile-chip__label">Profile</span>
       </a>
 
-      <a class="brand" href="index.html" aria-label="SauFox Entertainment">
+      <a class="brand" href="/" aria-label="SauFox Entertainment">
         <span class="brand__text"><img src="assets/wordmark.webp" alt="SauFox" width="1012" height="360"></span>
         <span class="brand__blur" aria-hidden="true"><img src="assets/wordmark.webp" alt="" width="1012" height="360"></span>
       </a>
@@ -670,7 +686,7 @@
     </form>
   </main>
 
-  <script src="js/vendor/supabase.js?v=80" defer></script>
-  <script src="js/main.js?v=80" defer></script>
+  <script src="js/vendor/supabase.js?v=81" defer></script>
+  <script src="js/main.js?v=81" defer></script>
 </body>
 </html>

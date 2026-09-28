@@ -4,6 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>
+    // Clean addresses: never ".html" in the address bar (GitHub Pages
+    // serves /work for work.html), and the home page is just "/". Pages
+    // start at the top: the browser doesn't bring back the old scroll
+    // position, and a reload or Back forgets any "#section" too.
+    (function () {
+      try {
+        var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+        var fresh = nav && (nav.type === "reload" || nav.type === "back_forward");
+        var p = location.pathname, c = p.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
+        var hash = fresh ? "" : location.hash;
+        if (c !== p || hash !== location.hash) history.replaceState(history.state, "", c + location.search + hash);
+        if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      } catch (e) {}
+    })();
+  </script>
+  <script>
     // Language: the visitor's choice, else Persian if their browser prefers
     // it. A Persian page stays hidden until js/main.js has put its text in.
     (function () {
@@ -42,7 +58,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=80">
+  <link rel="stylesheet" href="css/style.css?v=81">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -58,20 +74,20 @@
 <body>
   <header class="site-header">
     <div class="site-header__inner">
-      <a class="profile-chip" href="profile.html" aria-label="Profile">
+      <a class="profile-chip" href="profile" aria-label="Profile">
         <span class="profile-chip__avatar">
           <img src="assets/avatar-default.svg" alt="">
         </span>
         <span class="profile-chip__label">Profile</span>
       </a>
 
-      <a class="brand" href="index.html" aria-label="SauFox Entertainment">
+      <a class="brand" href="/" aria-label="SauFox Entertainment">
         <span class="brand__text"><img src="assets/wordmark.webp" alt="SauFox" width="1012" height="360"></span>
         <span class="brand__blur" aria-hidden="true"><img src="assets/wordmark.webp" alt="" width="1012" height="360"></span>
       </a>
 
-      <a class="cta cta--login" href="login.html" data-animate-letters data-hover-text="Welcome Back">Login</a>
-      <a class="cta cta--signup" href="login.html#signup" data-animate-letters data-hover-text="Sign Up Now">Wanna create an account?</a>
+      <a class="cta cta--login" href="login" data-animate-letters data-hover-text="Welcome Back">Login</a>
+      <a class="cta cta--signup" href="login#signup" data-animate-letters data-hover-text="Sign Up Now">Wanna create an account?</a>
     </div>
   </header>
 
@@ -171,14 +187,15 @@
           <button type="button" data-star="9" aria-label="9/10">★</button>
           <button type="button" data-star="10" aria-label="10/10">★</button>
         </div>
-        <textarea name="body" rows="4" maxlength="2000" placeholder="What did you think? (optional)"></textarea>
+        <textarea name="body" rows="4" maxlength="2000" autocomplete="off" placeholder="What did you think? (optional)"></textarea>
         <div class="review-form__foot">
           <p class="auth__message" role="status" aria-live="polite"></p>
           <button class="review-form__delete" type="button" hidden>Delete my review</button>
+          <button class="review-form__cancel" type="button" hidden>Cancel</button>
           <button class="review-form__submit" type="submit">Post review</button>
         </div>
       </form>
-      <p class="reviews__login" hidden><a href="login.html">Log in</a> <span>to rate and review.</span></p>
+      <p class="reviews__login" hidden><a href="login">Log in</a> <span>to rate and review.</span></p>
 
       <label class="reviews__sort">
         <span>Sort by</span>
@@ -195,14 +212,14 @@
     <section class="title-missing" hidden>
       <h1 class="title-head__name">We couldn&rsquo;t find that work</h1>
       <p>It may have moved or been renamed.</p>
-      <a class="empty__button" href="index.html">Back to all works</a>
+      <a class="empty__button" href="/">Back to all works</a>
     </section>
   </main>
 
   <footer class="site-footer">
     <div class="site-footer__inner">
       <div class="site-footer__brand">
-        <a class="site-footer__logo" href="index.html" aria-label="SauFox Entertainment"><img src="assets/logo.webp" alt="SauFox" width="480" height="533"></a>
+        <a class="site-footer__logo" href="/" aria-label="SauFox Entertainment"><img src="assets/logo.webp" alt="SauFox" width="480" height="533"></a>
         <p>Games, animation, films and novels, in physical and digital editions.</p>
         <!-- Trust seals: paste the snippet eNamad gives (and later others,
              such as Zarinpal's) inside this div, unchanged. It stays hidden
@@ -212,18 +229,18 @@
 
       <nav class="site-footer__col" aria-label="Studio">
         <h2>Studio</h2>
-        <a href="browse.html">All works</a>
-        <a href="news.html">News</a>
-        <a href="about.html">About us</a>
-        <a href="about.html#contact">Contact</a>
-        <a href="faq.html">Help &amp; FAQ</a>
-        <a href="index.html#plans">Subscriptions</a>
+        <a href="browse">All works</a>
+        <a href="news">News</a>
+        <a href="about">About us</a>
+        <a href="about#contact">Contact</a>
+        <a href="faq">Help &amp; FAQ</a>
+        <a href="/#plans">Subscriptions</a>
       </nav>
 
       <nav class="site-footer__col" aria-label="Legal">
         <h2>Legal</h2>
-        <a href="terms.html">Terms of use</a>
-        <a href="privacy.html">Privacy policy</a>
+        <a href="terms">Terms of use</a>
+        <a href="privacy">Privacy policy</a>
       </nav>
 
       <div class="site-footer__col">
@@ -264,8 +281,8 @@
     </button>
   </div>
 
-  <script src="js/vendor/supabase.js?v=80" defer></script>
-  <script src="js/fa.js?v=80" defer></script>
-  <script src="js/main.js?v=80" defer></script>
+  <script src="js/vendor/supabase.js?v=81" defer></script>
+  <script src="js/fa.js?v=81" defer></script>
+  <script src="js/main.js?v=81" defer></script>
 </body>
 </html>

@@ -4,6 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>
+    // Clean addresses: never ".html" in the address bar (GitHub Pages
+    // serves /work for work.html), and the home page is just "/". Pages
+    // start at the top: the browser doesn't bring back the old scroll
+    // position, and a reload or Back forgets any "#section" too.
+    (function () {
+      try {
+        var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+        var fresh = nav && (nav.type === "reload" || nav.type === "back_forward");
+        var p = location.pathname, c = p.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
+        var hash = fresh ? "" : location.hash;
+        if (c !== p || hash !== location.hash) history.replaceState(history.state, "", c + location.search + hash);
+        if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      } catch (e) {}
+    })();
+  </script>
+  <script>
     // Language: the visitor's choice, else Persian if their browser prefers
     // it. A Persian page stays hidden until js/main.js has put its text in.
     (function () {
@@ -33,7 +49,7 @@
   <meta name="robots" content="noindex">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=80">
+  <link rel="stylesheet" href="css/style.css?v=81">
   <script>
     // Signed-out visitors go to the login page instead.
     try {
@@ -44,14 +60,14 @@
 <body>
   <header class="site-header">
     <div class="site-header__inner">
-      <a class="profile-chip" href="profile.html" aria-label="Profile" aria-current="page">
+      <a class="profile-chip" href="profile" aria-label="Profile" aria-current="page">
         <span class="profile-chip__avatar">
           <img src="assets/avatar-default.svg" alt="">
         </span>
         <span class="profile-chip__label">Profile</span>
       </a>
 
-      <a class="brand" href="index.html" aria-label="SauFox Entertainment">
+      <a class="brand" href="/" aria-label="SauFox Entertainment">
         <span class="brand__text"><img src="assets/wordmark.webp" alt="SauFox" width="1012" height="360"></span>
         <span class="brand__blur" aria-hidden="true"><img src="assets/wordmark.webp" alt="" width="1012" height="360"></span>
       </a>
@@ -74,7 +90,7 @@
         </p>
         <p class="profile-head__plan">
           <span class="plan-badge">No subscription</span>
-          <a href="index.html#plans">See plans</a>
+          <a href="/#plans">See plans</a>
         </p>
       </div>
     </section>
@@ -93,7 +109,7 @@
         <div class="empty">
           <p class="empty__title">Your library is empty</p>
           <p class="empty__text">Games, films, animations and novels you buy or unlock with a subscription will appear here.</p>
-          <a class="empty__button" href="index.html">Browse works</a>
+          <a class="empty__button" href="/">Browse works</a>
         </div>
       </div>
 
@@ -101,7 +117,7 @@
         <div class="empty">
           <p class="empty__title">Nothing in My List yet</p>
           <p class="empty__text">Tap &ldquo;My List&rdquo; on any work to keep it here.</p>
-          <a class="empty__button" href="index.html">Browse works</a>
+          <a class="empty__button" href="/">Browse works</a>
         </div>
       </div>
 
@@ -109,7 +125,7 @@
         <div class="empty">
           <p class="empty__title">No orders yet</p>
           <p class="empty__text">Works you buy or pre-order, and where each order stands, will show up here.</p>
-          <a class="empty__button" href="index.html">Browse works</a>
+          <a class="empty__button" href="/">Browse works</a>
         </div>
       </div>
 
@@ -224,7 +240,7 @@
   <footer class="site-footer">
     <div class="site-footer__inner">
       <div class="site-footer__brand">
-        <a class="site-footer__logo" href="index.html" aria-label="SauFox Entertainment"><img src="assets/logo.webp" alt="SauFox" width="480" height="533"></a>
+        <a class="site-footer__logo" href="/" aria-label="SauFox Entertainment"><img src="assets/logo.webp" alt="SauFox" width="480" height="533"></a>
         <p>Games, animation, films and novels, in physical and digital editions.</p>
         <!-- Trust seals: paste the snippet eNamad gives (and later others,
              such as Zarinpal's) inside this div, unchanged. It stays hidden
@@ -234,18 +250,18 @@
 
       <nav class="site-footer__col" aria-label="Studio">
         <h2>Studio</h2>
-        <a href="browse.html">All works</a>
-        <a href="news.html">News</a>
-        <a href="about.html">About us</a>
-        <a href="about.html#contact">Contact</a>
-        <a href="faq.html">Help &amp; FAQ</a>
-        <a href="index.html#plans">Subscriptions</a>
+        <a href="browse">All works</a>
+        <a href="news">News</a>
+        <a href="about">About us</a>
+        <a href="about#contact">Contact</a>
+        <a href="faq">Help &amp; FAQ</a>
+        <a href="/#plans">Subscriptions</a>
       </nav>
 
       <nav class="site-footer__col" aria-label="Legal">
         <h2>Legal</h2>
-        <a href="terms.html">Terms of use</a>
-        <a href="privacy.html">Privacy policy</a>
+        <a href="terms">Terms of use</a>
+        <a href="privacy">Privacy policy</a>
       </nav>
 
       <div class="site-footer__col">
@@ -272,8 +288,8 @@
     </div>
   </footer>
 
-  <script src="js/vendor/supabase.js?v=80" defer></script>
-  <script src="js/fa.js?v=80" defer></script>
-  <script src="js/main.js?v=80" defer></script>
+  <script src="js/vendor/supabase.js?v=81" defer></script>
+  <script src="js/fa.js?v=81" defer></script>
+  <script src="js/main.js?v=81" defer></script>
 </body>
 </html>

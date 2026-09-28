@@ -21,6 +21,60 @@ const local = {
   },
 };
 
+// ---------- Clean addresses, fresh pages ----------
+// Links never show ".html" (GitHub Pages serves /work for work.html; the
+// home page is "/"), including links the scripts add later. The inline
+// script in each <head> cleans the address bar itself.
+(function cleanLinks() {
+  const PAGE = /^(?:\.\/|\/)?([a-z0-9-]+)\.html(?=$|[?#])(.*)$/i;
+  const tidy = (el) => {
+    const name = el.tagName === "FORM" ? "action" : "href";
+    const m = PAGE.exec(el.getAttribute(name) || "");
+    if (m) el.setAttribute(name, (m[1].toLowerCase() === "index" ? "/" : m[1]) + m[2]);
+  };
+  const SELECT = "a[href], form[action]";
+  document.querySelectorAll(SELECT).forEach(tidy);
+  new MutationObserver((records) =>
+    records.forEach((r) => {
+      if (r.type === "attributes") return r.target.matches(SELECT) && tidy(r.target);
+      r.addedNodes.forEach((node) => {
+        if (node.nodeType !== 1) return;
+        if (node.matches(SELECT)) tidy(node);
+        node.querySelectorAll(SELECT).forEach(tidy);
+      });
+    })
+  ).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["href", "action"] });
+})();
+
+// Coming back to the site's tab after a while, or with Back, loads the page
+// afresh from the top, so it shows what changed meanwhile (a comment posted
+// in another tab, a new price). Nothing is lost: the sign-in and settings
+// live in localStorage, which a reload doesn't touch. It waits while the
+// visitor is in the middle of something (typed text, an open box, a playing
+// video) and never happens on sign-in, checkout, admin or launcher pages.
+(function freshPages() {
+  const AWAY = 8000;
+  const SKIP = /^\/(login|checkout|admin|launcher|status)(\.html)?$/;
+  const busy = () =>
+    [...document.querySelectorAll("input, textarea")].some(
+      (el) => !["hidden", "checkbox", "radio", "file", "submit", "button"].includes(el.type) && el.value !== el.defaultValue
+    ) ||
+    Boolean(document.querySelector("dialog[open]")) ||
+    [...document.querySelectorAll("video, audio")].some((media) => !media.paused);
+  const reload = () => {
+    history.replaceState(history.state, "", location.pathname + location.search);
+    location.reload();
+  };
+  window.addEventListener("pageshow", (event) => event.persisted && reload());
+  let hiddenAt = 0;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return (hiddenAt = Date.now());
+    const away = hiddenAt && Date.now() - hiddenAt >= AWAY;
+    hiddenAt = 0;
+    if (away && !SKIP.test(location.pathname) && !busy()) reload();
+  });
+})();
+
 // ---------- Language ----------
 // English, or Persian (right to left). The inline script in each page's
 // <head> picks the language before first paint and hides a Persian page
@@ -441,7 +495,10 @@ const verifiedSession = async () => {
 
 // Sends a signed-out visitor to log in, then back to this page.
 const goLogin = () => {
-  local.set("next", location.pathname.split("/").pop() + location.search + location.hash);
+  // The page's file name, as it's written in links (the address bar shows
+  // "/work" for work.html, and "/" for the home page).
+  const page = location.pathname.split("/").pop().replace(/\.html$/, "") || "index";
+  local.set("next", `${page}.html${location.search}${location.hash}`);
   location.href = "login.html";
 };
 
@@ -3194,6 +3251,7 @@ const scoreOf = (score, className = "score", whole = false) => {
   const message = form.querySelector(".auth__message");
   const submit = form.querySelector(".review-form__submit");
   const remove = form.querySelector(".review-form__delete");
+  const cancel = form.querySelector(".review-form__cancel");
   const REMOVE_LABEL = released ? "Delete my review" : "Delete my comment";
   const list = section.querySelector(".reviews__list");
   const empty = section.querySelector(".reviews__empty");
@@ -3434,6 +3492,21 @@ const scoreOf = (score, className = "score", whole = false) => {
       main.append(reply);
     }
     if (mine && review.hidden) main.append(make("p", "review__note", "The studio has hidden this from others."));
+    // Their own: "Edit" opens it in the form above (which is otherwise
+    // empty, or hidden once they've posted).
+    if (mine) {
+      const actions = make("div", "review__actions");
+      const edit = make("button", "review__action", "Edit");
+      edit.type = "button";
+      edit.addEventListener("click", () => {
+        editing = true;
+        fillForm();
+        form.scrollIntoView({ block: "center", behavior: "smooth" });
+        bodyInput.focus({ preventScroll: true });
+      });
+      actions.append(edit);
+      main.append(actions);
+    }
     if (mine && review.helpful_count)
       main.append(make("p", "review__helped", review.helpful_count === 1 ? "1 person found this helpful" : `${num(review.helpful_count)} people found this helpful`));
     if (!mine) main.append(reviewActions(review));
@@ -3583,14 +3656,28 @@ const scoreOf = (score, className = "score", whole = false) => {
     button.addEventListener("mouseenter", () => showRating(Number(button.dataset.star)));
     button.addEventListener("mouseleave", () => showRating(rating));
   });
+  // The form starts empty. Once they've posted it goes away (one review
+  // each), and comes back holding their review only when they press Edit.
+  let editing = false;
   const fillForm = () => {
-    rating = (own && own.rating) || 0;
+    if (!own) editing = false;
+    form.hidden = !session || (Boolean(own) && !editing);
+    rating = editing ? own.rating || 0 : 0;
     showRating(rating);
-    bodyInput.value = (own && own.body) || "";
-    remove.hidden = !own;
+    bodyInput.value = editing ? own.body || "" : "";
+    remove.hidden = !editing;
+    cancel.hidden = !editing;
     remove.textContent = REMOVE_LABEL;
-    submit.textContent = own ? "Update" : released ? "Post review" : "Post comment";
+    form.querySelector(".review-form__title").textContent = editing
+      ? released ? "Edit your review" : "Edit your comment"
+      : released ? "Your review" : "Your comment";
+    submit.textContent = editing ? "Save changes" : released ? "Post review" : "Post comment";
   };
+  cancel.addEventListener("click", () => {
+    editing = false;
+    say("");
+    fillForm();
+  });
 
   session = await verifiedSession();
   if (!session) {
@@ -3611,7 +3698,6 @@ const scoreOf = (score, className = "score", whole = false) => {
     ]);
     (votes || []).forEach((v) => voted.add(v.review_id));
     (reports || []).forEach((r) => reported.add(r.review_id));
-    form.hidden = false;
     fillForm();
   }
 
@@ -3632,8 +3718,9 @@ const scoreOf = (score, className = "score", whole = false) => {
     submit.disabled = false;
     if (error) return say(error.code === "23505" ? "You've already reviewed this. Reload the page to edit it." : "Not saved. Check your connection and try again.");
     own = data;
+    editing = false;
+    say("");
     fillForm();
-    say(released ? "Thanks! Your review is up." : "Thanks! Your comment is up.", true);
     showMine();
     loadPage(true);
     showSummary();
@@ -4008,7 +4095,7 @@ const foldText = (text) =>
       if (select.value && !(name === "sort" && select.value === "featured")) next.set(name, select.value);
     });
     const query = next.toString();
-    history.replaceState(null, "", query ? `browse.html?${query}` : "browse.html");
+    history.replaceState(null, "", query ? `browse?${query}` : "browse");
   };
 
   let typing;

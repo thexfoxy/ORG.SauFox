@@ -4,6 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>
+    // Clean addresses: never ".html" in the address bar (GitHub Pages
+    // serves /work for work.html), and the home page is just "/". Pages
+    // start at the top: the browser doesn't bring back the old scroll
+    // position, and a reload or Back forgets any "#section" too.
+    (function () {
+      try {
+        var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+        var fresh = nav && (nav.type === "reload" || nav.type === "back_forward");
+        var p = location.pathname, c = p.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
+        var hash = fresh ? "" : location.hash;
+        if (c !== p || hash !== location.hash) history.replaceState(history.state, "", c + location.search + hash);
+        if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      } catch (e) {}
+    })();
+  </script>
+  <script>
     // Language: the visitor's choice, else Persian if their browser prefers
     // it. A Persian page stays hidden until js/main.js has put its text in.
     (function () {
@@ -30,15 +46,15 @@
   <link rel="icon" href="assets/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <meta name="theme-color" content="#0f0f11">
-  <link rel="canonical" href="https://saufoxentertainment.ir/faq.html">
-  <link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/faq.html">
-  <link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/faq.html?lang=fa">
-  <link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/faq.html">
+  <link rel="canonical" href="https://saufoxentertainment.ir/faq">
+  <link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/faq">
+  <link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/faq?lang=fa">
+  <link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/faq">
   <meta property="og:site_name" content="SauFox Entertainment">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Help &amp; FAQ · SauFox Entertainment">
   <meta property="og:description" content="Answers about accounts, buying, payment, refunds and pre-orders at SauFox Entertainment.">
-  <meta property="og:url" content="https://saufoxentertainment.ir/faq.html">
+  <meta property="og:url" content="https://saufoxentertainment.ir/faq">
   <meta property="og:image" content="https://saufoxentertainment.ir/assets/og.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -47,7 +63,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=80">
+  <link rel="stylesheet" href="css/style.css?v=81">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -63,20 +79,20 @@
 <body>
   <header class="site-header">
     <div class="site-header__inner">
-      <a class="profile-chip" href="profile.html" aria-label="Profile">
+      <a class="profile-chip" href="profile" aria-label="Profile">
         <span class="profile-chip__avatar">
           <img src="assets/avatar-default.svg" alt="">
         </span>
         <span class="profile-chip__label">Profile</span>
       </a>
 
-      <a class="brand" href="index.html" aria-label="SauFox Entertainment">
+      <a class="brand" href="/" aria-label="SauFox Entertainment">
         <span class="brand__text"><img src="assets/wordmark.webp" alt="SauFox" width="1012" height="360"></span>
         <span class="brand__blur" aria-hidden="true"><img src="assets/wordmark.webp" alt="" width="1012" height="360"></span>
       </a>
 
-      <a class="cta cta--login" href="login.html" data-animate-letters data-hover-text="Welcome Back">Login</a>
-      <a class="cta cta--signup" href="login.html#signup" data-animate-letters data-hover-text="Sign Up Now">Wanna create an account?</a>
+      <a class="cta cta--login" href="login" data-animate-letters data-hover-text="Welcome Back">Login</a>
+      <a class="cta cta--signup" href="login#signup" data-animate-letters data-hover-text="Sign Up Now">Wanna create an account?</a>
     </div>
   </header>
 
@@ -85,13 +101,13 @@
     <div data-only="en" translate="no">
       <p class="doc__kicker">Help</p>
       <h1 class="doc__title">Questions and answers</h1>
-      <p class="doc__lead">Quick answers about your account, buying, payment and refunds. Can&rsquo;t find yours? <a href="about.html#contact">Contact us</a>.</p>
+      <p class="doc__lead">Quick answers about your account, buying, payment and refunds. Can&rsquo;t find yours? <a href="about#contact">Contact us</a>.</p>
 
       <h2>Your account</h2>
       <div class="faq">
         <details class="faq__item">
           <summary>How do I create an account?</summary>
-          <div class="faq__answer"><p>On the <a href="login.html#signup">sign-up page</a>, enter your name, email and a password, or use &ldquo;Continue with Google&rdquo;. We email you a code; enter it on the site and your account is ready.</p></div>
+          <div class="faq__answer"><p>On the <a href="login#signup">sign-up page</a>, enter your name, email and a password, or use &ldquo;Continue with Google&rdquo;. We email you a code; enter it on the site and your account is ready.</p></div>
         </details>
         <details class="faq__item">
           <summary>Why do I get a code every time I log in?</summary>
@@ -103,7 +119,7 @@
         </details>
         <details class="faq__item">
           <summary>I forgot my password.</summary>
-          <div class="faq__answer"><p>On the <a href="login.html">login page</a>, press &ldquo;Forgot password?&rdquo;, enter your email, then the code we send you and your new password.</p></div>
+          <div class="faq__answer"><p>On the <a href="login">login page</a>, press &ldquo;Forgot password?&rdquo;, enter your email, then the code we send you and your new password.</p></div>
         </details>
       </div>
 
@@ -127,7 +143,7 @@
         </details>
         <details class="faq__item">
           <summary>Where do I find what I bought?</summary>
-          <div class="faq__answer"><p>In your profile, under <a href="profile.html#library">Library</a>. We also email you a receipt with the reference number. Your orders and their status are under <a href="profile.html#orders">Orders</a>.</p></div>
+          <div class="faq__answer"><p>In your profile, under <a href="profile#library">Library</a>. We also email you a receipt with the reference number. Your orders and their status are under <a href="profile#orders">Orders</a>.</p></div>
         </details>
         <details class="faq__item">
           <summary>What is a pre-order?</summary>
@@ -139,11 +155,11 @@
       <div class="faq">
         <details class="faq__item">
           <summary>Can I cancel an order?</summary>
-          <div class="faq__answer"><p>An unpaid order: yes, any time, from <a href="profile.html#orders">Orders</a> in your profile. A paid one: see refunds below.</p></div>
+          <div class="faq__answer"><p>An unpaid order: yes, any time, from <a href="profile#orders">Orders</a> in your profile. A paid one: see refunds below.</p></div>
         </details>
         <details class="faq__item">
           <summary>How do refunds work?</summary>
-          <div class="faq__answer"><p>A paid pre-order is refunded in full if you cancel before release day. For a released work, you can ask for a refund within 7 days of paying. Email us with your order number; the money goes back to the card you paid with within 7 working days. The full rules are in the <a href="terms.html#purchases">terms of purchase</a>.</p></div>
+          <div class="faq__answer"><p>A paid pre-order is refunded in full if you cancel before release day. For a released work, you can ask for a refund within 7 days of paying. Email us with your order number; the money goes back to the card you paid with within 7 working days. The full rules are in the <a href="terms#purchases">terms of purchase</a>.</p></div>
         </details>
       </div>
 
@@ -151,7 +167,7 @@
       <div class="faq">
         <details class="faq__item">
           <summary>When do subscriptions open?</summary>
-          <div class="faq__answer"><p>Soon. The plans and their prices are on the <a href="index.html#plans">home page</a>, and members will hear first when they open.</p></div>
+          <div class="faq__answer"><p>Soon. The plans and their prices are on the <a href="/#plans">home page</a>, and members will hear first when they open.</p></div>
         </details>
         <details class="faq__item">
           <summary>Can I use the site in English or Persian?</summary>
@@ -159,7 +175,7 @@
         </details>
         <details class="faq__item">
           <summary>How do I contact you?</summary>
-          <div class="faq__answer"><p>By email at <a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a>, or by phone; our numbers and address are on the <a href="about.html#contact">contact page</a>.</p></div>
+          <div class="faq__answer"><p>By email at <a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a>, or by phone; our numbers and address are on the <a href="about#contact">contact page</a>.</p></div>
         </details>
       </div>
     </div>
@@ -167,13 +183,13 @@
     <div data-only="fa">
       <p class="doc__kicker">راهنما</p>
       <h1 class="doc__title">سوالات متداول</h1>
-      <p class="doc__lead">پاسخ کوتاه به سوال‌های رایج درباره‌ی حساب کاربری، خرید، پرداخت و بازگشت وجه. پاسخ سوالتان را پیدا نکردید؟ <a href="about.html#contact">با ما تماس بگیرید</a>.</p>
+      <p class="doc__lead">پاسخ کوتاه به سوال‌های رایج درباره‌ی حساب کاربری، خرید، پرداخت و بازگشت وجه. پاسخ سوالتان را پیدا نکردید؟ <a href="about#contact">با ما تماس بگیرید</a>.</p>
 
       <h2>حساب کاربری</h2>
       <div class="faq">
         <details class="faq__item">
           <summary>چطور حساب بسازم؟</summary>
-          <div class="faq__answer"><p>در <a href="login.html#signup">صفحه‌ی ثبت‌نام</a> نام، ایمیل و یک رمز عبور وارد کنید، یا «ادامه با گوگل» را بزنید. یک کد به ایمیلتان می‌فرستیم؛ آن را در سایت وارد کنید و حسابتان آماده است.</p></div>
+          <div class="faq__answer"><p>در <a href="login#signup">صفحه‌ی ثبت‌نام</a> نام، ایمیل و یک رمز عبور وارد کنید، یا «ادامه با گوگل» را بزنید. یک کد به ایمیلتان می‌فرستیم؛ آن را در سایت وارد کنید و حسابتان آماده است.</p></div>
         </details>
         <details class="faq__item">
           <summary>چرا هر بار موقع ورود کد می‌آید؟</summary>
@@ -185,7 +201,7 @@
         </details>
         <details class="faq__item">
           <summary>رمز عبورم را فراموش کرده‌ام.</summary>
-          <div class="faq__answer"><p>در <a href="login.html">صفحه‌ی ورود</a> روی «رمز را فراموش کرده‌اید؟» بزنید، ایمیلتان را وارد کنید و بعد کدی که می‌فرستیم و رمز جدید را.</p></div>
+          <div class="faq__answer"><p>در <a href="login">صفحه‌ی ورود</a> روی «رمز را فراموش کرده‌اید؟» بزنید، ایمیلتان را وارد کنید و بعد کدی که می‌فرستیم و رمز جدید را.</p></div>
         </details>
       </div>
 
@@ -209,7 +225,7 @@
         </details>
         <details class="faq__item">
           <summary>چیزهایی که خریده‌ام کجاست؟</summary>
-          <div class="faq__answer"><p>در پروفایل، بخش <a href="profile.html#library">کتابخانه</a>. رسید پرداخت با شماره‌ی پیگیری هم به ایمیلتان فرستاده می‌شود. سفارش‌ها و وضعیتشان در بخش <a href="profile.html#orders">سفارش‌ها</a> است.</p></div>
+          <div class="faq__answer"><p>در پروفایل، بخش <a href="profile#library">کتابخانه</a>. رسید پرداخت با شماره‌ی پیگیری هم به ایمیلتان فرستاده می‌شود. سفارش‌ها و وضعیتشان در بخش <a href="profile#orders">سفارش‌ها</a> است.</p></div>
         </details>
         <details class="faq__item">
           <summary>پیش‌خرید یعنی چه؟</summary>
@@ -221,11 +237,11 @@
       <div class="faq">
         <details class="faq__item">
           <summary>می‌توانم سفارش را لغو کنم؟</summary>
-          <div class="faq__answer"><p>سفارش پرداخت‌نشده را بله، هر زمان، از بخش <a href="profile.html#orders">سفارش‌ها</a> در پروفایل. برای سفارش پرداخت‌شده، بخش بازگشت وجه را ببینید.</p></div>
+          <div class="faq__answer"><p>سفارش پرداخت‌نشده را بله، هر زمان، از بخش <a href="profile#orders">سفارش‌ها</a> در پروفایل. برای سفارش پرداخت‌شده، بخش بازگشت وجه را ببینید.</p></div>
         </details>
         <details class="faq__item">
           <summary>بازگشت وجه چطور است؟</summary>
-          <div class="faq__answer"><p>پیش‌خرید پرداخت‌شده اگر پیش از روز انتشار لغو شود، کل مبلغش برگردانده می‌شود. برای اثر منتشرشده تا ۷ روز پس از پرداخت می‌توانید درخواست بازگشت وجه بدهید. شماره‌ی سفارش را برای ما ایمیل کنید؛ مبلغ ظرف ۷ روز کاری به همان کارتی که با آن پرداخت کرده‌اید برمی‌گردد. قوانین کامل در <a href="terms.html#purchases">قوانین خرید</a> آمده است.</p></div>
+          <div class="faq__answer"><p>پیش‌خرید پرداخت‌شده اگر پیش از روز انتشار لغو شود، کل مبلغش برگردانده می‌شود. برای اثر منتشرشده تا ۷ روز پس از پرداخت می‌توانید درخواست بازگشت وجه بدهید. شماره‌ی سفارش را برای ما ایمیل کنید؛ مبلغ ظرف ۷ روز کاری به همان کارتی که با آن پرداخت کرده‌اید برمی‌گردد. قوانین کامل در <a href="terms#purchases">قوانین خرید</a> آمده است.</p></div>
         </details>
       </div>
 
@@ -233,7 +249,7 @@
       <div class="faq">
         <details class="faq__item">
           <summary>اشتراک‌ها کی فعال می‌شوند؟</summary>
-          <div class="faq__answer"><p>به‌زودی. پلن‌ها و قیمتشان در <a href="index.html#plans">صفحه‌ی اصلی</a> هست و اعضای سایت زودتر از همه باخبر می‌شوند.</p></div>
+          <div class="faq__answer"><p>به‌زودی. پلن‌ها و قیمتشان در <a href="/#plans">صفحه‌ی اصلی</a> هست و اعضای سایت زودتر از همه باخبر می‌شوند.</p></div>
         </details>
         <details class="faq__item">
           <summary>سایت فارسی و انگلیسی دارد؟</summary>
@@ -241,7 +257,7 @@
         </details>
         <details class="faq__item">
           <summary>چطور با شما تماس بگیرم؟</summary>
-          <div class="faq__answer"><p>با ایمیل <a class="selectable" href="mailto:saufoxentertainment@gmail.com" dir="ltr">saufoxentertainment@gmail.com</a> یا تلفن؛ شماره‌ها و نشانی ما در <a href="about.html#contact">صفحه‌ی تماس</a> است.</p></div>
+          <div class="faq__answer"><p>با ایمیل <a class="selectable" href="mailto:saufoxentertainment@gmail.com" dir="ltr">saufoxentertainment@gmail.com</a> یا تلفن؛ شماره‌ها و نشانی ما در <a href="about#contact">صفحه‌ی تماس</a> است.</p></div>
         </details>
       </div>
     </div>
@@ -250,7 +266,7 @@
   <footer class="site-footer">
     <div class="site-footer__inner">
       <div class="site-footer__brand">
-        <a class="site-footer__logo" href="index.html" aria-label="SauFox Entertainment"><img src="assets/logo.webp" alt="SauFox" width="480" height="533"></a>
+        <a class="site-footer__logo" href="/" aria-label="SauFox Entertainment"><img src="assets/logo.webp" alt="SauFox" width="480" height="533"></a>
         <p>Games, animation, films and novels, in physical and digital editions.</p>
         <!-- Trust seals: paste the snippet eNamad gives (and later others,
              such as Zarinpal's) inside this div, unchanged. It stays hidden
@@ -260,18 +276,18 @@
 
       <nav class="site-footer__col" aria-label="Studio">
         <h2>Studio</h2>
-        <a href="browse.html">All works</a>
-        <a href="news.html">News</a>
-        <a href="about.html">About us</a>
-        <a href="about.html#contact">Contact</a>
-        <a href="faq.html">Help &amp; FAQ</a>
-        <a href="index.html#plans">Subscriptions</a>
+        <a href="browse">All works</a>
+        <a href="news">News</a>
+        <a href="about">About us</a>
+        <a href="about#contact">Contact</a>
+        <a href="faq">Help &amp; FAQ</a>
+        <a href="/#plans">Subscriptions</a>
       </nav>
 
       <nav class="site-footer__col" aria-label="Legal">
         <h2>Legal</h2>
-        <a href="terms.html">Terms of use</a>
-        <a href="privacy.html">Privacy policy</a>
+        <a href="terms">Terms of use</a>
+        <a href="privacy">Privacy policy</a>
       </nav>
 
       <div class="site-footer__col">
@@ -298,7 +314,7 @@
     </div>
   </footer>
 
-  <script src="js/fa.js?v=80" defer></script>
-  <script src="js/main.js?v=80" defer></script>
+  <script src="js/fa.js?v=81" defer></script>
+  <script src="js/main.js?v=81" defer></script>
 </body>
 </html>

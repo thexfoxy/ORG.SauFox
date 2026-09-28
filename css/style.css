@@ -6217,6 +6217,7 @@ a.hero__panel {
 
 .review-form__submit,
 .review-form__delete,
+.review-form__cancel,
 .reviews__more {
   height: 38px;
   padding: 0 18px;
@@ -6236,9 +6237,15 @@ a.hero__panel {
 }
 
 .review-form__delete,
+.review-form__cancel,
 .reviews__more {
   color: var(--text);
   background: var(--surface-2);
+}
+
+.review-form__cancel {
+  color: var(--muted);
+  background: none;
 }
 
 .review-form__submit:disabled,

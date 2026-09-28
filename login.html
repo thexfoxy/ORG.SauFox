@@ -4,6 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>
+    // Clean addresses: never ".html" in the address bar (GitHub Pages
+    // serves /work for work.html), and the home page is just "/". Pages
+    // start at the top: the browser doesn't bring back the old scroll
+    // position, and a reload or Back forgets any "#section" too.
+    (function () {
+      try {
+        var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+        var fresh = nav && (nav.type === "reload" || nav.type === "back_forward");
+        var p = location.pathname, c = p.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
+        var hash = fresh ? "" : location.hash;
+        if (c !== p || hash !== location.hash) history.replaceState(history.state, "", c + location.search + hash);
+        if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      } catch (e) {}
+    })();
+  </script>
+  <script>
     // Language: the visitor's choice, else Persian if their browser prefers
     // it. A Persian page stays hidden until js/main.js has put its text in.
     (function () {
@@ -33,7 +49,7 @@
   <meta name="robots" content="noindex">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=80">
+  <link rel="stylesheet" href="css/style.css?v=81">
 </head>
 <body class="login-page">
   <!-- Background: slanted strips of artwork from the studio's releases,
@@ -42,7 +58,7 @@
 
   <main class="login">
     <button class="lang-switch lang-switch--corner" type="button" data-lang-switch translate="no">فارسی</button>
-    <a class="login__brand" href="index.html">SauFox <span>Entertainment</span></a>
+    <a class="login__brand" href="/">SauFox <span>Entertainment</span></a>
 
     <div class="auth">
       <!-- Left: tabs and the two forms, which slide past each other. -->
@@ -194,13 +210,13 @@
     </div>
 
     <p class="login__legal">
-      <span data-only="en" translate="no">By creating an account you agree to the <a href="terms.html">Terms of use</a> and <a href="privacy.html">Privacy policy</a>.</span>
-      <span data-only="fa">با ساختن حساب، <a href="terms.html">قوانین استفاده</a> و <a href="privacy.html">حریم خصوصی</a> را می‌پذیرید.</span>
+      <span data-only="en" translate="no">By creating an account you agree to the <a href="terms">Terms of use</a> and <a href="privacy">Privacy policy</a>.</span>
+      <span data-only="fa">با ساختن حساب، <a href="terms">قوانین استفاده</a> و <a href="privacy">حریم خصوصی</a> را می‌پذیرید.</span>
     </p>
   </main>
 
-  <script src="js/vendor/supabase.js?v=80" defer></script>
-  <script src="js/fa.js?v=80" defer></script>
-  <script src="js/main.js?v=80" defer></script>
+  <script src="js/vendor/supabase.js?v=81" defer></script>
+  <script src="js/fa.js?v=81" defer></script>
+  <script src="js/main.js?v=81" defer></script>
 </body>
 </html>

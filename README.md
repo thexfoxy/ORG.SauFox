@@ -325,6 +325,22 @@ nobody can log in.
   days (after 3 failures in a run, usually the day's sending limit, the
   rest wait for the next run).
 
+## Clean addresses and fresh pages
+
+- The address bar never shows ".html": GitHub Pages serves `/work` for
+  `work.html` and `/` for `index.html`. An inline script in every `<head>`
+  tidies the address on load; `cleanLinks` in `js/main.js` strips ".html"
+  from every link and form, including ones added later. Links in the HTML,
+  canonical/og URLs and `sitemap.xml` are written without it. (Redirects
+  set elsewhere, such as the sign-in return and the payment callback, may
+  still use `page.html`; the file exists, and the address is tidied.)
+- Pages always start at the top (no scroll restoring; a reload or Back
+  drops any `#section`). Returning to the site's tab after 8 seconds or
+  more, or arriving with Back, reloads the page so it's current. It waits
+  while something's typed, a box is open or a video plays, and never runs on
+  login, checkout, admin, launcher or status pages. Sign-in and settings are
+  in localStorage, so nothing is lost.
+
 ## Ratings and reviews
 
 - `reviews` table: one per member per work, 1-10 stars (as on IMDb) and an optional
@@ -343,8 +359,9 @@ nobody can log in.
   Comments (User reviews once out), shows how many there are and scrolls
   down to them.
 - Work page → Ratings & reviews (Comments before release): the average,
-  a bar for each of the ten stars, the member's own review (edit or
-  delete), and the list, 10 at a time. Scores show as ★ 8.4/10; cards show
+  a bar for each of the ten stars, the member's own review (the form
+  starts empty and hides once they've posted; Edit on their review brings it
+  back filled in, with Delete and Cancel), and the list, 10 at a time. Scores show as ★ 8.4/10; cards show
   the average; the home page gets a "Top rated" row once two works have
   ratings (a work with few ratings is pulled towards 6).
 - Admin panel → Reviews and comments: hide or show, reply, delete.
