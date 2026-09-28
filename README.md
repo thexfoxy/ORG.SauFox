@@ -334,8 +334,10 @@ nobody can log in.
   the account signed in here: a one-time sign-in from the `library`
   function (`launcher-token`) goes to the fixed portal address as
   `#signin=…`, and the portal makes its own session from it.
-- Until the subdomain is live, `support.html` stays the support page; after
-  that, the site's Support links and the ticket emails point to the portal.
+- The site's Support links go to the portal, and `support.html` forwards
+  there (`?t=<id>` to `#/tickets/<id>`, `?new&order=` to `#/new?order=`),
+  so the ticket links in emails land on the same ticket, after sign-in if
+  needed (the portal remembers the page asked for).
 
 ## Clean addresses and fresh pages
 

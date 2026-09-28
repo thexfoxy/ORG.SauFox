@@ -243,7 +243,15 @@ const signInScreen = (problem = "") => {
         h("h1.gate__title", "SauFox Entertainment"),
         h("p.gate__lead", t("Your tickets, orders and help, in one place.")),
         problem ? h("p.gate__problem", { role: "alert" }, problem) : null,
-        h("a.button.button--primary.gate__go", { href: `${MAIN}/portal-signin` }, t("Sign in with your SauFox account")),
+        h(
+          "a.button.button--primary.gate__go",
+          {
+            href: `${MAIN}/portal-signin`,
+            // Back to the page they asked for (say a ticket from an email).
+            onclick: () => store.set("after", /^#\/./.test(location.hash) ? location.hash : null),
+          },
+          t("Sign in with your SauFox account")
+        ),
         h("p.gate__alt", `${t("No account yet?")} `, h("a", { href: `${MAIN}/login#signup` }, t("Create one"))),
         langToggle()
       )
@@ -809,6 +817,11 @@ const route = async () => {
   };
   document.body.classList.remove("is-booting");
   shell();
+  if (handed) {
+    const after = store.get("after");
+    store.set("after", null);
+    if (after && /^#\/[\w/?=&.-]*$/.test(after)) history.replaceState(null, "", location.pathname + location.search + after);
+  }
   window.addEventListener("hashchange", route);
   route();
   unreadCount();

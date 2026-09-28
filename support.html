@@ -4,6 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>
+    // Support lives on the customer portal now: this page (and the ticket
+    // links in older emails) forwards there, to the same ticket.
+    (function () {
+      if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
+      var q = new URLSearchParams(location.search);
+      var to = q.get("t") ? "#/tickets/" + encodeURIComponent(q.get("t"))
+        : q.has("new") ? "#/new" + (q.get("order") ? "?order=" + encodeURIComponent(q.get("order")) : "")
+        : "#/";
+      location.replace("https://portal.saufoxentertainment.ir/" + to);
+    })();
+  </script>
+  <script>
     // Clean addresses: never ".html" in the address bar (GitHub Pages
     // serves /work for work.html), and the home page is just "/". Pages
     // start at the top: the browser doesn't bring back the old scroll
@@ -72,7 +84,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=87">
+  <link rel="stylesheet" href="css/style.css?v=88">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -204,7 +216,7 @@
         <a href="about">About us</a>
         <a href="about#contact">Contact</a>
         <a href="faq">Help &amp; FAQ</a>
-        <a href="support">Support</a>
+        <a href="https://portal.saufoxentertainment.ir/">Support</a>
         <a href="/#plans">Subscriptions</a>
       </nav>
 
@@ -238,8 +250,8 @@
     </div>
   </footer>
 
-  <script src="js/vendor/supabase.js?v=87" defer></script>
-  <script src="js/fa.js?v=87" defer></script>
-  <script src="js/main.js?v=87" defer></script>
+  <script src="js/vendor/supabase.js?v=88" defer></script>
+  <script src="js/fa.js?v=88" defer></script>
+  <script src="js/main.js?v=88" defer></script>
 </body>
 </html>
