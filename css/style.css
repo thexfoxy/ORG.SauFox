@@ -72,6 +72,17 @@
 }
 
 /* Components set their own display; hidden always wins. */
+/* No blue box flashing on whatever a finger taps (phones). */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
 [hidden] {
   display: none !important;
 }

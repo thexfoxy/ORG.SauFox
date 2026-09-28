@@ -42,6 +42,17 @@
   box-sizing: border-box;
 }
 
+/* No blue box flashing on whatever a finger taps (phones). */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
 [hidden] {
   display: none !important;
 }
