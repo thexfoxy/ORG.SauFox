@@ -84,7 +84,18 @@ Sign-up, login and profiles use the Supabase project `saufox-entertainment`
   and removes admins by email in the panel's "Admin team" section, through
   `admin_add(email)` and `admin_remove(user)`, which check
   `private.is_owner()` (verified sign-in included); the owner can't be
-  removed. Admins see the team with `admin_team()`.
+  removed. Admins see the team with `admin_team()`. `admin_add` takes an
+  email or a member's name on the site (refused when several share it).
+- Members (owner only, in the admin panel): every account, searchable by
+  name or email, through `owner_users(query, limit, offset)`. The owner
+  can make an account an admin (`owner_make_admin`), lock it for a hacked
+  account (`owner_lock`: signed out everywhere, no sign-in until unlocked,
+  purchases kept) or delete it (`owner_delete_user`: profile, list,
+  reviews, tickets go; orders stay without the account). None of it works
+  on the owner's own account.
+- Support lives only in the customer portal: once a visit, a notice
+  (`portalNotice` in `js/main.js`) says so, with a button to the portal;
+  not on sign-in, checkout, admin or status pages.
 - Storage bucket `works` (public, 5 MB, JPEG / PNG / WebP): artwork uploaded
   from the admin panel, in `<work id>/`. Only admins can write.
 - `public.profiles`: one row per member (name, currency, avatar_url),

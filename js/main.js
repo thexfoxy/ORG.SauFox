@@ -822,6 +822,92 @@ gl_FragColor=vec4(c,1.);}`;
   });
 })();
 
+// Once a visit: support and order help live in the customer portal only.
+// Not on the pages where it would get in the way (sign-in, checkout, the
+// admin panel, status pages).
+(function portalNotice() {
+  if (/\/(login|checkout|admin|launcher|status|portal-signin|support|404)(\.html)?$/.test(location.pathname)) return;
+  if (document.querySelector(".status, .admin")) return;
+  try {
+    if (sessionStorage.getItem("saufox.portal-notice")) return;
+  } catch (e) {
+    return;
+  }
+  const PORTAL = "https://portal.saufoxentertainment.ir/";
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const dialog = document.createElement("dialog");
+  dialog.className = "portal-notice";
+  dialog.setAttribute("aria-labelledby", "portal-notice-title");
+  const point = (icon, text) => `<li><span class="portal-notice__tick" aria-hidden="true">${icon}</span>${t(text)}</li>`;
+  const ICON = {
+    box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+    mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+  };
+  dialog.innerHTML = `
+    <div class="portal-notice__card">
+      <span class="portal-notice__ring" aria-hidden="true"></span>
+      <button class="portal-notice__x" type="button" aria-label="${t("Close")}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div class="portal-notice__mark" aria-hidden="true">
+        <span></span><span></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/><path d="M19 20a3 3 0 0 1-3 2h-3"/></svg>
+      </div>
+      <p class="portal-notice__kicker">${t("Customer portal")}</p>
+      <h2 class="portal-notice__title" id="portal-notice-title">${t("Support is only in the customer portal")}</h2>
+      <p class="portal-notice__lead">${t("To follow up an order or get help, please use the customer portal only. Messages sent anywhere else may not reach our team.")}</p>
+      <ul class="portal-notice__points">
+        ${point(ICON.box, "Follow your orders")}
+        ${point(ICON.chat, "Chat with our support team")}
+        ${point(ICON.mail, "Replies by email too")}
+      </ul>
+      <div class="portal-notice__actions">
+        <a class="portal-notice__go" href="${PORTAL}">${t("Open the customer portal")}</a>
+        <button class="portal-notice__later" type="button">${t("Got it")}</button>
+      </div>
+    </div>`;
+  const seen = () => {
+    try {
+      sessionStorage.setItem("saufox.portal-notice", "1");
+    } catch (e) {}
+  };
+  const close = () => {
+    seen();
+    if (calm || !dialog.animate) return dialog.close();
+    dialog.classList.add("is-leaving");
+    setTimeout(() => dialog.close(), 320);
+  };
+  dialog.querySelector(".portal-notice__x").addEventListener("click", close);
+  dialog.querySelector(".portal-notice__later").addEventListener("click", close);
+  dialog.querySelector(".portal-notice__go").addEventListener("click", seen);
+  dialog.addEventListener("cancel", (e) => {
+    e.preventDefault();
+    close();
+  });
+  // A click on the dimmed page around the card closes it too.
+  dialog.addEventListener("click", (e) => e.target === dialog && close());
+  dialog.addEventListener("close", () => dialog.remove());
+  // The card tilts a touch toward the pointer.
+  const card = dialog.querySelector(".portal-notice__card");
+  if (!calm)
+    card.addEventListener("pointermove", (e) => {
+      const box = card.getBoundingClientRect();
+      card.style.setProperty("--mx", `${e.clientX - box.left}px`);
+      card.style.setProperty("--my", `${e.clientY - box.top}px`);
+      card.style.setProperty("--rx", `${((e.clientY - box.top) / box.height - 0.5) * -4}deg`);
+      card.style.setProperty("--ry", `${((e.clientX - box.left) / box.width - 0.5) * 4}deg`);
+    });
+  // After the page has settled, and not over another open dialog.
+  const open = () => {
+    if (document.querySelector("dialog[open]")) return setTimeout(open, 2000);
+    document.body.append(dialog);
+    dialog.showModal();
+    dialog.querySelector(".portal-notice__go").focus({ preventScroll: true });
+  };
+  setTimeout(open, calm ? 400 : 1200);
+})();
+
 (function brandBlur() {
   const brand = document.querySelector(".brand");
   if (!brand || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
@@ -4612,22 +4698,6 @@ const ticketThread = async (list, messages, when) => {
   route(false);
 })();
 
-// Profile: "Support tickets", with how many have an unread reply.
-(async function supportBadge() {
-  const badge = document.querySelector(".profile-support__badge");
-  if (!badge || !account) return;
-  const session = await verifiedSession();
-  if (!session) return;
-  const { count } = await account
-    .from("tickets")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", session.user.id)
-    .eq("member_unread", true);
-  if (!count) return;
-  badge.textContent = digits(count);
-  badge.hidden = false;
-})();
-
 (async function adminPage() {
   const page = document.querySelector(".admin");
   if (!page) return;
@@ -6166,15 +6236,20 @@ const ticketThread = async (list, messages, when) => {
   };
   const TEAM_ERRORS = {
     SF020: "Only the owner can do this.",
-    SF021: "No SauFox account uses that email. Ask them to sign up on the site first.",
+    SF021: "No SauFox account uses that email or name. Ask them to sign up on the site first.",
     SF022: "They're already an admin.",
-    SF023: "The owner can't be removed.",
+    SF023: "Not on the owner's account.",
+    SF024: "Several accounts use that name. Use their email instead, or find them under Members.",
   };
   const loadTeam = async () => {
     const { data: team, error } = await account.rpc("admin_team");
     if (error) return;
     const owner = team.some((a) => a.role === "owner" && a.user_id === session.user.id);
     teamForm.hidden = !owner;
+    if (owner && membersBox.hidden) {
+      membersBox.hidden = false;
+      loadMembers(true);
+    }
     teamList.replaceChildren(
       ...team.map((a) => {
         const row = make("li", "admin-coupon");
@@ -6217,17 +6292,137 @@ const ticketThread = async (list, messages, when) => {
   };
   teamForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const email = teamForm.elements.email.value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return teamSay("Enter their email address.");
+    const who = teamForm.elements.who.value.trim();
+    if (who.length < 2) return teamSay("Enter their email or their name on the site.");
     const button = teamForm.querySelector('[type="submit"]');
     button.disabled = true;
-    const { error } = await account.rpc("admin_add", { p_email: email });
+    const { error } = await account.rpc("admin_add", { p_who: who });
     button.disabled = false;
     if (error) return teamSay(TEAM_ERRORS[error.code] || "Not added. Try again.");
     teamForm.reset();
-    teamSay(`${email} is now an admin. They'll see the panel next time they sign in.`, true);
+    teamSay(`${who} is now an admin. They'll see the panel next time they sign in.`, true);
     loadTeam();
+    loadMembers(true);
   });
+
+  // ---------- Members: every account, for the owner ----------
+  const membersBox = page.querySelector(".admin-members");
+  const memberList = membersBox.querySelector(".admin-members__list");
+  const memberSearch = membersBox.querySelector(".admin-members__search");
+  const memberMore = membersBox.querySelector(".admin-members__more");
+  const memberTotal = membersBox.querySelector(".admin-members__total");
+  const memberSay = (text, ok) => {
+    const note = membersBox.querySelector(".admin-members__message");
+    note.textContent = text;
+    note.classList.toggle("is-ok", Boolean(ok));
+  };
+  const PAGE = 50;
+  let memberOffset = 0;
+  let memberTurn = 0;
+  // A button that asks once more before it acts.
+  const twice = (label, ask, className, act) => {
+    const button = make("button", className, label);
+    button.type = "button";
+    button.addEventListener("click", async () => {
+      if (!button.dataset.armed) {
+        button.dataset.armed = "1";
+        button.textContent = ask;
+        setTimeout(() => {
+          delete button.dataset.armed;
+          button.textContent = label;
+        }, 4000);
+        return;
+      }
+      button.disabled = true;
+      await act();
+      button.disabled = false;
+    });
+    return button;
+  };
+  const memberRow = (m) => {
+    const row = make("li", m.locked ? "admin-coupon admin-member is-off" : "admin-coupon admin-member");
+    const face = make("img", "admin-member__face");
+    face.src = m.avatar_url || "assets/avatar-default.svg";
+    face.alt = "";
+    face.loading = "lazy";
+    face.onerror = () => (face.src = "assets/avatar-default.svg");
+    const main = make("div", "admin-coupon__main");
+    const name = make("strong", "", m.name || m.email.split("@")[0]);
+    name.dir = "auto";
+    const email = make("span", "selectable", m.email);
+    email.dir = "ltr";
+    const facts = [
+      `joined ${whenText(m.created_at)}`,
+      m.last_sign_in_at ? `last in ${whenText(m.last_sign_in_at)}` : "never signed in",
+      m.providers ? `via ${m.providers}` : "",
+      m.orders ? `${m.orders} order${m.orders === 1 ? "" : "s"}` : "",
+    ].filter(Boolean);
+    main.append(name, email, make("span", "", facts.join(" · ")));
+    const side = make("div", "admin-file__side");
+    if (m.role) side.append(make("span", m.role === "owner" ? "admin-team__role is-owner" : "admin-team__role", m.role === "owner" ? "Owner" : "Admin"));
+    if (m.locked) side.append(make("span", "admin-team__role is-locked", "Locked"));
+    if (m.role !== "owner") {
+      if (!m.role) {
+        const promote = make("button", "admin-button", "Make admin");
+        promote.type = "button";
+        promote.addEventListener("click", async () => {
+          promote.disabled = true;
+          const { error } = await account.rpc("owner_make_admin", { p_user: m.user_id });
+          promote.disabled = false;
+          if (error) return memberSay(TEAM_ERRORS[error.code] || "Not changed. Try again.");
+          memberSay(`${m.email} is now an admin.`, true);
+          loadTeam();
+          row.replaceWith(memberRow({ ...m, role: "admin" }));
+        });
+        side.append(promote);
+      }
+      const doLock = async () => {
+        const { error } = await account.rpc("owner_lock", { p_user: m.user_id, p_lock: !m.locked });
+        if (error) return memberSay(TEAM_ERRORS[error.code] || "Not changed. Try again.");
+        memberSay(m.locked ? `${m.email} can sign in again.` : `${m.email} is locked and signed out everywhere.`, true);
+        row.replaceWith(memberRow({ ...m, locked: !m.locked }));
+      };
+      if (m.locked) {
+        const unlock = make("button", "admin-button", "Unlock");
+        unlock.type = "button";
+        unlock.addEventListener("click", doLock);
+        side.append(unlock);
+      } else side.append(twice("Lock", "Lock and sign out?", "admin-button", doLock));
+      side.append(
+        twice("Delete", "Delete forever?", "admin-button admin-button--danger", async () => {
+          const { error } = await account.rpc("owner_delete_user", { p_user: m.user_id });
+          if (error) return memberSay(TEAM_ERRORS[error.code] || "Not deleted. Try again.");
+          memberSay(`${m.email}'s account is deleted.`, true);
+          row.remove();
+          loadTeam();
+        })
+      );
+    }
+    row.append(face, main, side);
+    return row;
+  };
+  const loadMembers = async (fresh) => {
+    const turn = ++memberTurn;
+    if (fresh) memberOffset = 0;
+    const { data, error } = await account.rpc("owner_users", { p_query: memberSearch.value.trim(), p_limit: PAGE, p_offset: memberOffset });
+    if (turn !== memberTurn) return;
+    if (error) return memberSay("Members couldn't be loaded. Reload the page to try again.");
+    const rows = data.map(memberRow);
+    if (fresh) memberList.replaceChildren(...rows);
+    else memberList.append(...rows);
+    memberOffset += data.length;
+    const total = data.length ? Number(data[0].total) : fresh ? 0 : memberOffset;
+    memberTotal.textContent = `(${total})`;
+    memberMore.hidden = memberOffset >= total;
+    if (fresh && !data.length) memberSay(memberSearch.value.trim() ? "No account matches that." : "No accounts yet.");
+    else if (fresh) memberSay("");
+  };
+  let memberTimer = 0;
+  memberSearch.addEventListener("input", () => {
+    clearTimeout(memberTimer);
+    memberTimer = setTimeout(() => loadMembers(true), 300);
+  });
+  memberMore.addEventListener("click", () => loadMembers(false));
   loadTeam();
 
   // ---------- Files for buyers ----------

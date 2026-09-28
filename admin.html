@@ -11,7 +11,7 @@
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=90">
+  <link rel="stylesheet" href="css/style.css?v=91">
   <script>
     // Clean addresses: never ".html" in the address bar (GitHub Pages
     // serves /work for work.html), and the home page is just "/". Pages
@@ -103,9 +103,9 @@
         <p class="admin-group__hint">Everyone here can use this panel and the support desk. Only the owner can add or remove admins.</p>
         <form class="admin-team__form" novalidate hidden>
           <label class="admin-field">
-            <span>Add an admin by email</span>
+            <span>Add an admin by email or name</span>
             <span class="admin-coupons__code admin-team__add">
-              <input name="email" type="email" dir="ltr" autocomplete="off" placeholder="name@example.com" required>
+              <input name="who" type="text" dir="auto" autocomplete="off" placeholder="name@example.com or their name on the site" required>
               <button class="admin-button admin-button--primary" type="submit">Add admin</button>
             </span>
           </label>
@@ -113,6 +113,17 @@
           <p class="admin-message" role="status" aria-live="polite"></p>
         </form>
         <ol class="admin-coupons__list admin-team__list"></ol>
+      </section>
+
+      <!-- Every account on the site; the owner only (the database refuses
+           anyone else). -->
+      <section class="admin-members admin-group" hidden>
+        <h2 class="admin-rates__title">Members <span class="admin-members__total"></span></h2>
+        <p class="admin-group__hint">Every account on the site, newest first. Search by name or email. <strong>Lock</strong> a hacked account: it&rsquo;s signed out on every device and can&rsquo;t sign in until you unlock it; its purchases stay. <strong>Delete</strong> removes the account for good (profile, list, reviews, tickets); its orders stay in your records.</p>
+        <input class="admin-members__search" type="search" dir="auto" autocomplete="off" placeholder="Search name or email" aria-label="Search members">
+        <p class="admin-message admin-members__message" role="status" aria-live="polite"></p>
+        <ol class="admin-coupons__list admin-members__list"></ol>
+        <button class="admin-button admin-members__more" type="button" hidden>Show more</button>
       </section>
 
       <!-- Discount codes for checkout (public.coupons). -->
@@ -722,6 +733,6 @@
   </main>
 
   <script src="js/vendor/supabase.js?v=89" defer></script>
-  <script src="js/main.js?v=90" defer></script>
+  <script src="js/main.js?v=91" defer></script>
 </body>
 </html>
