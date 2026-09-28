@@ -2578,6 +2578,7 @@ main.profile-page {
 }
 
 .title-poster {
+  position: relative;
   aspect-ratio: 3 / 4;
   max-width: 100%;
   border-radius: var(--radius);
@@ -3242,6 +3243,7 @@ a.hero__panel {
 }
 
 .poster-card__frame {
+  position: relative;
   display: block;
   aspect-ratio: 3 / 4;
   max-width: 100%;
@@ -5838,14 +5840,6 @@ a.hero__panel {
   line-height: 1;
 }
 
-.poster-card__score {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-}
 
 /* Beside the title, as on IMDb: "SauFox rating ★ 8.4/10 1.2K" and
    "Your rating ☆ Rate"; the second opens the ten-star box. */
@@ -7914,4 +7908,48 @@ a.hero__panel {
 
 .profile-support__badge[hidden] {
   display: none;
+}
+
+/* The average score in a cover's corner: a dark pill with a gold star. */
+.cover-score {
+  position: absolute;
+  top: 10px;
+  inset-inline-start: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  font: 700 13px/1 var(--font-body);
+  color: var(--text);
+  background: rgba(10, 10, 12, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.cover-score__star {
+  font-size: 14px;
+  color: var(--gold);
+}
+
+.title-poster .cover-score {
+  top: 14px;
+  inset-inline-start: 14px;
+  padding: 7px 13px 7px 11px;
+  font-size: 16px;
+}
+
+.title-poster .cover-score__star {
+  font-size: 17px;
+}
+
+.poster-card .cover-score {
+  top: 8px;
+  inset-inline-start: 8px;
+  padding: 4px 8px 4px 7px;
+  font-size: 12px;
 }

@@ -1379,6 +1379,7 @@ const dragScroll = (track) => {
     caption.append(title, el("span", "card__kind", work.kind));
     media.append(...slides, caption);
     if (slides.length > 1) media.append(dots);
+    setCoverScore(media, work.score, work.reviews);
 
     const price = el("div", "card__price");
     const priceTrack = el("div", "card__price-track");
@@ -1506,6 +1507,31 @@ const dragScroll = (track) => {
   if (document.fonts) document.fonts.ready.then(updateMask);
 })();
 
+// The average score in a cover's corner (home cards, poster cards, the work
+// page's poster), once a work has ratings: "★ 8.4".
+const coverScore = (score, count) => {
+  if (!count) return null;
+  const badge = document.createElement("span");
+  badge.className = "cover-score";
+  badge.translate = false;
+  badge.setAttribute("aria-label", `${scoreText(score)}/10`);
+  const star = document.createElement("span");
+  star.className = "cover-score__star";
+  star.textContent = "★";
+  const value = document.createElement("b");
+  value.textContent = scoreText(score);
+  badge.append(star, value);
+  return badge;
+};
+// Puts (or refreshes, or removes) the badge in a cover.
+const setCoverScore = (frame, score, count) => {
+  if (!frame) return;
+  const old = frame.querySelector(":scope > .cover-score");
+  const next = coverScore(score, count);
+  if (old) old.remove();
+  if (next) frame.append(next);
+};
+
 // A small poster card linking to a work's page (category rows, My List).
 const posterCard = (work) => {
   const link = document.createElement("a");
@@ -1528,13 +1554,8 @@ const posterCard = (work) => {
   const kind = document.createElement("span");
   kind.className = "poster-card__kind";
   kind.textContent = work.kind;
+  setCoverScore(frame, work.score, work.reviews);
   link.append(frame, title, kind);
-  if (work.reviews) {
-    const score = document.createElement("span");
-    score.className = "poster-card__score";
-    score.append(scoreOf(work.score, "score score--small"));
-    link.append(score);
-  }
   return link;
 };
 
@@ -2890,6 +2911,7 @@ const signedInGoHome = async (user) => {
   if (work.images[0]) {
     poster.src = work.images[0];
     poster.alt = `${work.title} poster`;
+    setCoverScore(page.querySelector(".title-poster"), work.score, work.reviews);
   } else page.querySelector(".title-poster").hidden = true;
 
   // Facts
@@ -3325,6 +3347,7 @@ const scoreOf = (score, className = "score", whole = false) => {
   // "Your rating" opens a box of ten stars; rating needs no written review.
   let box = null;
   const showAverage = (score, count) => {
+    setCoverScore(document.querySelector(".title-poster"), score, count);
     if (!box) return;
     const average = box.querySelector(".title-rating__average");
     average.hidden = !count;
@@ -3479,8 +3502,10 @@ const scoreOf = (score, className = "score", whole = false) => {
     const go = box && box.querySelector(".title-rating__go");
     if (go) go.textContent = talked ? `${compact(talked)} · ${t("Read and write")}` : t("Be the first");
     if (!released) return;
-    const { data: totals } = await account.from("works").select("review_count, review_sum").eq("id", work.id).maybeSingle();
-    const count = (totals && totals.review_count) || 0;
+    const { data: totals, error: totalsError } = await account.from("works").select("review_count, review_sum").eq("id", work.id).maybeSingle();
+    // Couldn't ask: leave what the page already shows.
+    if (totalsError || !totals) return;
+    const count = totals.review_count || 0;
     const summary = section.querySelector(".reviews__summary");
     summary.hidden = !count;
     // The score beside the title (see rateBox), linking down here.

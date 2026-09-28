@@ -423,8 +423,9 @@ nobody can log in.
   and one every 15 seconds, enforced by `private.review_limits`; on released
   works it also shows their rating), and the list with the member's own
   comments first (Edit opens the text in place, with Save, Cancel and
-  Delete); each comment shows its author's rating, and the list, 10 at a time. Scores show as ★ 8.4/10; cards show
-  the average; the home page gets a "Top rated" row once two works have
+  Delete); each comment shows its author's rating, and the list, 10 at a time. Scores show as ★ 8.4/10; every cover (home cards,
+  category rows, browse, My List, the work page's poster) shows the average
+  in its corner once a work has ratings (`coverScore`); the home page gets a "Top rated" row once two works have
   ratings (a work with few ratings is pulled towards 6).
 - Admin panel → Reviews and comments: hide or show, reply, delete.
 - Helpful: `review_votes`, one per member per review (not their own);
