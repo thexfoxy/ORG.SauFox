@@ -4331,7 +4331,7 @@ const TICKET_TOPICS = {
   subscription: "Subscription",
   other: "Something else",
 };
-const TICKET_STATUS = { open: "Waiting for us", answered: "Answered", closed: "Closed" };
+const TICKET_STATUS = { open: "Waiting for a reply", answered: "Answered", closed: "Closed" };
 const SUPPORT_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
 const supportUpload = async (file, ownerId) => {
   if (!SUPPORT_TYPES.includes(file.type)) throw new Error("Attach an image (JPG, PNG, WebP or GIF) or a PDF.");

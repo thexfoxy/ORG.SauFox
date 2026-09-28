@@ -394,6 +394,7 @@ const FA = {
   "Account and sign-in": "حساب کاربری و ورود",
   "Technical problem": "مشکل فنی",
   "Waiting for us": "در انتظار پاسخ ما",
+  "Waiting for a reply": "در انتظار پاسخ",
   "Answered": "پاسخ داده شد",
   "Closed": "بسته",
   "New reply": "پاسخ تازه",

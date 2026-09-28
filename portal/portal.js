@@ -54,6 +54,7 @@ const FA = {
   "Hello, {name}": "سلام {name}",
   "Here's where your requests and purchases stand.": "وضعیت درخواست‌ها و خریدهای شما این‌جاست.",
   "Waiting for us": "در انتظار پاسخ ما",
+  "Waiting for a reply": "در انتظار پاسخ",
   Answered: "پاسخ داده شد",
   Closed: "بسته",
   "New replies": "پاسخ‌های تازه",
@@ -196,7 +197,10 @@ const TOPICS = {
   subscription: "Subscription",
   other: "Something else",
 };
-const STATUS = { open: "Waiting for us", answered: "Answered", closed: "Closed" };
+// A member sees their open ticket as waiting for a reply; the desk sees
+// it as waiting for us.
+const STATUS = { open: "Waiting for a reply", answered: "Answered", closed: "Closed" };
+const DESK_STATUS = { ...STATUS, open: "Waiting for us" };
 const ORDER_STATUS = {
   awaiting_payment: "Awaiting payment",
   paid: "Paid",
@@ -554,7 +558,7 @@ const unreadCount = async () => {
     document.title = (desk ? `(${digits(desk)}) ` : "") + t("Customer portal · SauFox Entertainment");
   }
 };
-const badge = (status) => h(`span.badge.badge--${status}`, t(STATUS[status]));
+const badge = (status, desk) => h(`span.badge.badge--${status}`, t((desk ? DESK_STATUS : STATUS)[status]));
 const orderTitle = (o) =>
   o.plan_id ? t("{name} plan ({days} days)", { name: t(PLAN_NAMES[o.plan_id] || o.plan_id), days: o.plan_days || 30 }) : o.title;
 
@@ -639,7 +643,7 @@ views.tickets = async (view) => {
     "div.chips",
     [
       ["all", "All"],
-      ["open", "Waiting for us"],
+      ["open", "Waiting for a reply"],
       ["answered", "Answered"],
       ["closed", "Closed"],
     ].map(([f, label]) =>
@@ -912,7 +916,7 @@ const chat = (root, ticket, { staffSide, onChange }) => {
         "div.chat__title",
         who,
         h("p.chat__subject", h("b", `#${digits(current.number)}`), " ", h("span", { dir: "auto", translate: "no" }, current.subject)),
-        h("p.chat__meta", badge(current.status), h("span", t(TOPICS[current.category] || current.category)))
+        h("p.chat__meta", badge(current.status, staffSide), h("span", t(TOPICS[current.category] || current.category)))
       ),
       toggle
     );
