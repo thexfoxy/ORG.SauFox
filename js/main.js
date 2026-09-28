@@ -611,6 +611,105 @@ const fetchProfile = async (user) => {
 })();
 
 // Section 1 — Header: logotype blur follows the mouse (desktop only).
+// Header backdrop (WebGL): slow smoke in the site's dark silver with faint
+// orange embers drifting through it, and a soft warm light under the
+// mouse. Drawn at half resolution and ~30 fps, paused while the tab is
+// hidden; one still frame for reduced motion; nothing without WebGL.
+(function headerShader() {
+  const header = document.querySelector(".site-header");
+  if (!header) return;
+  const canvas = document.createElement("canvas");
+  canvas.className = "site-header__shader";
+  canvas.setAttribute("aria-hidden", "true");
+  const gl = canvas.getContext("webgl", { alpha: false, antialias: false, powerPreference: "low-power" });
+  if (!gl) return;
+  const VERT = "attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}";
+  const FRAG = `precision mediump float;
+uniform vec2 r;uniform float t;uniform vec3 m;
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+vec2(1.,1.)),f.x),f.y);}
+float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
+void main(){
+vec2 uv=gl_FragCoord.xy/r;
+vec2 p=vec2(gl_FragCoord.x/r.y,uv.y)*1.4;
+float T=t*.035;
+vec2 q=vec2(fbm(p+vec2(T,0.)),fbm(p+vec2(-T,T*.5)+5.2));
+float s=fbm(p*1.1+2.2*q+vec2(T*1.6,0.));
+vec3 c=vec3(.059,.059,.067);
+c+=vec3(.78,.79,.84)*smoothstep(.42,.95,s)*.11;
+float e=smoothstep(.64,.95,fbm(p*2.6+q*3.-vec2(0.,T*7.)));
+c+=vec3(1.,.48,.1)*e*.2*(1.-uv.y*.5);
+vec2 d=(gl_FragCoord.xy-m.xy)/r.y;
+c+=vec3(1.,.62,.32)*exp(-dot(d,d)*2.)*.09*m.z;
+gl_FragColor=vec4(c,1.);}`;
+  const shader = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+  };
+  const vs = shader(gl.VERTEX_SHADER, VERT);
+  const fs = shader(gl.FRAGMENT_SHADER, FRAG);
+  if (!vs || !fs) return;
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const a = gl.getAttribLocation(prog, "a");
+  gl.enableVertexAttribArray(a);
+  gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+  const uR = gl.getUniformLocation(prog, "r");
+  const uT = gl.getUniformLocation(prog, "t");
+  const uM = gl.getUniformLocation(prog, "m");
+  header.prepend(canvas);
+
+  const SCALE = 0.5;
+  const size = () => {
+    canvas.width = Math.max(1, Math.round(header.clientWidth * SCALE));
+    canvas.height = Math.max(1, Math.round(header.clientHeight * SCALE));
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  };
+  // The mouse light eases in and out.
+  const mouse = { x: 0, y: 0, on: 0, want: 0 };
+  header.addEventListener("pointermove", (event) => {
+    const box = header.getBoundingClientRect();
+    mouse.x = (event.clientX - box.left) * SCALE;
+    mouse.y = (box.bottom - event.clientY) * SCALE;
+    mouse.want = 1;
+  });
+  header.addEventListener("pointerleave", () => (mouse.want = 0));
+
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const start = performance.now() - Math.random() * 60000;
+  let last = 0;
+  let frame = 0;
+  const draw = (now) => {
+    frame = still ? 0 : requestAnimationFrame(draw);
+    if (now - last < 33) return;
+    last = now;
+    mouse.on += (mouse.want - mouse.on) * 0.08;
+    gl.uniform2f(uR, canvas.width, canvas.height);
+    gl.uniform1f(uT, (now - start) / 1000);
+    gl.uniform3f(uM, mouse.x, mouse.y, mouse.on);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  };
+  size();
+  new ResizeObserver(() => {
+    size();
+    if (still) draw(performance.now() + 1000);
+  }).observe(header);
+  document.addEventListener("visibilitychange", () => {
+    cancelAnimationFrame(frame);
+    if (!document.hidden && !still) frame = requestAnimationFrame(draw);
+  });
+  frame = requestAnimationFrame(draw);
+})();
+
 (function brandBlur() {
   const brand = document.querySelector(".brand");
   if (!brand || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
