@@ -191,14 +191,20 @@ a {
   display: none;
 }
 
-/* ---------- Brand (script logotype) ---------- */
+/* ---------- Brand (the gold SAUFOX wordmark, assets/wordmark.webp) ---------- */
 
 .brand {
   grid-area: brand;
-  font: 400 38px/1 var(--font-logo);
-  white-space: nowrap;
+  display: block;
+  line-height: 0;
   text-decoration: none;
-  padding-top: 4px; /* optical centering for the script's tall caps */
+}
+
+.brand img {
+  display: block;
+  width: auto;
+  height: 46px;
+  filter: drop-shadow(0 2px 10px rgba(230, 184, 74, 0.18));
 }
 
 /* Cursor blur (desktop only): a blurred copy of the logotype sits on top of
@@ -466,8 +472,8 @@ a {
     --header-h: 64px;
   }
 
-  .brand {
-    font-size: 30px;
+  .brand img {
+    height: 32px;
   }
 
   .cta {
@@ -489,16 +495,9 @@ a {
   }
 }
 
-@media (max-width: 480px) {
-  /* The side buttons need the room: the logotype shortens to "SauFox". */
-  .brand__sub {
-    display: none;
-  }
-}
-
 @media (max-width: 420px) {
-  .brand {
-    font-size: 26px;
+  .brand img {
+    height: 28px;
   }
 
   .cta {

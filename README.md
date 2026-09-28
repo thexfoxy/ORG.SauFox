@@ -434,7 +434,7 @@ in a browser can still be captured by a determined visitor.
 Built one section at a time from the hand-drawn sketches.
 
 Home page:
-- [x] 1. Header: script logotype in the centre (on desktop, the part under the
+- [x] 1. Header: the gold SAUFOX wordmark (assets/wordmark.webp, transparent) in the centre (on desktop, the part under the
       mouse softly blurs); the right side depends on the visitor:
       - first visit or no account: "Wanna create an account?"
       - has an account but signed out: "Login"
