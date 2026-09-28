@@ -5368,6 +5368,43 @@ a.hero__panel {
   min-width: 0;
 }
 
+/* A game order's key, on its own row below the order. */
+.admin-order__key {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.admin-order__key.is-delivered {
+  border-color: color-mix(in srgb, var(--green, #57d6a3) 40%, transparent);
+}
+
+.admin-order__key-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.admin-order__key code {
+  font: 700 15px/1 monospace;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.admin-order__key-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .admin-order__main strong {
   overflow: hidden;
   font-weight: 600;

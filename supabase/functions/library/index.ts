@@ -98,9 +98,10 @@ Deno.serve(async (req) => {
       // (user_id, not gifted away) or redeemed (redeemed_by).
       const { data: licenses } = await db
         .from("licenses")
-        .select("user_id, redeemed_by")
+        .select("user_id, redeemed_by, delivered_at")
         .eq("work_id", build.work_id)
         .eq("revoked", false)
+        .not("delivered_at", "is", null)
         .or(`user_id.eq.${user.id},redeemed_by.eq.${user.id}`);
       const owned = (licenses || []).some(
         (l) => l.redeemed_by === user.id || (l.user_id === user.id && !l.redeemed_by),

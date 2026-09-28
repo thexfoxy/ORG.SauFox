@@ -145,15 +145,10 @@ export const placedEmail = (order: Order, payable: boolean) => {
 };
 
 // ---------- To the buyer: payment receipt ----------
-export const paidEmail = (order: Order, released: boolean, planEnds?: string | null, licenseCode?: string | null) => {
+export const paidEmail = (order: Order, released: boolean, planEnds?: string | null, game?: boolean) => {
   const when = order.paid_at || new Date().toISOString();
   const plan = Boolean(order.plan_id);
-  const keyRow = licenseCode
-    ? `<p style="margin:18px 0 0;padding:14px 16px;border:1px solid #2a2a2f;border-radius:10px;background:#151518;">` +
-      `<span style="display:block;font-size:12px;color:#8e8c95;letter-spacing:.08em;">کلید بازی · GAME KEY</span>` +
-      `<span dir="ltr" style="display:block;margin-top:6px;font:600 20px/1.4 monospace;letter-spacing:.12em;color:#ff7a1a;">${esc(licenseCode)}</span>` +
-      `</p>`
-    : "";
+  const keyRow = "";
   const fa =
     hello(order.name, true) +
     `<p style="margin:0;">پرداخت شما انجام شد. این رسید را نگه دارید.</p>` +
@@ -172,8 +167,8 @@ export const paidEmail = (order: Order, released: boolean, planEnds?: string | n
     `<p style="margin:16px 0 0;">${
       plan
         ? `اشتراک شما فعال شد${planEnds ? ` و تا ${whenDayFa(planEnds)} اعتبار دارد` : ""}. تخفیف اشتراک در خریدهای بعدی خودبه‌خود حساب می‌شود.`
-        : licenseCode
-          ? "این کلید یک‌بارمصرف است. آن را در لانچر ساوفاکس وارد کنید تا بازی به کتابخانه‌تان اضافه و دانلود شود. کلید در پروفایل شما هم هست."
+        : game
+          ? "کلید بازی شما به‌زودی از طریق همین ایمیل برایتان فرستاده می‌شود. لطفاً کمی صبر کنید."
           : released
             ? "این اثر حالا در «کتابخانه»ی پروفایل شماست."
             : "این اثر در روز انتشار به «کتابخانه»ی پروفایل شما اضافه می‌شود."
@@ -196,8 +191,8 @@ export const paidEmail = (order: Order, released: boolean, planEnds?: string | n
     `<p style="margin:16px 0 0;">${
       plan
         ? `Your plan is active${planEnds ? ` until ${whenDayEn(planEnds)}` : ""}. Its discount comes off your next purchases by itself.`
-        : licenseCode
-          ? "This key works once. Enter it in the SauFox launcher to add the game to your library and download it. The key is in your profile too."
+        : game
+          ? "Your game key will be sent to this email shortly. Please hold on a little."
           : released
             ? "It&rsquo;s in the Library in your profile now."
             : "It will appear in the Library in your profile on release day."
@@ -213,6 +208,37 @@ export const paidEmail = (order: Order, released: boolean, planEnds?: string | n
         : button(`${SITE}/profile.html#library`, "کتابخانه‌ی من", "My library"),
       `برای بازگشت وجه، طبق <a href="${SITE}/terms.html#${plan ? "subscriptions" : "purchases"}" style="color:#ff7a1a;">قوانین خرید</a>، شماره‌ی سفارش را به همین ایمیل پاسخ دهید.`,
       `For a refund under the <a href="${SITE}/terms.html#${plan ? "subscriptions" : "purchases"}" style="color:#ff7a1a;">terms of purchase</a>, reply to this email with your order number.`
+    ),
+  };
+};
+
+// ---------- To the buyer: here is your game key ----------
+// Sent by the studio from the admin panel (the "Send key" button).
+export const keyEmail = (order: { number: number; title: string; name: string; email: string }, code: string) => {
+  const key =
+    `<p style="margin:18px 0 0;padding:16px;border:1px solid #2a2a2f;border-radius:10px;background:#151518;text-align:center;">` +
+    `<span style="display:block;font-size:12px;color:#8e8c95;letter-spacing:.12em;">کلید بازی · GAME KEY</span>` +
+    `<span dir="ltr" style="display:block;margin-top:8px;font:700 22px/1.4 monospace;letter-spacing:.14em;color:#ff7a1a;">${esc(code)}</span>` +
+    `</p>`;
+  const fa =
+    hello(order.name, true) +
+    `<p style="margin:0;">کلید بازی «<span dir="ltr">${esc(order.title)}</span>» شما آماده است.</p>` +
+    key +
+    `<p style="margin:16px 0 0;">این کلید یک‌بارمصرف است. لانچر ساوفاکس را باز کنید، وارد حسابتان شوید و این کلید را وارد کنید تا بازی به کتابخانه‌تان اضافه و از سرور دانلود شود. کلید در پروفایل شما هم هست.</p>`;
+  const en =
+    hello(order.name, false) +
+    `<p style="margin:0;">Your key for &ldquo;${esc(order.title)}&rdquo; is ready.</p>` +
+    key +
+    `<p style="margin:16px 0 0;">This key works once. Open the SauFox launcher, sign in, and enter this key to add the game to your library and download it from our server. The key is in your profile too.</p>`;
+  return {
+    to: order.email,
+    subject: `کلید بازی سفارش ${faNum(order.number)} ساوفاکس | Your SauFox game key, order ${order.number}`,
+    html: page(
+      fa,
+      en,
+      button(`${SITE}/profile.html#library`, "کتابخانه‌ی من", "My library"),
+      "کلید خود را با کسی به اشتراک نگذارید.",
+      "Keep your key to yourself."
     ),
   };
 };

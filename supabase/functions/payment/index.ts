@@ -38,7 +38,7 @@
 // from the database (public.zarinpal_call), whose IP stays the same; the
 // admin panel shows it.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { alertEmail, mailReady, paidEmail, placedEmail, planEndingEmail, send, stageEmail, STUDIO, studioEmail, ticketReplyEmail, ticketStudioEmail, type Order } from "./mail.ts";
+import { alertEmail, keyEmail, mailReady, paidEmail, placedEmail, planEndingEmail, send, stageEmail, STUDIO, studioEmail, ticketReplyEmail, ticketStudioEmail, type Order } from "./mail.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
@@ -120,10 +120,11 @@ const emailOnce = async (orderId: string, kind: Stage) => {
       const { data: sub } = await db.from("subscriptions").select("ends_at").eq("order_id", order.id).maybeSingle();
       await send(paidEmail(order, true, sub?.ends_at));
     } else if (kind === "paid") {
-      const { data: work } = await db.from("works").select("status").eq("id", order.work_id).maybeSingle();
-      // The game's license key, so the buyer can add it in the launcher.
-      const { data: lic } = await db.from("licenses").select("code").eq("order_id", order.id).maybeSingle();
-      await send(paidEmail(order, work?.status === "released", null, lic?.code));
+      const { data: work } = await db.from("works").select("status, kind").eq("id", order.work_id).maybeSingle();
+      // A game's key is delivered by hand later, so the receipt only says it's
+      // coming by email; other works go straight to the buyer's library.
+      const game = (work?.kind || "").toLowerCase() === "game";
+      await send(paidEmail(order, work?.status === "released", null, game));
     } else await send(stageEmail(order, kind));
   } catch (e) {
     const message = (e as Error).message;
@@ -282,6 +283,36 @@ Deno.serve(async (req) => {
     return reply({ sent: true });
   }
 
+  // ---------- Send a game key to the buyer (admin panel) ----------
+  // Emails the order's license key to the buyer and marks it delivered, so
+  // the game then appears in their library and launcher.
+  if (body.action === "send-key") {
+    const user = await caller(req);
+    if (!user) return reply({ error: "signed_out" }, 401);
+    if (!(await isAdmin(user.id))) return reply({ error: "forbidden" }, 403);
+    if (!/^[0-9a-f-]{36}$/i.test(String(body.order_id || ""))) return reply({ error: "bad_request" }, 400);
+    if (!mailReady()) return reply({ error: "no_password" });
+    const { data: order } = await db
+      .from("orders")
+      .select("id, number, title, name, email, work_id")
+      .eq("id", body.order_id)
+      .maybeSingle();
+    if (!order) return reply({ error: "not_found" }, 404);
+    const { data: lic } = await db
+      .from("licenses")
+      .select("id, code, revoked")
+      .eq("order_id", order.id)
+      .maybeSingle();
+    if (!lic || lic.revoked) return reply({ error: "no_license" }, 404);
+    try {
+      await send(keyEmail(order, lic.code));
+    } catch (e) {
+      return reply({ error: "send_failed", detail: (e as Error).message.slice(0, 200) });
+    }
+    await db.from("licenses").update({ delivered_at: new Date().toISOString() }).eq("id", lic.id);
+    return reply({ sent: true });
+  }
+
   // ---------- Test email (admin panel) ----------
   if (body.action === "email-test") {
     const user = await caller(req);
@@ -294,7 +325,7 @@ Deno.serve(async (req) => {
       phone: "09000000000", ref_id: "000000000000", card_pan: "6037-99**-****-0000", paid_at: now, created_at: now, test: true,
     };
     try {
-      const { via, resendError } = await send(paidEmail(sample, true, null, "SFOX-TEST-KEY0-0000-0000"));
+      const { via, resendError } = await send(paidEmail(sample, true, null, true));
       return reply({ ok: true, to: STUDIO, via, resend_error: resendError?.slice(0, 200) });
     } catch (e) {
       return reply({ error: "send_failed", detail: (e as Error).message.slice(0, 200) });

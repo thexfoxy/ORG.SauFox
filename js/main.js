@@ -5727,7 +5727,7 @@ const ticketThread = async (list, messages, when) => {
   };
   const orderList = page.querySelector(".admin-orders__list");
   const noOrders = page.querySelector(".admin-orders__empty");
-  const orderRow = (order) => {
+  const orderRow = (order, license) => {
     const row = make("li", "admin-order");
     const main = make("div", "admin-order__main");
     main.append(
@@ -5811,30 +5811,86 @@ const ticketThread = async (list, messages, when) => {
       row.classList.add("has-mail-problem");
     }
     row.append(main, buyer, side);
+
+    // A game order carries its one-time key. Show it, and let the studio
+    // send it to the buyer (which also delivers it: the game then appears in
+    // the buyer's library and launcher).
+    if (license && gameIds.has(order.work_id) && order.status !== "cancelled") {
+      const box = make("div", "admin-order__key");
+      const code = make("code", "selectable", license.code);
+      code.dir = "ltr";
+      const copy = make("button", "admin-button", "Copy");
+      copy.type = "button";
+      copy.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(license.code);
+          copy.textContent = "Copied";
+          setTimeout(() => (copy.textContent = "Copy"), 1400);
+        } catch (e) {}
+      });
+      const keyNote = make("span", "admin-order__key-note");
+      const sendBtn = make("button", "admin-button admin-button--primary", license.delivered_at ? "Resend key" : "Send key to buyer");
+      sendBtn.type = "button";
+      if (license.delivered_at) {
+        box.classList.add("is-delivered");
+        keyNote.textContent = `Sent ${whenText(license.delivered_at)}`;
+      }
+      sendBtn.addEventListener("click", async () => {
+        sendBtn.disabled = true;
+        keyNote.textContent = "Sending…";
+        const answer = await payment({ action: "send-key", order_id: order.id }, await verifiedSession());
+        sendBtn.disabled = false;
+        if (answer.sent) {
+          license.delivered_at = new Date().toISOString();
+          box.classList.add("is-delivered");
+          sendBtn.textContent = "Resend key";
+          keyNote.textContent = `Sent to ${order.email}`;
+        } else {
+          keyNote.textContent =
+            answer.error === "no_password"
+              ? "Email isn't set up yet (see the test email above)."
+              : answer.error === "no_license"
+                ? "No key for this order."
+                : answer.error === "send_failed"
+                  ? "The email didn't go out. Try again."
+                  : "Couldn't send. Try again.";
+        }
+      });
+      box.append(make("span", "admin-order__key-label", "Game key"), code, copy, sendBtn, keyNote);
+      row.append(box);
+    }
     return row;
   };
   const EMAIL_NAMES = { placed: "order received", paid: "receipt", processing: "in progress", completed: "completed" };
   const mailSummary = page.querySelector('[data-slot="mail-problems"]');
-  const loadOrders = () =>
-    account
-      .from("orders")
-      .select("id, number, title, amount_irr, name, email, phone, status, created_at, ref_id, card_pan, test, email_pending, email_error, email_tries, coupon_code, discount_irr, member_discount_irr")
-      .order("created_at", { ascending: false })
-      .limit(200)
-      .then(({ data, error }) => {
-        if (error) {
-          noOrders.textContent = "Orders couldn't be loaded. Reload the page to try again.";
-          noOrders.hidden = false;
-          return;
-        }
-        orderList.replaceChildren(...data.map(orderRow));
-        noOrders.hidden = data.length > 0;
-        const stuck = data.filter((order) => order.email_pending && order.email_pending.length).length;
-        mailSummary.textContent = stuck
-          ? `${stuck} order${stuck === 1 ? " has" : "s have"} emails that didn't go out (marked below). They're retried every 15 minutes.`
-          : "";
-        mailSummary.hidden = !stuck;
-      });
+  // Which works are games (games' keys are sent by hand).
+  let gameIds = new Set();
+  const loadOrders = async () => {
+    const [{ data, error }, { data: licenses }, { data: works }] = await Promise.all([
+      account
+        .from("orders")
+        .select("id, number, title, amount_irr, name, email, phone, status, created_at, ref_id, card_pan, test, email_pending, email_error, email_tries, coupon_code, discount_irr, member_discount_irr, work_id, plan_id")
+        .order("created_at", { ascending: false })
+        .limit(200),
+      account.from("licenses").select("id, order_id, code, delivered_at, work_id"),
+      account.from("works").select("id, kind"),
+    ]);
+    gameIds = new Set((works || []).filter((w) => (w.kind || "").toLowerCase() === "game").map((w) => w.id));
+    if (error) {
+      noOrders.textContent = "Orders couldn't be loaded. Reload the page to try again.";
+      noOrders.hidden = false;
+      return;
+    }
+    const keyOf = {};
+    (licenses || []).forEach((l) => l.order_id && (keyOf[l.order_id] = l));
+    orderList.replaceChildren(...data.map((order) => orderRow(order, keyOf[order.id])));
+    noOrders.hidden = data.length > 0;
+    const stuck = data.filter((order) => order.email_pending && order.email_pending.length).length;
+    mailSummary.textContent = stuck
+      ? `${stuck} order${stuck === 1 ? " has" : "s have"} emails that didn't go out (marked below). They're retried every 15 minutes.`
+      : "";
+    mailSummary.hidden = !stuck;
+  };
   loadOrders();
 
   // ---------- Discount codes ----------

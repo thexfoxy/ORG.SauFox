@@ -480,6 +480,15 @@ nobody can log in.
 - `license_devices` (per-computer, a device hash and last-seen) is ready for
   the launcher to activate a key on a limited number of machines
   (`max_devices`, default 3); the launcher itself is a separate repo.
+- Delivery: a game's key is held (`delivered_at` null) until the studio
+  sends it. On payment the receipt only says the key is coming by email
+  (`paidEmail` with `game`); the game stays out of the buyer's library
+  (`my_licenses` and the launcher download both require `delivered_at`).
+  In the admin panel each game order shows its key with a "Send key to
+  buyer" button: `payment` `send-key` emails the key (`keyEmail`) and sets
+  `delivered_at`, so the game then appears for the buyer. `order_license_admin`
+  and `mark_license_delivered` back this; non-game works are delivered at
+  once, as before. A redeemed (gifted) key is delivered on redemption.
 
 ## Library: files and the launcher
 
