@@ -3446,6 +3446,45 @@ a.hero__panel {
   background: transparent;
 }
 
+/* Shown when eNamad's image won't load (js/main.js trustSeals). */
+.seal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+  line-height: 1.2;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.site-footer__seals a:hover .seal-badge {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.seal-badge svg {
+  width: 30px;
+  height: 30px;
+  color: #3ec28f;
+}
+
+.seal-badge__text {
+  display: grid;
+  gap: 3px;
+}
+
+.seal-badge__text strong {
+  font-size: 14px;
+}
+
+.seal-badge__text small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
 .site-footer__seals img {
   width: auto;
   height: 84px;

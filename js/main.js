@@ -767,6 +767,61 @@ gl_FragColor=vec4(c,1.);}`;
   frame = requestAnimationFrame(draw);
 })();
 
+// The eNamad seal loads from eNamad's own server, which is often slow or
+// out of reach (outside Iran, behind a VPN). A failed image is tried again
+// twice; if it still won't come, a plain badge takes its place, linking to
+// the same verification page, so the spot is never empty.
+(function trustSeals() {
+  document.querySelectorAll(".site-footer__seals a").forEach((link) => {
+    const img = link.querySelector("img");
+    if (!img) return;
+    const src = img.getAttribute("src");
+    let tries = 0;
+    const fallback = () => {
+      if (link.querySelector(".seal-badge")) return;
+      img.hidden = true;
+      const badge = document.createElement("span");
+      badge.className = "seal-badge";
+      badge.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5l8-3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 12.2l2.4 2.4 4.6-4.9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const text = document.createElement("span");
+      text.className = "seal-badge__text";
+      const name = document.createElement("strong");
+      name.textContent = t("eNamad");
+      const note = document.createElement("small");
+      note.textContent = t("Trust seal · Verify");
+      text.append(name, note);
+      badge.append(text);
+      link.append(badge);
+      link.setAttribute("aria-label", t("eNamad trust seal"));
+    };
+    const failed = () => {
+      if (tries >= 2) return fallback();
+      tries += 1;
+      setTimeout(() => (img.src = `${src}&retry=${tries}`), 2500 * tries);
+    };
+    img.addEventListener("error", failed);
+    img.addEventListener("load", () => {
+      // eNamad sometimes answers with an empty 1×1 picture instead of an error.
+      if (img.naturalWidth < 20) failed();
+    });
+    // Already finished before this script ran.
+    if (img.complete && (img.naturalWidth < 20)) failed();
+    // Still nothing after 12 seconds: show the badge (the image, if it
+    // turns up later, takes the spot back).
+    setTimeout(() => {
+      if (!img.complete || img.naturalWidth < 20) fallback();
+    }, 12000);
+    img.addEventListener("load", () => {
+      if (img.naturalWidth >= 20) {
+        img.hidden = false;
+        const badge = link.querySelector(".seal-badge");
+        if (badge) badge.remove();
+      }
+    });
+  });
+})();
+
 (function brandBlur() {
   const brand = document.querySelector(".brand");
   if (!brand || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
