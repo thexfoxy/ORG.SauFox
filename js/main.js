@@ -53,25 +53,14 @@ const local = {
 // visitor is in the middle of something (typed text, an open box, a playing
 // video) and never happens on sign-in, checkout, admin or launcher pages.
 (function freshPages() {
-  const AWAY = 8000;
-  const SKIP = /^\/(login|checkout|admin|launcher|status)(\.html)?$/;
-  const busy = () =>
-    [...document.querySelectorAll("input, textarea")].some(
-      (el) => !["hidden", "checkbox", "radio", "file", "submit", "button"].includes(el.type) && el.value !== el.defaultValue
-    ) ||
-    Boolean(document.querySelector("dialog[open]")) ||
-    [...document.querySelectorAll("video, audio")].some((media) => !media.paused);
-  const reload = () => {
+  // Only when the page comes back from the browser's back/forward cache (the
+  // Back button), so a returning visitor sees fresh data and starts at the
+  // top. Switching to another browser tab and back does NOT reload — that
+  // was more annoying than helpful.
+  window.addEventListener("pageshow", (event) => {
+    if (!event.persisted) return;
     history.replaceState(history.state, "", location.pathname + location.search);
     location.reload();
-  };
-  window.addEventListener("pageshow", (event) => event.persisted && reload());
-  let hiddenAt = 0;
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) return (hiddenAt = Date.now());
-    const away = hiddenAt && Date.now() - hiddenAt >= AWAY;
-    hiddenAt = 0;
-    if (away && !SKIP.test(location.pathname) && !busy()) reload();
   });
 })();
 
