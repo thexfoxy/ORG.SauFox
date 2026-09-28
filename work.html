@@ -66,7 +66,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=82">
+  <link rel="stylesheet" href="css/style.css?v=83">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -183,23 +183,10 @@
 
       <form class="review-form" novalidate hidden>
         <h3 class="review-form__title">Your review</h3>
-        <div class="star-input" role="radiogroup" aria-label="Your rating">
-          <button type="button" data-star="1" aria-label="1/10">★</button>
-          <button type="button" data-star="2" aria-label="2/10">★</button>
-          <button type="button" data-star="3" aria-label="3/10">★</button>
-          <button type="button" data-star="4" aria-label="4/10">★</button>
-          <button type="button" data-star="5" aria-label="5/10">★</button>
-          <button type="button" data-star="6" aria-label="6/10">★</button>
-          <button type="button" data-star="7" aria-label="7/10">★</button>
-          <button type="button" data-star="8" aria-label="8/10">★</button>
-          <button type="button" data-star="9" aria-label="9/10">★</button>
-          <button type="button" data-star="10" aria-label="10/10">★</button>
-        </div>
-        <textarea name="body" rows="4" maxlength="2000" autocomplete="off" placeholder="What did you think? (optional)"></textarea>
+        <button class="review-form__rate" type="button" hidden></button>
+        <textarea name="body" rows="4" maxlength="2000" autocomplete="off" placeholder="What did you think?"></textarea>
         <div class="review-form__foot">
           <p class="auth__message" role="status" aria-live="polite"></p>
-          <button class="review-form__delete" type="button" hidden>Delete my review</button>
-          <button class="review-form__cancel" type="button" hidden>Cancel</button>
           <button class="review-form__submit" type="submit">Post review</button>
         </div>
       </form>
@@ -289,8 +276,8 @@
     </button>
   </div>
 
-  <script src="js/vendor/supabase.js?v=82" defer></script>
-  <script src="js/fa.js?v=82" defer></script>
-  <script src="js/main.js?v=82" defer></script>
+  <script src="js/vendor/supabase.js?v=83" defer></script>
+  <script src="js/fa.js?v=83" defer></script>
+  <script src="js/main.js?v=83" defer></script>
 </body>
 </html>

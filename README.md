@@ -363,7 +363,8 @@ nobody can log in.
 
 ## Ratings and reviews
 
-- `reviews` table: one per member per work, 1-10 stars (as on IMDb) and an optional
+- `reviews` table: any number of comments per member per work, but one rated
+  row (unique index `reviews_one_rating`), 1-10 stars (as on IMDb) and an optional
   comment (up to 2000 characters). Before a work is released it takes
   comments only; the database drops any stars. The trigger
   `private.review_defaults` fills in the author's name and photo from their
@@ -379,9 +380,12 @@ nobody can log in.
   Comments (User reviews once out), shows how many there are and scrolls
   down to them.
 - Work page → Ratings & reviews (Comments before release): the average,
-  a bar for each of the ten stars, the member's own review (the form
-  starts empty and hides once they've posted; Edit on their review brings it
-  back filled in, with Delete and Cancel), and the list, 10 at a time. Scores show as ★ 8.4/10; cards show
+  a bar for each of the ten stars, the comment box (always there and
+  empty; members can post as many comments as they like, at most 20 per work
+  and one every 15 seconds, enforced by `private.review_limits`; on released
+  works it also shows their rating), and the list with the member's own
+  comments first (Edit opens the text in place, with Save, Cancel and
+  Delete); each comment shows its author's rating, and the list, 10 at a time. Scores show as ★ 8.4/10; cards show
   the average; the home page gets a "Top rated" row once two works have
   ratings (a work with few ratings is pulled towards 6).
 - Admin panel → Reviews and comments: hide or show, reply, delete.

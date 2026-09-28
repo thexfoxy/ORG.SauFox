@@ -3246,13 +3246,10 @@ const scoreOf = (score, className = "score", whole = false) => {
   };
 
   const form = section.querySelector(".review-form");
-  const starButtons = [...form.querySelectorAll("[data-star]")];
   const bodyInput = form.querySelector("textarea");
   const message = form.querySelector(".auth__message");
   const submit = form.querySelector(".review-form__submit");
-  const remove = form.querySelector(".review-form__delete");
-  const cancel = form.querySelector(".review-form__cancel");
-  const REMOVE_LABEL = released ? "Delete my review" : "Delete my comment";
+  const formRate = form.querySelector(".review-form__rate");
   const list = section.querySelector(".reviews__list");
   const empty = section.querySelector(".reviews__empty");
   const more = section.querySelector(".reviews__more");
@@ -3263,9 +3260,8 @@ const scoreOf = (score, className = "score", whole = false) => {
 
   section.querySelector("#reviews-title").textContent = released ? "Ratings & reviews" : "Comments";
   form.querySelector(".review-form__title").textContent = released ? "Your review" : "Your comment";
-  form.querySelector(".star-input").hidden = !released;
   // (Text boxes are left out of the page translation, so this one's done here.)
-  bodyInput.placeholder = t(released ? "What did you think? (optional)" : "Your thoughts or questions about it…");
+  bodyInput.placeholder = t(released ? "What did you think?" : "Your thoughts or questions about it…");
   empty.textContent = released ? "No reviews yet. Be the first." : "No comments yet. Be the first.";
   section.querySelector(".reviews__login span").textContent = released ? "to rate and review." : "to comment.";
   section.hidden = false;
@@ -3353,6 +3349,8 @@ const scoreOf = (score, className = "score", whole = false) => {
     dialog.addEventListener("close", () => dialog.remove());
     const saved = (data) => {
       own = data;
+      if (data && data.rating) ratingOf.set(session.user.id, data.rating);
+      else ratingOf.delete(session.user.id);
       fillForm();
       showMine();
       loadPage(true);
@@ -3479,6 +3477,9 @@ const scoreOf = (score, className = "score", whole = false) => {
     if (review.rating) head.append(scoreOf(review.rating, "score score--small", true));
     head.append(make("time", "review__date", dateText(review.created_at)));
     main.append(head);
+    // An author's comment shows their rating (kept on its own row) too.
+    const stars = review.rating || ratingOf.get(review.user_id);
+    if (!review.rating && stars) head.insertBefore(scoreOf(stars, "score score--small", true), head.querySelector(".review__date"));
     if (review.body) {
       const text = make("p", "review__body", review.body);
       text.dir = "auto";
@@ -3492,18 +3493,13 @@ const scoreOf = (score, className = "score", whole = false) => {
       main.append(reply);
     }
     if (mine && review.hidden) main.append(make("p", "review__note", "The studio has hidden this from others."));
-    // Their own: "Edit" opens it in the form above (which is otherwise
-    // empty, or hidden once they've posted).
+    // Their own: Edit turns the text into a box right here, with Save,
+    // Cancel and Delete (pressed twice).
     if (mine) {
       const actions = make("div", "review__actions");
       const edit = make("button", "review__action", "Edit");
       edit.type = "button";
-      edit.addEventListener("click", () => {
-        editing = true;
-        fillForm();
-        form.scrollIntoView({ block: "center", behavior: "smooth" });
-        bodyInput.focus({ preventScroll: true });
-      });
+      edit.addEventListener("click", () => editInPlace(review, main, actions));
       actions.append(edit);
       main.append(actions);
     }
@@ -3512,6 +3508,70 @@ const scoreOf = (score, className = "score", whole = false) => {
     if (!mine) main.append(reviewActions(review));
     item.append(avatar, main);
     return item;
+  };
+
+  const editInPlace = (review, main, actions) => {
+    const text = main.querySelector(".review__body");
+    const box = make("form", "review-edit");
+    box.noValidate = true;
+    const input = make("textarea");
+    input.rows = 3;
+    input.maxLength = 2000;
+    input.dir = "auto";
+    input.autocomplete = "off";
+    input.value = review.body || "";
+    const note = make("p", "auth__message");
+    note.setAttribute("role", "status");
+    const del = make("button", "review-form__delete", "Delete");
+    del.type = "button";
+    const back = make("button", "review-form__cancel", "Cancel");
+    back.type = "button";
+    const save = make("button", "review-form__submit", "Save changes");
+    save.type = "submit";
+    const foot = make("div", "review-form__foot");
+    foot.append(note, del, back, save);
+    box.append(input, foot);
+    if (text) text.replaceWith(box);
+    else main.querySelector(".review__head").after(box);
+    actions.hidden = true;
+    input.focus();
+    const close = () => {
+      box.replaceWith(text || "");
+      actions.hidden = false;
+    };
+    back.addEventListener("click", close);
+    box.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const body = input.value.trim();
+      if (!body && !review.rating) return (note.textContent = t("Write something, or delete it."));
+      save.disabled = true;
+      const { error } = await account.from("reviews").update({ body: body || null }).eq("id", review.id);
+      save.disabled = false;
+      if (error) return (note.textContent = t("Not saved. Check your connection and try again."));
+      loadPage(true);
+    });
+    del.addEventListener("click", async () => {
+      // Press twice: the first press asks.
+      if (!del.dataset.armed) {
+        del.dataset.armed = "1";
+        del.textContent = t("Tap again to delete");
+        setTimeout(() => {
+          delete del.dataset.armed;
+          del.textContent = t("Delete");
+        }, 4000);
+        return;
+      }
+      del.disabled = true;
+      // The row with their rating keeps the stars and loses only the text.
+      const { error } = review.rating
+        ? await account.from("reviews").update({ body: null }).eq("id", review.id)
+        : await account.from("reviews").delete().eq("id", review.id);
+      del.disabled = false;
+      if (error) return (note.textContent = t("Not deleted. Try again."));
+      if (own && own.id === review.id) own.body = null;
+      loadPage(true);
+      showSummary();
+    });
   };
 
   // ---------- "Helpful" and "Report" under others' reviews ----------
@@ -3614,23 +3674,45 @@ const scoreOf = (score, className = "score", whole = false) => {
 
   const FIELDS = "id, user_id, rating, body, author_name, author_avatar, owner, hidden, reply, created_at, helpful_count";
   let shown = 0;
+  // Their rating (the one row with stars); comments are rows without.
   let own = null;
   let session = null;
+  // Authors' ratings, to show beside their comments.
+  const ratingOf = new Map();
+  const learnRatings = async (rows) => {
+    const ids = [...new Set(rows.map((r) => r.user_id))].filter((id) => !ratingOf.has(id));
+    if (!released || !ids.length) return;
+    const { data } = await account.from("reviews").select("user_id, rating").eq("work_id", work.id).in("user_id", ids).not("rating", "is", null);
+    (data || []).forEach((r) => ratingOf.set(r.user_id, r.rating));
+  };
   // Newest first, or most helpful first.
   const sortPick = section.querySelector('[data-slot="sort"]');
   sortPick.addEventListener("change", () => loadPage(true));
+  // Written comments only (a bare rating counts in the summary instead):
+  // the member's own first, then everyone else's.
   const loadPage = async (reset) => {
+    let mine = [];
     if (reset) {
       shown = 0;
-      list.replaceChildren();
-      if (own) list.append(reviewItem(own, true));
+      if (session) {
+        const { data } = await account
+          .from("reviews")
+          .select(FIELDS)
+          .eq("work_id", work.id)
+          .eq("user_id", session.user.id)
+          .not("body", "is", null)
+          .order("created_at", { ascending: false });
+        mine = data || [];
+      }
     }
-    let query = account.from("reviews").select(FIELDS).eq("work_id", work.id).eq("hidden", false);
+    let query = account.from("reviews").select(FIELDS).eq("work_id", work.id).eq("hidden", false).not("body", "is", null);
     if (session) query = query.neq("user_id", session.user.id);
     if (sortPick.value === "helpful") query = query.order("helpful_count", { ascending: false });
     const { data, error } = await query.order("created_at", { ascending: false }).range(shown, shown + PAGE);
     if (error) return;
     const page = data.slice(0, PAGE);
+    await learnRatings([...mine, ...page]);
+    if (reset) list.replaceChildren(...mine.map((r) => reviewItem(r, true)));
     list.append(...page.map((r) => reviewItem(r, false)));
     shown += page.length;
     more.hidden = data.length <= PAGE;
@@ -3639,45 +3721,22 @@ const scoreOf = (score, className = "score", whole = false) => {
   };
   more.addEventListener("click", () => loadPage(false));
 
-  // ---------- The member's own review ----------
-  let rating = 0;
-  const showRating = (value) =>
-    starButtons.forEach((b) => {
-      const on = Number(b.dataset.star) <= value;
-      b.classList.toggle("is-on", on);
-      b.setAttribute("aria-checked", String(Number(b.dataset.star) === rating));
-    });
-  starButtons.forEach((button) => {
-    button.setAttribute("role", "radio");
-    button.addEventListener("click", () => {
-      rating = Number(button.dataset.star);
-      showRating(rating);
-    });
-    button.addEventListener("mouseenter", () => showRating(Number(button.dataset.star)));
-    button.addEventListener("mouseleave", () => showRating(rating));
-  });
-  // The form starts empty. Once they've posted it goes away (one review
-  // each), and comes back holding their review only when they press Edit.
-  let editing = false;
+  // ---------- The form: always there, always empty ----------
+  // Each post is a new comment. On a released work the form also shows
+  // their rating, which opens the ten-star box.
   const fillForm = () => {
-    if (!own) editing = false;
-    form.hidden = !session || (Boolean(own) && !editing);
-    rating = editing ? own.rating || 0 : 0;
-    showRating(rating);
-    bodyInput.value = editing ? own.body || "" : "";
-    remove.hidden = !editing;
-    cancel.hidden = !editing;
-    remove.textContent = REMOVE_LABEL;
-    form.querySelector(".review-form__title").textContent = editing
-      ? released ? "Edit your review" : "Edit your comment"
-      : released ? "Your review" : "Your comment";
-    submit.textContent = editing ? "Save changes" : released ? "Post review" : "Post comment";
+    form.hidden = !session;
+    bodyInput.value = "";
+    submit.textContent = released ? "Post review" : "Post comment";
+    formRate.hidden = !released;
+    if (!released) return;
+    const value = own && own.rating;
+    formRate.replaceChildren(
+      make("span", "", value ? "Your rating" : "Rate it too"),
+      value ? scoreOf(value, "score score--small", true) : make("span", "stars stars--empty", "☆")
+    );
   };
-  cancel.addEventListener("click", () => {
-    editing = false;
-    say("");
-    fillForm();
-  });
+  formRate.addEventListener("click", () => rateDialog());
 
   session = await verifiedSession();
   if (!session) {
@@ -3689,7 +3748,13 @@ const scoreOf = (score, className = "score", whole = false) => {
       location.href = "login.html";
     });
   } else {
-    const { data } = await account.from("reviews").select(FIELDS).eq("work_id", work.id).eq("user_id", session.user.id).maybeSingle();
+    const { data } = await account
+      .from("reviews")
+      .select(FIELDS)
+      .eq("work_id", work.id)
+      .eq("user_id", session.user.id)
+      .not("rating", "is", null)
+      .maybeSingle();
     own = data || null;
     // Which reviews they've already marked helpful or reported.
     const [{ data: votes }, { data: reports }] = await Promise.all([
@@ -3704,48 +3769,25 @@ const scoreOf = (score, className = "score", whole = false) => {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const body = bodyInput.value.trim();
-    if (released && !rating) return say("Choose from 1 to 10 stars.");
-    if (!released && !body) {
+    if (!body) {
       bodyInput.focus();
-      return say("Write your comment first.");
+      return say(released ? "Write your review first." : "Write your comment first.");
     }
     submit.disabled = true;
     say("Saving…", true);
-    const row = { rating: released ? rating : null, body: body || null };
-    const { data, error } = own
-      ? await account.from("reviews").update(row).eq("id", own.id).select(FIELDS).single()
-      : await account.from("reviews").insert({ work_id: work.id, ...row }).select(FIELDS).single();
+    const { error } = await account.from("reviews").insert({ work_id: work.id, rating: null, body });
     submit.disabled = false;
-    if (error) return say(error.code === "23505" ? "You've already reviewed this. Reload the page to edit it." : "Not saved. Check your connection and try again.");
-    own = data;
-    editing = false;
-    say("");
-    fillForm();
-    showMine();
+    if (error)
+      return say(
+        error.code === "SF004"
+          ? "Wait a few seconds before posting again."
+          : error.code === "SF005"
+            ? "You've reached 20 comments on this work."
+            : "Not saved. Check your connection and try again."
+      );
+    bodyInput.value = "";
+    say(released ? "Thanks! Your review is up." : "Thanks! Your comment is up.", true);
     loadPage(true);
-    showSummary();
-  });
-  remove.addEventListener("click", async () => {
-    // Press twice: the first press asks.
-    if (!remove.dataset.armed) {
-      remove.dataset.armed = "1";
-      remove.textContent = "Tap again to delete";
-      setTimeout(() => {
-        delete remove.dataset.armed;
-        remove.textContent = REMOVE_LABEL;
-      }, 4000);
-      return;
-    }
-    remove.disabled = true;
-    const { error } = await account.from("reviews").delete().eq("id", own.id);
-    remove.disabled = false;
-    if (error) return say("Not deleted. Try again.");
-    own = null;
-    fillForm();
-    say("Deleted.", true);
-    showMine();
-    loadPage(true);
-    showSummary();
   });
 
   rateBox();
