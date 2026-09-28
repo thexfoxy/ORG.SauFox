@@ -341,6 +341,26 @@ nobody can log in.
   login, checkout, admin, launcher or status pages. Sign-in and settings are
   in localStorage, so nothing is lost.
 
+## Security checklist (last run 2026-09-28)
+
+- Every public table has row-level security; writes are admin-only or
+  limited to the member's own rows. Prices, discounts and order status are
+  set by database triggers, never trusted from the browser; members can only
+  cancel their own unpaid orders. Storage: admins write artwork, members only
+  their own avatar folder.
+- Edge Functions check the caller's token themselves, admin actions check
+  `admins`, and payment verification uses the amount stored on the order.
+  Secrets live only in Supabase (Edge Functions → Secrets), never in the repo;
+  the key in `js/main.js` is the publishable one.
+- The pages never put user text in as HTML (only fixed SVG icons use
+  innerHTML); emails escape everything. supabase-js is served from
+  `js/vendor`, not a CDN.
+- Clickjacking: the head script hides the page when it's framed by another
+  site (GitHub Pages can't send X-Frame-Options).
+- Still to switch on in the dashboard: Authentication → Passwords → leaked
+  password protection. The retired `ip-probe` function only answers "Gone"
+  and can be deleted there.
+
 ## Ratings and reviews
 
 - `reviews` table: one per member per work, 1-10 stars (as on IMDb) and an optional

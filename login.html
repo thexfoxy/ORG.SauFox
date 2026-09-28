@@ -9,6 +9,14 @@
     // start at the top: the browser doesn't bring back the old scroll
     // position, and a reload or Back forgets any "#section" too.
     (function () {
+      // Never inside another site's frame (clickjacking): GitHub Pages
+      // can't send X-Frame-Options, so the page leaves the frame itself,
+      // or stays blank if it can't.
+      if (window.top !== window.self) {
+        document.documentElement.style.display = "none";
+        try { window.top.location = window.location.href; } catch (e) {}
+        return;
+      }
       try {
         var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
         var fresh = nav && (nav.type === "reload" || nav.type === "back_forward");
@@ -49,7 +57,7 @@
   <meta name="robots" content="noindex">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=81">
+  <link rel="stylesheet" href="css/style.css?v=82">
 </head>
 <body class="login-page">
   <!-- Background: slanted strips of artwork from the studio's releases,
@@ -215,8 +223,8 @@
     </p>
   </main>
 
-  <script src="js/vendor/supabase.js?v=81" defer></script>
-  <script src="js/fa.js?v=81" defer></script>
-  <script src="js/main.js?v=81" defer></script>
+  <script src="js/vendor/supabase.js?v=82" defer></script>
+  <script src="js/fa.js?v=82" defer></script>
+  <script src="js/main.js?v=82" defer></script>
 </body>
 </html>
