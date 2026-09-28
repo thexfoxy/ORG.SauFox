@@ -243,14 +243,120 @@ const db = window.supabase
     })
   : null;
 
+// ---------- Motion ----------
+// Everything eases out on one curve; none of it runs for visitors who ask
+// their system for less motion.
+const EASE = "cubic-bezier(.22, 1, .36, 1)";
+const SPRING = "cubic-bezier(.34, 1.4, .64, 1)";
+const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+const moving = () => !still.matches && typeof Element.prototype.animate === "function";
+
+// Rises into place, one after another.
+const reveal = (els, { y = 16, step = 55, delay = 0, max = 10, duration = 760 } = {}) => {
+  if (!moving()) return;
+  [...els].forEach((el, i) =>
+    el.animate(
+      [
+        { opacity: 0, transform: `translateY(${y}px) scale(.985)` },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration, delay: delay + Math.min(i, max) * step, easing: EASE, fill: "backwards" }
+    )
+  );
+};
+
+// Redraws a list, then glides each item from where it was to where it is
+// now (items that are new rise in). Items carry data-key.
+const flip = (box, render) => {
+  const before = new Map();
+  if (moving()) box.querySelectorAll(":scope > [data-key]").forEach((el) => before.set(el.dataset.key, el.getBoundingClientRect()));
+  render();
+  if (!moving()) return;
+  let fresh = 0;
+  box.querySelectorAll(":scope > [data-key]").forEach((el) => {
+    const was = before.get(el.dataset.key);
+    if (!was) {
+      el.animate(
+        [
+          { opacity: 0, transform: "translateY(10px) scale(.98)" },
+          { opacity: 1, transform: "none" },
+        ],
+        { duration: 520, delay: Math.min(fresh++, 10) * 35, easing: EASE, fill: "backwards" }
+      );
+      return;
+    }
+    const now = el.getBoundingClientRect();
+    const dx = was.left - now.left;
+    const dy = was.top - now.top;
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1)
+      el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 640, easing: EASE });
+  });
+  const empty = box.querySelector(":scope > .empty");
+  if (empty) reveal([empty], { y: 8 });
+};
+
+// A number that counts up to its value.
+const counter = (n, tag = "b.stat__value", delay = 180) => {
+  const el = h(tag, digits(n));
+  if (!moving() || !n) return el;
+  el.textContent = digits(0);
+  const start = performance.now() + delay;
+  const tick = (now) => {
+    const p = Math.max(0, Math.min(1, (now - start) / 1100));
+    el.textContent = digits(Math.round(n * (1 - Math.pow(1 - p, 4))));
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  return el;
+};
+
+// A little pop when a badge's number changes.
+const pop = (el) =>
+  moving() &&
+  el.animate([{ transform: "scale(.4)", opacity: 0 }, { transform: "scale(1.18)", opacity: 1, offset: 0.6 }, { transform: "scale(1)" }], {
+    duration: 520,
+    easing: EASE,
+  });
+
+// Cards light up where the pointer is.
+document.addEventListener(
+  "pointermove",
+  (e) => {
+    const card = e.target.closest && e.target.closest(".glow");
+    if (!card) return;
+    const box = card.getBoundingClientRect();
+    card.style.setProperty("--mx", `${e.clientX - box.left}px`);
+    card.style.setProperty("--my", `${e.clientY - box.top}px`);
+  },
+  { passive: true }
+);
+
+// Buttons ripple from where they're pressed.
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    const b = e.target.closest && e.target.closest(".button, .chip, .chat__send, .chat__attach, .side__link");
+    if (!b || !moving()) return;
+    const box = b.getBoundingClientRect();
+    const size = Math.max(box.width, box.height) * 2.2;
+    const ink = document.createElement("span");
+    ink.className = "ink";
+    ink.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - box.left - size / 2}px;top:${e.clientY - box.top - size / 2}px`;
+    b.appendChild(ink);
+    ink.animate([{ transform: "scale(0)", opacity: 0.35 }, { transform: "scale(1)", opacity: 0 }], { duration: 650, easing: EASE }).onfinish = () => ink.remove();
+  },
+  { passive: true }
+);
+
 // ---------- Signing in ----------
 const signInScreen = (problem = "") => {
   document.body.classList.remove("is-booting");
   app.replaceChildren(
     h(
       "main.gate",
+      h("div.aurora", { "aria-hidden": "true" }, h("i"), h("i"), h("i")),
       h(
-        "div.gate__card",
+        "div.gate__card.glow",
         h("img.gate__logo", { src: "assets/logo.webp", alt: "SauFox", width: 96, height: 107 }),
         h("p.gate__kicker", t("Customer portal")),
         h("h1.gate__title", "SauFox Entertainment"),
@@ -270,6 +376,16 @@ const signInScreen = (problem = "") => {
       )
     )
   );
+  const card = app.querySelector(".gate__card");
+  if (moving())
+    card.animate(
+      [
+        { opacity: 0, transform: "translateY(28px) scale(.96)", filter: "blur(8px)" },
+        { opacity: 1, transform: "none", filter: "blur(0)" },
+      ],
+      { duration: 1000, easing: EASE, fill: "backwards" }
+    );
+  reveal(card.children, { delay: 160, step: 70, y: 12 });
 };
 const langToggle = () =>
   h(
@@ -324,6 +440,7 @@ const shell = () => {
         ),
         h(
           "nav.side__nav",
+          h("span.side__pill", { "aria-hidden": "true" }),
           nav.map(([href, name, label]) =>
             h(
               "a.side__link",
@@ -344,6 +461,7 @@ const shell = () => {
         "div.main",
         h(
           "header.top",
+          h("span.top__progress", { "aria-hidden": "true" }),
           h("p.top__where", { id: "where" }),
           h(
             "div.top__me",
@@ -368,21 +486,65 @@ const shell = () => {
       )
     )
   );
+  if (moving()) {
+    const side = app.querySelector(".side");
+    // From its own edge: the start side, or the bottom on phones.
+    const from = window.innerWidth <= 820 ? "translateY(24px)" : `translateX(${document.documentElement.dir === "rtl" ? 24 : -24}px)`;
+    side.animate([{ opacity: 0, transform: from }, { opacity: 1, transform: "none" }], {
+      duration: 800,
+      easing: EASE,
+      fill: "backwards",
+    });
+    app.querySelector(".top").animate([{ opacity: 0, transform: "translateY(-12px)" }, { opacity: 1, transform: "none" }], {
+      duration: 700,
+      delay: 80,
+      easing: EASE,
+      fill: "backwards",
+    });
+    reveal(app.querySelectorAll(".side__brand, .side__link, .side__foot > *"), { delay: 120, step: 45, y: 10 });
+  }
+  window.addEventListener("resize", movePill, { passive: true });
+};
+
+// The highlight under the current page glides from link to link.
+const movePill = () => {
+  const pill = document.querySelector(".side__pill");
+  if (!pill) return;
+  const here = document.querySelector(".side__link.is-here");
+  pill.classList.toggle("is-shown", Boolean(here));
+  if (!here) return;
+  pill.style.width = `${here.offsetWidth}px`;
+  pill.style.height = `${here.offsetHeight}px`;
+  pill.style.transform = `translate(${here.offsetLeft}px, ${here.offsetTop}px)`;
+  // No glide on the very first placement.
+  if (!pill.classList.contains("is-ready")) requestAnimationFrame(() => requestAnimationFrame(() => pill.classList.add("is-ready")));
 };
 
 const setWhere = (label) => {
-  document.getElementById("where").textContent = label;
+  const where = document.getElementById("where");
+  if (where.textContent !== label) {
+    where.textContent = label;
+    if (moving())
+      where.animate([{ opacity: 0, transform: "translateY(6px)", filter: "blur(3px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], {
+        duration: 480,
+        easing: EASE,
+      });
+  }
   document.querySelectorAll(".side__link[data-route]").forEach((a) => {
     const route = a.dataset.route;
     const here = location.hash || "#/";
     a.classList.toggle("is-here", route === "#/" ? here === "#/" : here.startsWith(route));
   });
+  movePill();
 };
 const unreadCount = async () => {
   const show = (el, n) => {
     if (!el) return;
-    el.textContent = digits(n || 0);
+    const text = digits(n || 0);
+    const changed = el.textContent !== text;
+    el.textContent = text;
     el.hidden = !n;
+    if (n && changed) pop(el);
   };
   const { count } = await db.from("tickets").select("id", { count: "exact", head: true }).eq("user_id", me.id).eq("member_unread", true);
   show(document.querySelector(".side__count:not(.side__count--desk)"), count);
@@ -398,8 +560,8 @@ const orderTitle = (o) =>
 
 const ticketRow = (tk) =>
   h(
-    `a.row.row--${tk.status}${tk.member_unread ? ".is-unread" : ""}`,
-    { href: `#/tickets/${tk.id}` },
+    `a.row.glow.row--${tk.status}${tk.member_unread ? ".is-unread" : ""}`,
+    { href: `#/tickets/${tk.id}`, dataset: { key: tk.id } },
     h("span.row__top", h("b.row__num", `#${digits(tk.number)}`), badge(tk.status), tk.member_unread ? h("span.row__new", t("New reply")) : null),
     h("strong.row__title", { dir: "auto", translate: "no" }, tk.subject),
     h("span.row__meta", `${t(TOPICS[tk.category] || tk.category)} · ${when(tk.updated_at)}`)
@@ -426,11 +588,11 @@ views.overview = async (view) => {
     ),
     h(
       "section.stats",
-      h("div.stat", h("span.stat__label", t("Open tickets")), h("b.stat__value", digits(open))),
-      h("div.stat" + (unread ? ".stat--hot" : ""), h("span.stat__label", t("New replies")), h("b.stat__value", digits(unread))),
-      h("div.stat", h("span.stat__label", t("Orders")), h("b.stat__value", digits((orders || []).length))),
+      h("div.stat.glow", h("span.stat__label", t("Open tickets")), counter(open)),
+      h("div.stat.glow" + (unread ? ".stat--hot" : ""), h("span.stat__label", t("New replies")), counter(unread)),
+      h("div.stat.glow", h("span.stat__label", t("Orders")), counter((orders || []).length)),
       h(
-        "div.stat" + (plan ? `.stat--${plan.plan}` : ""),
+        "div.stat.glow" + (plan ? `.stat--${plan.plan}` : ""),
         h("span.stat__label", t("Subscription")),
         h("b.stat__value", plan ? t(PLAN_NAMES[plan.plan] || plan.plan) : t("None")),
         plan && plan.ends_at ? h("span.stat__note", t("until {date}", { date: when(plan.ends_at, false) })) : null
@@ -470,7 +632,7 @@ views.tickets = async (view) => {
     const shown = all.filter(
       (tk) => (filter === "all" || tk.status === filter) && (!q || tk.subject.toLowerCase().includes(q) || String(tk.number).includes(q))
     );
-    rows.replaceChildren(...(shown.length ? shown.map(ticketRow) : [h("div.empty", h("p", t("Nothing here.")))]));
+    flip(rows, () => rows.replaceChildren(...(shown.length ? shown.map(ticketRow) : [h("div.empty", h("p", t("Nothing here.")))])));
     chips.querySelectorAll("button").forEach((b) => b.classList.toggle("is-on", b.dataset.f === filter));
   };
   const chips = h(
@@ -602,7 +764,8 @@ views.newTicket = async (view, params) => {
     h("div.form__foot", note, h("a.button", { href: "#/tickets" }, t("Cancel")), send)
   );
   view.replaceChildren(h("section.hello", h("h1.hello__title", t("New ticket"))), form);
-  subject.focus();
+  // Once it's on screen.
+  requestAnimationFrame(() => subject.focus({ preventScroll: true }));
 };
 
 // ---------- The chat (a member's ticket, and the admins' desk) ----------
@@ -648,6 +811,7 @@ const drawMessages = async (list, messages, staffSide, links) => {
     items.push(
       h(
         `li.bubble${mine ? ".bubble--mine" : ""}${m.staff ? ".bubble--staff" : ""}${last ? ".bubble--last" : ""}`,
+        { dataset: { id: m.id } },
         !mine && last
           ? m.staff
             ? h("img.bubble__face", { src: "assets/logo.webp", alt: "" })
@@ -670,8 +834,31 @@ const drawMessages = async (list, messages, staffSide, links) => {
     );
   });
   const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+  const first = !list.seen;
+  const seen = list.seen || new Set();
   list.replaceChildren(...items);
-  if (atBottom || list.dataset.fresh !== "0") list.scrollTop = list.scrollHeight;
+  // New messages pop out from their own side; the first drawing rises in.
+  const fresh = [...list.querySelectorAll(".bubble")].filter((b) => !seen.has(b.dataset.id));
+  fresh.forEach((b) => seen.add(b.dataset.id));
+  list.seen = seen;
+  if (moving()) {
+    if (first) reveal([...list.children].slice(-14), { y: 14, step: 35, duration: 640 });
+    else
+      fresh.forEach((b, i) => {
+        const box = b.querySelector(".bubble__box");
+        box.style.transformOrigin = b.classList.contains("bubble--mine") ? "100% 100%" : "0% 100%";
+        if (document.documentElement.dir === "rtl") box.style.transformOrigin = b.classList.contains("bubble--mine") ? "0% 100%" : "100% 100%";
+        box.animate(
+          [
+            { opacity: 0, transform: "translateY(14px) scale(.6)" },
+            { opacity: 1, transform: "none" },
+          ],
+          { duration: 560, delay: i * 70, easing: SPRING, fill: "backwards" }
+        );
+      });
+  }
+  if (first) list.scrollTop = list.scrollHeight;
+  else if (atBottom || list.dataset.fresh === "1") list.scrollTo({ top: list.scrollHeight, behavior: moving() ? "smooth" : "auto" });
   list.dataset.fresh = "0";
 };
 
@@ -799,9 +986,25 @@ const chat = (root, ticket, { staffSide, onChange }) => {
       onsubmit: async (e) => {
         e.preventDefault();
         const body = input.value.trim();
-        if (!body) return input.focus();
+        if (!body) {
+          if (moving()) input.animate([{ transform: "translateX(0)" }, { transform: "translateX(-6px)" }, { transform: "translateX(5px)" }, { transform: "translateX(-3px)" }, { transform: "none" }], { duration: 380, easing: "ease-out" });
+          return input.focus();
+        }
         send.disabled = true;
         note.textContent = "";
+        if (moving()) {
+          // The paper plane flies off and a new one slides back in.
+          const s = document.documentElement.dir === "rtl" ? -1 : 1;
+          send.querySelector("svg").animate(
+            [
+              { transform: `scaleX(${s})` },
+              { transform: `translate(${20 * s}px, -20px) scale(${0.5 * s}, .5)`, opacity: 0, offset: 0.42 },
+              { transform: `translate(${-16 * s}px, 16px) scale(${0.5 * s}, .5)`, opacity: 0, offset: 0.43 },
+              { transform: `scaleX(${s})`, opacity: 1 },
+            ],
+            { duration: 760, easing: EASE }
+          );
+        }
         try {
           const attached = fileInput.files[0] ? await uploadFile(fileInput.files[0], current.user_id || me.id) : {};
           const { data: message, error } = await db.from("ticket_messages").insert({ ticket_id: current.id, body, ...attached }).select("id").single();
@@ -825,6 +1028,7 @@ const chat = (root, ticket, { staffSide, onChange }) => {
           await refreshTicket();
         } catch (err) {
           note.textContent = err.message;
+          if (moving()) note.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 400, easing: EASE });
         } finally {
           send.disabled = false;
           input.focus();
@@ -837,7 +1041,19 @@ const chat = (root, ticket, { staffSide, onChange }) => {
     fileName
   );
 
-  root.replaceChildren(h("section.chat" + (staffSide ? ".chat--desk" : ""), head, staffSide ? orderLine : null, list, form));
+  const section = h("section.chat" + (staffSide ? ".chat--desk" : ""), head, staffSide ? orderLine : null, list, form);
+  root.replaceChildren(section);
+  if (moving()) {
+    const side = document.documentElement.dir === "rtl" ? -1 : 1;
+    section.animate(
+      [
+        { opacity: 0, transform: staffSide ? `translateX(${28 * side}px)` : "translateY(22px) scale(.985)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: 700, easing: EASE, fill: "backwards" }
+    );
+    reveal([head, form], { delay: 120, step: 90, y: 8 });
+  }
   drawHead();
   load(true).then(markRead);
   grow();
@@ -877,6 +1093,14 @@ views.desk = async (view, params, id) => {
   let tickets = [];
   const lastOf = {};
   const listBox = h("div.desk__rows");
+  // Moving between conversations keeps the list still (and where it was
+  // scrolled); only the chat slides in.
+  const before = document.querySelector("#view .desk__rows");
+  let quiet = Boolean(before);
+  if (before) {
+    const top = before.scrollTop;
+    requestAnimationFrame(() => (listBox.scrollTop = top));
+  }
   const pane = h("div.desk__pane");
   const chips = h("div.chips.chips--small");
   const search = h("input.search", {
@@ -916,13 +1140,15 @@ views.desk = async (view, params, id) => {
         !query ||
         [tk.name, tk.email, tk.subject, `#${tk.number}`, String(tk.number)].some((v) => String(v || "").toLowerCase().includes(query))
     );
-    listBox.replaceChildren(
+    const paint = quiet ? (fn) => fn() : (fn) => flip(listBox, fn);
+    quiet = false;
+    paint(() => listBox.replaceChildren(
       ...(shown.length
         ? shown.map((tk) => {
             const last = lastOf[tk.id];
             return h(
               `a.conv${tk.studio_unread ? ".is-unread" : ""}${tk.id === id ? ".is-here" : ""}`,
-              { href: `#/desk/${tk.id}` },
+              { href: `#/desk/${tk.id}`, dataset: { key: tk.id } },
               h("span.conv__avatar", initials(tk.name)),
               h(
                 "span.conv__main",
@@ -938,7 +1164,7 @@ views.desk = async (view, params, id) => {
             );
           })
         : [h("div.empty", h("p", t("Nothing here.")))])
-    );
+    ));
   };
   const loadList = async () => {
     drawChips();
@@ -966,6 +1192,7 @@ views.desk = async (view, params, id) => {
       pane
     )
   );
+  if (!before) reveal(view.querySelectorAll(".desk__tools > *"), { step: 60, y: 10 });
   await loadList();
   if (id) {
     const { data: ticket } = await db.from("tickets").select(TICKET_FIELDS).eq("id", id).maybeSingle();
@@ -979,7 +1206,10 @@ views.desk = async (view, params, id) => {
           drawList();
         },
       });
-  } else pane.replaceChildren(h("div.desk__empty", h("img", { src: "assets/logo.webp", alt: "" }), h("p", t("Pick a conversation."))));
+  } else {
+    pane.replaceChildren(h("div.desk__empty", h("img", { src: "assets/logo.webp", alt: "" }), h("p", t("Pick a conversation."))));
+    reveal(pane.firstChild.children, { delay: 200, step: 90 });
+  }
 
   // The list stays live too: a new ticket or message moves it up.
   const channel = db
@@ -1024,7 +1254,7 @@ views.orders = async (view) => {
 
 views.help = async (view) => {
   setWhere(t("Help"));
-  const card = (href, title, text) => h("a.help", { href, target: "_blank", rel: "noopener" }, h("strong", t(title)), h("span", t(text)));
+  const card = (href, title, text) => h("a.help.glow", { href, target: "_blank", rel: "noopener" }, h("strong", t(title)), h("span", t(text)));
   view.replaceChildren(
     h("section.hello", h("div", h("h1.hello__title", t("Help and answers")), h("p.hello__lead", t("Quick answers first; if yours isn't there, open a ticket."))), h("a.button.button--primary", { href: "#/new" }, icon("plus"), t("Open a ticket"))),
     h(
@@ -1050,12 +1280,19 @@ const route = async () => {
   stopChat = null;
   const [path, query = ""] = (location.hash.replace(/^#/, "") || "/").split("?");
   const params = new URLSearchParams(query);
-  const view = document.getElementById("view");
-  if (!view) return;
-  view.className = "view";
-  view.replaceChildren(h("div.loading", h("span")));
-  window.scrollTo(0, 0);
+  const old = document.getElementById("view");
+  if (!old) return;
+  const turn = (route.turn = (route.turn || 0) + 1);
   const parts = path.split("/").filter(Boolean);
+  // The next page is built off screen while this one dims (a spinner if
+  // there's nothing to dim), then swapped in and rises into place.
+  const bar = document.querySelector(".top__progress");
+  bar.classList.remove("is-done");
+  void bar.offsetWidth;
+  bar.classList.add("is-going");
+  if (!old.children.length) old.replaceChildren(h("div.loading", h("span")));
+  else if (!(parts[0] === "desk" && old.classList.contains("view--desk"))) old.classList.add("is-leaving");
+  const view = h("main.view", { tabindex: "-1" });
   try {
     if (!parts.length) await views.overview(view);
     else if (parts[0] === "desk") await views.desk(view, params, parts[1]);
@@ -1064,9 +1301,20 @@ const route = async () => {
     else if (parts[0] === "new") await views.newTicket(view, params);
     else if (parts[0] === "orders") await views.orders(view);
     else if (parts[0] === "help") await views.help(view);
-    else location.hash = "#/";
+    else return (location.hash = "#/");
   } catch (e) {
     view.replaceChildren(h("div.panel.empty", h("p", t("Couldn't reach the server. Check your connection and reload the page."))));
+  }
+  // A newer page was asked for meanwhile: that one wins.
+  if (turn !== route.turn) return;
+  bar.classList.replace("is-going", "is-done");
+  view.id = "view";
+  old.replaceWith(view);
+  window.scrollTo({ top: 0, behavior: "auto" });
+  if (!view.classList.contains("view--chat") && !view.classList.contains("view--desk")) {
+    reveal(view.children, { step: 70 });
+    reveal(view.querySelectorAll(".stat, .help"), { delay: 140, step: 60, y: 18 });
+    reveal(view.querySelectorAll(".split .row, .form > *"), { delay: 220, step: 45, y: 10 });
   }
   view.focus({ preventScroll: true });
 };

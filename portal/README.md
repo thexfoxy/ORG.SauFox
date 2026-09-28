@@ -22,6 +22,13 @@ rule are shared with it.
   An admin's message is marked staff by the database and emailed to the
   member. On phones the list and the chat take turns.
 - English and Persian (`FA` in `portal.js`; the choice is kept per site).
+- Motion (the `Motion` helpers in `portal.js`, the end of `portal.css`):
+  pages build off screen while the current one dims, then rise in with a
+  stagger; a highlight glides between sidebar links; lists glide items to
+  their new places when they reorder (`flip`); new chat bubbles pop from
+  their side; numbers count up; cards light up under the pointer; buttons
+  ripple; slow light drifts behind the sign-in card. All of it switches
+  off when the system asks for reduced motion.
 
 ## Signing in
 
