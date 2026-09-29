@@ -94,8 +94,9 @@ Sign-up, login and profiles use the Supabase project `saufox-entertainment`
   reviews, tickets go; orders stay without the account). None of it works
   on the owner's own account.
 - Support lives only in the customer portal: once a visit, a notice
-  (`portalNotice` in `js/main.js`) says so, with a button to the portal;
-  not on sign-in, checkout, admin or status pages.
+  (`portalNotice` in `js/main.js`, a small floating chip in the bottom
+  corner that leaves by itself after 10 seconds) says so, with a link to the
+  portal; not on sign-in, checkout, admin, download or status pages.
 - Storage bucket `works` (public, 5 MB, JPEG / PNG / WebP): artwork uploaded
   from the admin panel, in `<work id>/`. Only admins can write.
 - `public.profiles`: one row per member (name, currency, avatar_url),

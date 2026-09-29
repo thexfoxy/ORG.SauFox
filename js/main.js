@@ -824,77 +824,45 @@ gl_FragColor=vec4(c,1.);}`;
   }
   const PORTAL = "https://portal.saufoxentertainment.ir/";
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const dialog = document.createElement("dialog");
-  dialog.className = "portal-notice";
-  dialog.setAttribute("aria-labelledby", "portal-notice-title");
-  const point = (icon, text) => `<li><span class="portal-notice__tick" aria-hidden="true">${icon}</span>${t(text)}</li>`;
-  const ICON = {
-    box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>',
-    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
-    mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
-  };
-  dialog.innerHTML = `
-    <div class="portal-notice__card">
-      <span class="portal-notice__ring" aria-hidden="true"></span>
-      <button class="portal-notice__x" type="button" aria-label="${t("Close")}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
-      </button>
-      <div class="portal-notice__mark" aria-hidden="true">
-        <span></span><span></span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/><path d="M19 20a3 3 0 0 1-3 2h-3"/></svg>
-      </div>
-      <p class="portal-notice__kicker">${t("Customer portal")}</p>
-      <h2 class="portal-notice__title" id="portal-notice-title">${t("Support is only in the customer portal")}</h2>
-      <p class="portal-notice__lead">${t("To follow up an order or get help, please use the customer portal only. Messages sent anywhere else may not reach our team.")}</p>
-      <ul class="portal-notice__points">
-        ${point(ICON.box, "Follow your orders")}
-        ${point(ICON.chat, "Chat with our support team")}
-        ${point(ICON.mail, "Replies by email too")}
-      </ul>
-      <div class="portal-notice__actions">
-        <a class="portal-notice__go" href="${PORTAL}">${t("Open the customer portal")}</a>
-        <button class="portal-notice__later" type="button">${t("Got it")}</button>
-      </div>
-    </div>`;
+  // A small floating chip, not a modal: it leaves by itself after 10s
+  // (the timer bar pauses while the pointer is on it).
+  const note = document.createElement("aside");
+  note.className = "portal-notice";
+  note.setAttribute("role", "status");
+  note.innerHTML = `
+    <span class="portal-notice__mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/><path d="M19 20a3 3 0 0 1-3 2h-3"/></svg>
+    </span>
+    <div class="portal-notice__body">
+      <p class="portal-notice__title">${t("Support is only in the customer portal")}</p>
+      <a class="portal-notice__go" href="${PORTAL}">${t("Open the customer portal")} ›</a>
+    </div>
+    <button class="portal-notice__x" type="button" aria-label="${t("Close")}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <span class="portal-notice__bar" aria-hidden="true"></span>`;
   const seen = () => {
     try {
       sessionStorage.setItem("saufox.portal-notice", "1");
     } catch (e) {}
   };
+  let gone = false;
   const close = () => {
+    if (gone) return;
+    gone = true;
     seen();
-    if (calm || !dialog.animate) return dialog.close();
-    dialog.classList.add("is-leaving");
-    setTimeout(() => dialog.close(), 320);
+    if (calm) return note.remove();
+    note.classList.add("is-leaving");
+    setTimeout(() => note.remove(), 350);
   };
-  dialog.querySelector(".portal-notice__x").addEventListener("click", close);
-  dialog.querySelector(".portal-notice__later").addEventListener("click", close);
-  dialog.querySelector(".portal-notice__go").addEventListener("click", seen);
-  dialog.addEventListener("cancel", (e) => {
-    e.preventDefault();
-    close();
-  });
-  // A click on the dimmed page around the card closes it too.
-  dialog.addEventListener("click", (e) => e.target === dialog && close());
-  dialog.addEventListener("close", () => dialog.remove());
-  // The card tilts a touch toward the pointer.
-  const card = dialog.querySelector(".portal-notice__card");
-  if (!calm)
-    card.addEventListener("pointermove", (e) => {
-      const box = card.getBoundingClientRect();
-      card.style.setProperty("--mx", `${e.clientX - box.left}px`);
-      card.style.setProperty("--my", `${e.clientY - box.top}px`);
-      card.style.setProperty("--rx", `${((e.clientY - box.top) / box.height - 0.5) * -4}deg`);
-      card.style.setProperty("--ry", `${((e.clientX - box.left) / box.width - 0.5) * 4}deg`);
-    });
-  // After the page has settled, and not over another open dialog.
-  const open = () => {
-    if (document.querySelector("dialog[open]")) return setTimeout(open, 2000);
-    document.body.append(dialog);
-    dialog.showModal();
-    dialog.querySelector(".portal-notice__go").focus({ preventScroll: true });
-  };
-  setTimeout(open, calm ? 400 : 1200);
+  note.querySelector(".portal-notice__x").addEventListener("click", close);
+  note.querySelector(".portal-notice__go").addEventListener("click", seen);
+  note.querySelector(".portal-notice__bar").addEventListener("animationend", close);
+  setTimeout(() => {
+    document.body.append(note);
+    seen();
+    if (calm) setTimeout(close, 10000);
+  }, calm ? 400 : 1200);
 })();
 
 (function brandBlur() {
