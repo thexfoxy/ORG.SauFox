@@ -374,6 +374,7 @@ const FA = {
   "That key couldn't be added. Try again.": "کلید افزوده نشد. دوباره امتحان کنید.",
   "That game is already in your library.": "این بازی از قبل در کتابخانه‌ی شماست.",
   "Added to your library.": "به کتابخانه‌ی شما افزوده شد.",
+  "No support is given outside the customer portal": "هیچ پشتیبانی‌ای خارج از پرتال مشتریان انجام نمی‌شود",
   "Support is only in the customer portal": "پشتیبانی فقط از طریق پرتال مشتریان",
   "To follow up an order or get help, please use the customer portal only. Messages sent anywhere else may not reach our team.": "برای پیگیری سفارش یا دریافت پشتیبانی، لطفاً فقط و فقط از طریق پرتال مشتریان اقدام کنید. پیام‌هایی که از راه‌های دیگر فرستاده شوند ممکن است به تیم ما نرسند.",
   "Follow your orders": "پیگیری سفارش‌ها",

@@ -824,7 +824,7 @@ gl_FragColor=vec4(c,1.);}`;
   }
   const PORTAL = "https://portal.saufoxentertainment.ir/";
   const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // A small floating chip, not a modal: it leaves by itself after 10s
+  // A floating box over the top of the page, not a modal: it leaves by itself after 10s
   // (the timer bar pauses while the pointer is on it).
   const note = document.createElement("aside");
   note.className = "portal-notice";
@@ -834,8 +834,10 @@ gl_FragColor=vec4(c,1.);}`;
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/><path d="M19 20a3 3 0 0 1-3 2h-3"/></svg>
     </span>
     <div class="portal-notice__body">
-      <p class="portal-notice__title">${t("Support is only in the customer portal")}</p>
-      <a class="portal-notice__go" href="${PORTAL}">${t("Open the customer portal")} ›</a>
+      <p class="portal-notice__kicker">${t("Customer portal")}</p>
+      <p class="portal-notice__title">${t("No support is given outside the customer portal")}</p>
+      <p class="portal-notice__lead">${t("To follow up an order or get help, please use the customer portal only. Messages sent anywhere else may not reach our team.")}</p>
+      <a class="portal-notice__go" href="${PORTAL}">${t("Open the customer portal")}</a>
     </div>
     <button class="portal-notice__x" type="button" aria-label="${t("Close")}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
