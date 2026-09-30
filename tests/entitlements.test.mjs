@@ -105,6 +105,56 @@ test('late payment on a cancelled order is recorded for reconciliation without r
   assert.equal((await one('select payment_attempt($1,$2) as result',[O,'authority-1'])).result.needs_review,true);
   await as(db); assert.equal((await db.query('select * from builds')).rows.length,0);
 });
+
+test('a manually advanced order still records its gateway reference',async()=>{
+  await as(db,A,SA,'service_role');await db.query("update orders set status='awaiting_payment' where id=$1",[O]);
+  await db.query('select register_payment_attempt($1,$2,$3,$4)',[O,'authority-1',true,100000]);
+  await db.query("update orders set status='processing' where id=$1",[O]);
+  const {result}=await one('select confirm_order_payment($1,$2,$3,$4) as result',[O,'authority-1','123',null]);
+  assert.equal(result.ref_id,'123');
+  assert.equal((await one('select status from orders where id=$1',[O])).status,'processing');
+  await assert.rejects(db.query('select confirm_order_payment($1,$2,$3,$4)',[O,'authority-1','456',null]),/reference changed/);
+});
+
+test('a failed order update rolls back the verified payment attempt',async()=>{
+  await as(db,A,SA,'service_role');await db.query("update orders set status='awaiting_payment' where id=$1",[O]);
+  await db.query('select register_payment_attempt($1,$2,$3,$4)',[O,'authority-1',true,100000]);
+  await db.exec(`reset role;
+    create function pg_temp.reject_payment() returns trigger language plpgsql as $$ begin raise exception 'simulated storage failure'; end $$;
+    create trigger reject_payment before update on public.orders for each row when(new.status='paid') execute function pg_temp.reject_payment();`);
+  try {
+    await as(db,A,SA,'service_role');
+    await assert.rejects(db.query('select confirm_order_payment($1,$2,$3,$4)',[O,'authority-1','123',null]),/simulated storage failure/);
+    assert.equal((await one('select payment_attempt($1,$2) as result',[O,'authority-1'])).result.verified_at,null);
+    assert.equal((await one('select status from orders where id=$1',[O])).status,'awaiting_payment');
+  } finally { await db.exec('reset role; drop trigger reject_payment on public.orders'); }
+});
+
+test('a second paid authority is recorded for review without replacing the first receipt',async()=>{
+  await as(db,A,SA,'service_role');await db.query("update orders set status='awaiting_payment' where id=$1",[O]);
+  for(const authority of ['first','second']) await db.query('select register_payment_attempt($1,$2,$3,$4)',[O,authority,true,100000]);
+  await db.query('select confirm_order_payment($1,$2,$3,$4)',[O,'first','123',null]);
+  const {result}=await one('select confirm_order_payment($1,$2,$3,$4) as result',[O,'second','456',null]);
+  assert.equal(result.error,'payment_review');
+  assert.equal((await one('select ref_id from orders where id=$1',[O])).ref_id,'123');
+  assert.equal(Number((await one('select count(*) as count from licenses')).count),1);
+});
+
+test('a failed mail lease can retry, and a stale acknowledgment cannot finish a new claim',async()=>{
+  const ticket=(await one("insert into tickets(subject,category) values('Help','other') returning id")).id;
+  const message=(await one("insert into ticket_messages(ticket_id,body) values($1,'Please help') returning id",[ticket])).id;
+  await as(db,A,SA,'service_role');
+  const first=(await one('select * from claim_ticket_emails($1)',[message])).claim;
+  await db.exec(`reset role; update private.ticket_email_outbox set lease_until=now()-interval '1 second'`);
+  await as(db,A,SA,'service_role');
+  const next=(await one('select * from claim_ticket_emails($1)',[message])).claim;
+  assert.notEqual(first,next);
+  await db.query('select finish_ticket_email($1,$2,null)',[message,first]);
+  await db.exec('reset role');
+  assert.equal((await one('select sent_at from private.ticket_email_outbox')).sent_at,null);
+  await as(db,A,SA,'service_role');await db.query('select finish_ticket_email($1,$2,null)',[message,next]);
+  assert.equal((await db.query('select * from claim_ticket_emails()')).rows.length,0);
+});
 test('members cannot call service-only payment or outbox RPCs',async()=>{
   await assert.rejects(db.query('select confirm_order_payment($1,$2,$3,$4)',[O,'a','1',null]),/permission denied/);
   await assert.rejects(db.query('select * from claim_ticket_emails()'),/permission denied/);

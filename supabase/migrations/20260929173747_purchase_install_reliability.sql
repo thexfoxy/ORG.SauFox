@@ -23,6 +23,7 @@ create unique index licenses_normalized_code on public.licenses
   (upper(regexp_replace(code, '[^A-Za-z0-9]', '', 'g')));
 update public.licenses l set order_revoked = true from public.orders o
  where o.id = l.order_id and o.status not in ('paid','processing','completed');
+delete from public.license_devices where license_id in (select id from public.licenses where order_revoked);
 
 create or replace function private.can_use_license(p_license uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
@@ -188,14 +189,17 @@ begin
   select * into a from private.payment_attempts where order_id=p_order and authority=p_authority for update;
   if o.id is null or a.authority is null or a.amount_irr<>o.amount_irr or coalesce(p_ref,'')='' then
     raise exception 'Invalid payment' using errcode='SF040'; end if;
+  if a.verified_at is not null and a.ref_id is distinct from p_ref then
+    raise exception 'Payment reference changed' using errcode='SF040'; end if;
   update private.payment_attempts set verified_at=coalesce(verified_at,now()),ref_id=p_ref,
     needs_review=(o.status='cancelled' or (o.ref_id is not null and o.ref_id<>p_ref)) where authority=p_authority;
   if o.status='cancelled' or (o.ref_id is not null and o.ref_id<>p_ref) then
     return jsonb_build_object('paid',false,'error','payment_review','number',o.number);
   end if;
-  if o.status='awaiting_payment' then
-    update public.orders set status='paid',authority=p_authority,ref_id=p_ref,test=a.test,
-      card_pan=p_card,paid_at=now() where id=p_order returning * into o;
+  if o.status='awaiting_payment' or o.ref_id is null then
+    update public.orders set status=case when o.status='awaiting_payment' then 'paid' else o.status end,
+      authority=p_authority,ref_id=p_ref,test=a.test,
+      card_pan=p_card,paid_at=coalesce(paid_at,now()) where id=p_order returning * into o;
   end if;
   return jsonb_build_object('paid',true,'number',o.number,'ref_id',o.ref_id,'plan',o.plan_id);
 end; $$;
