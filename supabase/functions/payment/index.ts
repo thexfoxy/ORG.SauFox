@@ -228,10 +228,13 @@ const sendPlanReminders = async () => {
 // Claim rows atomically. The database queued them when the message was committed.
 const sendTicketEmails = async (messageId: string | null = null) => {
   if (!mailReady()) return { sent: 0, failed: 0 };
-  const { data: jobs, error } = await db.rpc("claim_ticket_emails", { p_message: messageId, p_limit: 10 });
-  if (error) throw new Error("Could not claim support email jobs");
   let sent = 0, failed = 0;
-  for (const job of jobs || []) {
+  // Claim only the next job so queued SMTP work cannot outlive its lease.
+  for (let index = 0; index < 10; index++) {
+    const { data: jobs, error } = await db.rpc("claim_ticket_emails", { p_message: messageId, p_limit: 1 });
+    if (error) throw new Error("Could not claim support email jobs");
+    if (!jobs?.length) break;
+    const job = jobs[0];
     let problem: string | null = null;
     try {
       const { data: message, error: messageError } = await db.from("ticket_messages")

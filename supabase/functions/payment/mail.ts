@@ -495,6 +495,8 @@ const viaGmail = async (mail: Mail) => {
     // Google shows app passwords in groups of four; the spaces aren't part of it.
     auth: { user: STUDIO, pass: (Deno.env.get("SMTP_PASSWORD") || "").replace(/\s+/g, "") },
     connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
   });
   await transport.sendMail({ from: { name: "SauFox Entertainment", address: STUDIO }, text: plain(mail.html), ...mail });
 };
