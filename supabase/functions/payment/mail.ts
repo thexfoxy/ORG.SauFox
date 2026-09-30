@@ -468,10 +468,10 @@ type Mail = { to: string; subject: string; html: string; replyTo?: string };
 // Resend (resend.com), once RESEND_API_KEY is set: mail comes from the
 // site's own domain (MAIL_FROM, default orders@saufoxentertainment.ir),
 // which inboxes trust more. Replies still go to the studio's Gmail.
-const viaResend = async (mail: Mail) => {
+const viaResend = async (mail: Mail, idempotencyKey?: string) => {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY")}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY")}`, "Content-Type": "application/json", ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) },
     body: JSON.stringify({
       from: `SauFox Entertainment <${Deno.env.get("MAIL_FROM") || "orders@saufoxentertainment.ir"}>`,
       to: [mail.to],
@@ -502,16 +502,17 @@ const viaGmail = async (mail: Mail) => {
 // Resend first when it's set up; if it refuses (say the domain isn't
 // verified yet) and the Gmail password is there too, Gmail sends instead.
 // Says which one sent it, and why Resend didn't.
-export const send = async (mail: Mail): Promise<{ via: "resend" | "gmail"; resendError?: string }> => {
+export const send = async (mail: Mail, idempotencyKey?: string): Promise<{ via: "resend" | "gmail"; resendError?: string }> => {
   if (!Deno.env.get("RESEND_API_KEY")) {
     await viaGmail(mail);
     return { via: "gmail" };
   }
   try {
-    await viaResend(mail);
+    await viaResend(mail, idempotencyKey);
     return { via: "resend" };
   } catch (e) {
-    if (!Deno.env.get("SMTP_PASSWORD")) throw e;
+    // A timeout may mean Resend accepted the email: never switch providers for queued mail.
+    if (idempotencyKey || !Deno.env.get("SMTP_PASSWORD")) throw e;
     const resendError = (e as Error).message;
     console.error(resendError, "- sending through Gmail instead");
     await viaGmail(mail);

@@ -1,3 +1,4 @@
+import { verifiedCaller, memberClient } from "../_shared/auth.ts";
 // Online payment through Zarinpal (a Shaparak-licensed gateway).
 //
 // POST { action: "start", order_id }            signed-in member, own order
@@ -37,7 +38,7 @@
 // leave from a different IP each time, so the requests themselves go out
 // from the database (public.zarinpal_call), whose IP stays the same; the
 // admin panel shows it.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 import { alertEmail, keyEmail, mailReady, paidEmail, placedEmail, planEndingEmail, send, stageEmail, STUDIO, studioEmail, ticketReplyEmail, ticketStudioEmail, type Order } from "./mail.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
@@ -73,20 +74,7 @@ const zarinpal = async (test: boolean, action: "request" | "verify", payload: un
 
 // The caller, if their session came through an emailed code or Google
 // (same rule as the database's private.verified()).
-const caller = async (req: Request) => {
-  const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  if (!token) return null;
-  const { data, error } = await db.auth.getUser(token);
-  if (error || !data.user) return null;
-  try {
-    const claims = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    const methods: { method: string }[] = claims.amr || [];
-    if (!methods.some((m) => m.method !== "password")) return null;
-  } catch {
-    return null;
-  }
-  return data.user;
-};
+const caller = (req: Request) => verifiedCaller(req, db);
 
 // Work that carries on after the reply (emails).
 const later = (work: Promise<unknown>) => {
@@ -237,6 +225,34 @@ const sendPlanReminders = async () => {
   return { sent, failed };
 };
 
+// Claim rows atomically. The database queued them when the message was committed.
+const sendTicketEmails = async (messageId: string | null = null) => {
+  if (!mailReady()) return { sent: 0, failed: 0 };
+  const { data: jobs, error } = await db.rpc("claim_ticket_emails", { p_message: messageId, p_limit: 10 });
+  if (error) throw new Error("Could not claim support email jobs");
+  let sent = 0, failed = 0;
+  for (const job of jobs || []) {
+    let problem: string | null = null;
+    try {
+      const { data: message, error: messageError } = await db.from("ticket_messages")
+        .select("id,ticket_id,staff,body,author_name,attachment_name,created_at").eq("id", job.message_id).single();
+      if (messageError || !message) throw new Error("Message unavailable");
+      const { data: ticket, error: ticketError } = await db.from("tickets")
+        .select("id,number,subject,category,email,name").eq("id", message.ticket_id).single();
+      if (ticketError || !ticket) throw new Error("Ticket unavailable");
+      const { data: first, error: firstError } = await db.from("ticket_messages").select("id")
+        .eq("ticket_id", ticket.id).order("created_at").order("id").limit(1);
+      if (firstError) throw new Error("Ticket history unavailable");
+      const mail = message.staff ? ticketReplyEmail(ticket, message) : ticketStudioEmail(ticket, message, first?.[0]?.id === message.id);
+      await send(mail, `ticket-${message.id}`);
+      sent++;
+    } catch (e) { problem = (e as Error).message; failed++; }
+    const done = await db.rpc("finish_ticket_email", { p_message: job.message_id, p_claim: job.claim, p_error: problem });
+    if (done.error) console.error("support email acknowledgment failed", job.message_id);
+  }
+  return { sent, failed };
+};
+
 const salesOpen = async () => {
   const { data } = await db.from("site_settings").select("sales_open").eq("id", 1).maybeSingle();
   return data?.sales_open !== false;
@@ -271,16 +287,9 @@ Deno.serve(async (req) => {
     // Only its author, and only while it's fresh (no re-sending old ones).
     if (!message || message.user_id !== user.id || Date.now() - Date.parse(message.created_at) > 10 * 60 * 1000)
       return reply({ error: "not_found" }, 404);
-    const { data: ticket } = await db
-      .from("tickets")
-      .select("id, number, subject, category, email, name")
-      .eq("id", message.ticket_id)
-      .maybeSingle();
-    if (!ticket || !mailReady()) return reply({ sent: false });
-    const { count } = await db.from("ticket_messages").select("id", { count: "exact", head: true }).eq("ticket_id", ticket.id);
-    const mail = message.staff ? ticketReplyEmail(ticket, message) : ticketStudioEmail(ticket, message, (count || 0) <= 1);
-    later(send(mail).catch((e) => console.error("ticket email", (e as Error).message)));
-    return reply({ sent: true });
+    if (!mailReady()) return reply({ queued: true, sent: false });
+    later(sendTicketEmails(message.id));
+    return reply({ queued: true });
   }
 
   // ---------- Send a game key to the buyer (admin panel) ----------
@@ -356,7 +365,7 @@ Deno.serve(async (req) => {
       failed += result.failed;
     }
     if (fromCron) {
-      for (const result of [await sendAlerts(), await sendPlanReminders()]) {
+      for (const result of [await sendAlerts(), await sendPlanReminders(), await sendTicketEmails()]) {
         sent += result.sent;
         failed += result.failed;
       }
@@ -425,11 +434,10 @@ Deno.serve(async (req) => {
       console.error("zarinpal request", JSON.stringify(answer));
       return reply({ error: "gateway" }, 502);
     }
-    // Every code issued stays valid, in case an earlier bank tab is the one paid.
-    await db
-      .from("orders")
-      .update({ authority, test, authorities: [...(order.authorities || []), authority].slice(-20) })
-      .eq("id", order.id);
+    const { error: saveError } = await db.rpc("register_payment_attempt", {
+      p_order: order.id, p_authority: authority, p_test: test, p_amount: order.amount_irr,
+    });
+    if (saveError) return reply({ error: "storage" }, 503);
     return reply({ url: zp.startPay(authority) });
   }
 
@@ -441,27 +449,30 @@ Deno.serve(async (req) => {
       .eq("id", orderId)
       .maybeSingle();
     if (!order) return reply({ error: "not_found" }, 404);
-    if (["paid", "processing", "completed"].includes(order.status))
-      return reply({ paid: true, number: order.number, ref_id: order.ref_id, plan: order.plan_id });
     const authority = String(body.authority || "");
-    if (!(order.authorities || []).includes(authority)) return reply({ error: "not_found" }, 404);
+    const { data: attempt, error: attemptError } = await db.rpc("payment_attempt", { p_order: order.id, p_authority: authority });
+    if (attemptError) return reply({ error: "storage" }, 503);
+    if (!attempt) return reply({ error: "not_found" }, 404);
+    if (attempt.needs_review) return reply({ paid: false, error: "payment_review", number: order.number }, 409);
+    if (attempt.verified_at && attempt.ref_id && !attempt.needs_review && order.ref_id === attempt.ref_id
+      && ["paid", "processing", "completed"].includes(order.status))
+      return reply({ paid: true, number: order.number, ref_id: order.ref_id, plan: order.plan_id });
     if (body.status !== "OK") return reply({ paid: false, number: order.number, plan: order.plan_id });
-
-    const zp = gateway(order.test);
-    const answer = await zarinpal(order.test, "verify", { merchant_id: zp.merchant, amount: order.amount_irr, authority });
+    const zp = gateway(attempt.test);
+    const answer = await zarinpal(attempt.test, "verify", { merchant_id: zp.merchant, amount: attempt.amount_irr, authority });
     const code = answer?.data?.code;
+    if (!answer || (!answer.data && !answer.errors?.code)) return reply({ error: "gateway" }, 502);
     if (code !== 100 && code !== 101) {
       console.error("zarinpal verify", JSON.stringify(answer));
       return reply({ paid: false, number: order.number, plan: order.plan_id });
     }
-    const ref = String(answer.data.ref_id);
-    await db
-      .from("orders")
-      .update({ status: "paid", authority, ref_id: ref, card_pan: answer.data.card_pan || null, paid_at: new Date().toISOString() })
-      .eq("id", order.id)
-      .not("status", "in", "(paid,processing,completed)");
-    later(emailOnce(order.id, "paid"));
-    return reply({ paid: true, number: order.number, ref_id: ref, plan: order.plan_id });
+    if (!answer.data.ref_id) return reply({ error: "gateway" }, 502);
+    const { data: result, error: saveError } = await db.rpc("confirm_order_payment", {
+      p_order: order.id, p_authority: authority, p_ref: String(answer.data.ref_id), p_card: answer.data.card_pan || null,
+    });
+    if (saveError || !result) return reply({ error: "storage" }, 503);
+    if (result.paid) later(emailOnce(order.id, "paid"));
+    return reply(result, result.error ? 409 : 200);
   }
 
   return reply({ error: "bad_request" }, 400);
