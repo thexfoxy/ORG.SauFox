@@ -79,7 +79,1583 @@ const num = (n, decimals = 0) =>
 const money = {
   USD: (n) => (LANG === "fa" ? `${num(n, 2)} دلار` : `$${num(n, 2)}`),
   EUR: (n) => (LANG === "fa" ? `${num(n, 2)} یورو` : `€${num(n, 2)}`),
-  IRR: (n) => (LANG === "fa" ? `${num(Math.round(n))} ریال` : `${num(Math.round(…18169 tokens truncated…nked = (w) => (w.score * w.reviews + 6 * 3) / (w.reviews + 3);
+  IRR: (n) => (LANG === "fa" ? `${num(Math.round(n))} ریال` : `${num(Math.round(n))} Rials`),
+};
+const priceText = (work, code) => (work.approx && work.approx[code] ? "≈ " : "") + money[code](work.prices[code]);
+
+// Dates in Tehran time; Persian uses the Iranian calendar.
+const dateText = (iso, options = { day: "numeric", month: "long", year: "numeric" }) =>
+  new Date(iso).toLocaleDateString(LANG === "fa" ? "fa-IR" : "en-GB", { ...options, timeZone: "Asia/Tehran" });
+
+// Keys with {name} parts become patterns.
+const faPatterns =
+  LANG === "fa"
+    ? Object.keys(FA)
+        .filter((key) => key.includes("{"))
+        .map((key) => {
+          const names = [];
+          const source = key
+            .replace(/[.*+?^$()|[\]\\{}]/g, "\\$&")
+            .replace(/\\\{(\w+)\\\}/g, (_, name) => {
+              names.push(name);
+              return "(.+?)";
+            });
+          return { key, names, re: new RegExp(`^${source}$`) };
+        })
+    : [];
+
+const t = (text) => {
+  if (LANG !== "fa" || !text) return text;
+  const trimmed = text.trim();
+  if (!trimmed) return text;
+  let out = FA[trimmed];
+  if (out === undefined) {
+    for (const { key, names, re } of faPatterns) {
+      const match = trimmed.match(re);
+      if (!match) continue;
+      out = names.reduce((s, name, i) => {
+        const value = match[i + 1];
+        return s.replace(`{${name}}`, /^\d+$/.test(value) ? faDigits(value) : FA[value] || value);
+      }, FA[key]);
+      break;
+    }
+  }
+  return out === undefined ? text : text.replace(trimmed, out);
+};
+
+(function translatePage() {
+  if (LANG !== "fa") return;
+  const SKIP = "script, style, textarea, [translate='no']";
+  const ATTRS = ["placeholder", "aria-label", "title", "alt", "data-hover-text"];
+
+  const translateText = (node) => {
+    if (!node.parentElement || node.parentElement.closest(SKIP)) return;
+    const next = t(node.nodeValue);
+    if (next !== node.nodeValue) node.nodeValue = next;
+  };
+  const translateAttr = (el, name) => {
+    const value = el.getAttribute(name);
+    const next = value && t(value);
+    if (next && next !== value && !el.closest(SKIP)) el.setAttribute(name, next);
+  };
+  const translateTree = (root) => {
+    if (root.nodeType === Node.TEXT_NODE) return translateText(root);
+    if (root.nodeType !== Node.ELEMENT_NODE || root.closest(SKIP)) return;
+    [root, ...root.querySelectorAll(ATTRS.map((a) => `[${a}]`).join(","))].forEach((el) =>
+      ATTRS.forEach((a) => el.hasAttribute(a) && translateAttr(el, a))
+    );
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) translateText(walker.currentNode);
+  };
+
+  translateTree(document.documentElement);
+  // The Persian text pages have their own headings (#contact -> #contact-fa).
+  const twin = /^#[\w-]+$/.test(location.hash) && document.getElementById(`${location.hash.slice(1)}-fa`);
+  if (twin) addEventListener("load", () => twin.scrollIntoView());
+  new MutationObserver((records) => {
+    for (const r of records) {
+      if (r.type === "childList") r.addedNodes.forEach(translateTree);
+      else if (r.type === "characterData") translateText(r.target);
+      else translateAttr(r.target, r.attributeName);
+    }
+  }).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: ATTRS,
+  });
+})();
+document.documentElement.classList.remove("i18n-pending");
+
+// Language switch (footer, login pages): remembers the choice and reloads.
+document.querySelectorAll("[data-lang-switch]").forEach((button) => {
+  button.textContent = LANG === "fa" ? "English" : "فارسی";
+  button.lang = LANG === "fa" ? "en" : "fa";
+  button.addEventListener("click", () => {
+    const next = LANG === "fa" ? "en" : "fa";
+    local.set("lang", next);
+    // An address that names the language (?lang=fa) gets the new one.
+    const url = new URL(location.href);
+    if (url.searchParams.has("lang")) {
+      url.searchParams.set("lang", next);
+      location.replace(url.href);
+    } else location.reload();
+  });
+});
+
+// Search engines and link previews. Each page's <head> has its English
+// description, canonical address and ?lang=fa twin; in Persian the texts
+// are translated, and an address with ?lang=fa is its own canonical one.
+// Pages built from data (a work) call pageMeta with their own details.
+const SITE_URL = "https://saufoxentertainment.ir";
+const FA_URL = /[?&]lang=fa(&|$)/.test(location.search);
+const setMeta = (selector, attr, value) => {
+  let el = document.head.querySelector(selector);
+  if (!el) {
+    const [, tag, key, name] = selector.match(/^(\w+)\[(\w+)="([^"]+)"\]/);
+    el = document.createElement(tag);
+    el.setAttribute(key, name);
+    document.head.append(el);
+  }
+  el.setAttribute(attr, value);
+};
+const pageMeta = ({ path, title, description, image } = {}) => {
+  const head = document.head;
+  if (path) {
+    const url = SITE_URL + path;
+    const fa = url + (url.includes("?") ? "&" : "?") + "lang=fa";
+    setMeta('link[rel="canonical"]', "href", FA_URL ? fa : url);
+    setMeta('link[hreflang="en"]', "href", url);
+    setMeta('link[hreflang="fa"]', "href", fa);
+    setMeta('link[hreflang="x-default"]', "href", url);
+    head.querySelectorAll("link[hreflang]").forEach((link) => (link.rel = "alternate"));
+    setMeta('meta[property="og:url"]', "content", FA_URL ? fa : url);
+  } else if (FA_URL) {
+    const canonical = head.querySelector('link[rel="canonical"]');
+    const fa = head.querySelector('link[hreflang="fa"]');
+    if (canonical && fa) canonical.href = fa.href;
+    const og = head.querySelector('meta[property="og:url"]');
+    if (og && fa) og.content = fa.href;
+  }
+  if (title) setMeta('meta[property="og:title"]', "content", t(title));
+  if (description) {
+    setMeta('meta[name="description"]', "content", t(description));
+    setMeta('meta[property="og:description"]', "content", t(description));
+  }
+  if (image) setMeta('meta[property="og:image"]', "content", new URL(image, SITE_URL + "/").href);
+  if (LANG === "fa") {
+    ['meta[name="description"]', 'meta[property="og:description"]', 'meta[property="og:title"]'].forEach((selector) => {
+      const el = head.querySelector(selector);
+      if (el) el.content = t(el.content);
+    });
+    const locale = head.querySelector('meta[property="og:locale"]');
+    const other = head.querySelector('meta[property="og:locale:alternate"]');
+    if (locale && other) [locale.content, other.content] = ["fa_IR", "en_US"];
+  }
+};
+if (!document.querySelector(".title-page")) pageMeta();
+
+// A sign-in link from an email (older templates) lands on the site's home
+// page with the session in the address; the login page picks it up.
+if (!document.querySelector(".auth") && /(^#|&)(access_token|error_code)=/.test(location.hash))
+  location.replace(`login.html${location.hash}`);
+
+// Accounts live in Supabase (project saufox-entertainment). This key is the
+// public one meant for browsers; the database's row-level security decides
+// what each member can read and change. The session is stored under
+// "saufox.session", which the inline script in each page's <head> checks
+// before first paint. Only pages that load js/vendor/supabase.js get a client.
+const SUPABASE_URL = "https://gwyqkzhhnspfadqefmix.supabase.co";
+const SUPABASE_KEY = "sb_publishable_IB06YrDhrsKJbVghWP-zzg_xDgB1mXN";
+// Cloudflare Turnstile site key (public) for the login page's bot check.
+// Empty: no captcha. Set it before turning CAPTCHA protection on in Supabase.
+const TURNSTILE_SITE_KEY = "0x4AAAAAAFDsz8h-Njtg3UzM";
+const timeout = (ms) => (AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
+
+const account = (() => {
+  if (!window.supabase) return null;
+  // Sessions from the pre-Supabase demo were a bare email address.
+  const old = local.get("session");
+  if (old && !old.startsWith("{")) local.set("session", null);
+  return window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      // "implicit": links in emails work on whichever device opens them.
+    auth: { storageKey: "saufox.session", flowType: "implicit" },
+      // Give up after 20 seconds so a stalled connection shows an error
+      // instead of leaving the page waiting.
+    global: { fetch: (url, options = {}) => fetch(url, { ...options, signal: options.signal || timeout(20000) }) },
+  });
+})();
+
+// The catalogue lives in Supabase (table works), managed on admin.html.
+// Pages read the published works with one plain request, so the home page
+// doesn't need the Supabase library. The last copy is kept in this browser
+// and used if the request fails.
+// Prices in each currency: the work's own where the admin gave one,
+// otherwise worked out from its Rial price at the rates set in the admin
+// panel (shown with "≈").
+const pricesOf = (row, rates) => {
+  const prices = { USD: row.price_usd, EUR: row.price_eur, IRR: row.price_irr };
+  const approx = {};
+  [["USD", rates.usd_irr], ["EUR", rates.eur_irr]].forEach(([code, rate]) => {
+    if (prices[code] == null && row.price_irr != null && rate) {
+      prices[code] = Math.round((row.price_irr / rate) * 100) / 100;
+      approx[code] = true;
+    }
+  });
+  return { prices, approx };
+};
+
+// ---------- Cast & crew ----------
+// Each person has a name, a photo, any number of roles and, for actors and
+// voices, the character(s) they play (works.credits: { name, photo, roles,
+// character }). Where they show follows from the roles: anyone who directs
+// or writes leads, actors and voices are the cast, the rest the crew.
+// Credits from before (one role, perhaps a group, "as <character>") are
+// read the same way.
+const DIRECTOR = /^(director|co-director|کارگردان)$/i;
+const WRITER = /^(writer|co-writer|screenplay|screenwriter|story|author|نویسنده|فیلم‌نامه|فیلمنامه|فیلم‌نامه‌نویس)$/i;
+const CAST = /^(actor|actress|cast|voice|voice actor|voice actress|narrator|as .+|voice of .+|بازیگر|صداپیشه|گوینده|راوی|در نقش .+)$/i;
+const creditRoles = (credit) => {
+  if (Array.isArray(credit.roles)) return credit.roles.filter(Boolean);
+  if (credit.group === "director_writer") return ["Director", "Writer"];
+  const role = String(credit.role || "").trim();
+  if (!role) return [];
+  // An old cast entry's role was the character played.
+  if (credit.group === "cast" && !CAST.test(role)) return [`as ${role}`];
+  return role.split(/\s*(?:,|&|\/|\band\b)\s*/i).filter(Boolean);
+};
+// Roles that play a character, so the admin panel asks which one.
+const PLAYS = /^(actor|actress|voice|voice actor|voice actress|بازیگر|صداپیشه)$/i;
+// A credit as { name, photo, roles, character }: "as Anna" roles become
+// the character (with an Actor role if nothing else says so).
+const readCredit = (credit) => {
+  let roles = creditRoles(credit);
+  const played = roles.filter((r) => /^(as|در نقش)\s+/i.test(r)).map((r) => r.replace(/^(as|در نقش)\s+/i, ""));
+  roles = roles.filter((r) => !/^(as|در نقش)\s+/i.test(r));
+  if (played.length && !roles.some((r) => PLAYS.test(r))) roles.unshift("Actor");
+  const character = [credit.character, ...played].filter(Boolean).join(", ");
+  return { name: credit.name || "", photo: credit.photo || "", roles, character };
+};
+// AI tools that helped make the work: listed inside the crew, apart.
+const AI = /^(ai|ai assistant|ai model|دستیار هوش مصنوعی|هوش مصنوعی)$/i;
+// "lead" (directs or writes), "ai" (an AI assistant), "cast" (only acts or
+// voices) or "crew".
+const creditPlace = (roles) =>
+  roles.some((r) => DIRECTOR.test(r) || WRITER.test(r))
+    ? "lead"
+    : roles.some((r) => AI.test(r))
+      ? "ai"
+      : roles.length && roles.every((r) => CAST.test(r))
+        ? "cast"
+        : "crew";
+
+const toWork = (row, rates = {}) => ({
+  ...pricesOf(row, rates),
+  id: row.id,
+  title: row.title,
+  kind: row.kind,
+  status: row.status,
+  statusText: (LANG === "fa" && row.status_text_fa) || row.status_text || "",
+  images: [row.cover_url || row.hero_url].filter(Boolean),
+  hero: row.hero_url || "",
+  heroFocus: row.hero_focus || "",
+  heroFeatured: Boolean(row.hero_featured),
+  stills: row.stills || [],
+  trailerDate: row.trailer_date,
+  trailer: row.trailer || "",
+  youtube: row.youtube_url || "",
+  youtubeThumb: row.youtube_thumb_url || "",
+  synopsis: (LANG === "fa" && row.synopsis_fa) || row.synopsis || "",
+  genres: row.genres || [],
+  platforms: row.platforms || [],
+  rating: row.rating || "",
+  credits: (row.credits || []).map(readCredit).filter((credit) => credit.name),
+  created: row.created_at || "",
+  // Both languages' texts, for search (browse.html).
+  text: [row.synopsis, row.synopsis_fa, row.status_text, row.status_text_fa].filter(Boolean).join(" "),
+  // Members' reviews: the average of their stars, and how many there are.
+  reviews: row.review_count || 0,
+  score: row.review_count ? row.review_sum / row.review_count : null,
+});
+
+// Loads the published works and the site settings (exchange rates,
+// maintenance). { works, settings, offline }: offline when the server
+// can't be reached and there's no saved copy either.
+const loadSite = async () => {
+  const get = async (path) => {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: { apikey: SUPABASE_KEY }, signal: timeout(15000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  };
+  try {
+    const [rows, settings, plans] = await Promise.all([
+      get("works?select=*&published=eq.true&order=sort.asc,created_at.asc"),
+      get("site_settings?select=usd_irr,eur_irr,maintenance,maintenance_note,maintenance_note_fa,payments,sales_open&id=eq.1").catch(() => []),
+      get("plans?select=id,rank,discount_percent,free_kinds,on_sale,plan_prices(days,price_irr)&order=rank.asc").catch(() => []),
+    ]);
+    // Each plan's prices by length: { 7: rials, 30: rials, … } (none = not offered).
+    plans.forEach((plan) => {
+      plan.prices = {};
+      (plan.plan_prices || []).forEach((row) => row.price_irr != null && (plan.prices[row.days] = row.price_irr));
+      delete plan.plan_prices;
+    });
+    const rates = { ...(settings[0] || {}), plans };
+    local.set("catalog", JSON.stringify({ rows, rates }));
+    return { works: rows.map((row) => toWork(row, rates)), settings: rates, offline: false };
+  } catch (e) {
+    try {
+      const saved = JSON.parse(local.get("catalog") || "null");
+      if (!saved) return { works: [], settings: {}, offline: true };
+      const rows = Array.isArray(saved) ? saved : saved.rows || [];
+      // A saved copy doesn't count as maintenance: that needs the server.
+      const rates = { ...(saved.rates || {}), maintenance: false, payments: "off" };
+      return { works: rows.map((row) => toWork(row, rates)), settings: rates, offline: false };
+    } catch (e2) {
+      return { works: [], settings: {}, offline: true };
+    }
+  }
+};
+
+// Started once, on the pages that show works.
+const site = document.querySelector(".hero, .works, .plans, .title-page, .login-bg, .profile-page, .checkout, .browse, .news")
+  ? loadSite()
+  : Promise.resolve({ works: [], settings: {}, offline: false });
+const catalog = site.then((data) => data.works);
+
+// Behind every page built from the catalogue: a collage of the studio's
+// artwork, faint and heavily blurred, so the dark background isn't flat.
+// Added once the page has loaded, so it never slows the first view. Not on
+// the login page (it has its own artwork).
+(async function pageBackdrop() {
+  if (!document.querySelector(".hero, .works, .plans, .title-page, .profile-page, .checkout, .browse, .news")) return;
+  const works = await catalog;
+  const pictures = [...new Set(works.flatMap((w) => [w.hero, ...w.images, ...w.stills]).filter(Boolean))];
+  if (!pictures.length) return;
+  if (document.readyState !== "complete") await new Promise((resolve) => addEventListener("load", resolve, { once: true }));
+  const layer = document.createElement("div");
+  layer.className = "page-backdrop";
+  layer.setAttribute("aria-hidden", "true");
+  // Enough tiles to fill the grid, each picture used in turn.
+  const TILES = 24;
+  for (let i = 0; i < TILES; i++) {
+    const img = document.createElement("img");
+    img.alt = "";
+    img.decoding = "async";
+    img.setAttribute("fetchpriority", "low");
+    img.src = pictures[(i * 7) % pictures.length];
+    layer.append(img);
+  }
+  layer.addEventListener("load", () => layer.classList.add("is-in"), { capture: true, once: true });
+  document.body.prepend(layer);
+})();
+
+// Maintenance and outages, on the pages built from the catalogue: visitors
+// go to the status page (which comes back here when the site is up).
+// Admins see the site as usual, with a reminder bar.
+(async function siteStatus() {
+  if (!document.querySelector(".hero, .works, .title-page, .profile-page, .checkout, .browse")) return;
+  const { settings, offline } = await site;
+  const from = encodeURIComponent(location.pathname + location.search + location.hash);
+  if (offline) return location.replace(`status.html?reason=offline&from=${from}`);
+  if (!settings.maintenance) return;
+  if (local.get("admin") !== "1") return location.replace(`status.html?reason=maintenance&from=${from}`);
+  const bar = document.createElement("div");
+  bar.className = "maintenance-bar";
+  const text = document.createElement("span");
+  text.textContent = "Maintenance mode is on. Visitors see the maintenance page.";
+  const link = document.createElement("a");
+  link.href = "admin.html";
+  link.textContent = "Turn it off";
+  bar.append(text, link);
+  document.body.append(bar);
+})();
+
+// The current session, if it came through an emailed code or Google. The
+// database opens nothing to a session made from the password alone (a login
+// that stopped before its code), so such a leftover is cleared here.
+const passwordOnly = (session) => {
+  try {
+    const claims = JSON.parse(atob(session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const methods = claims.amr || [];
+    return methods.length > 0 && methods.every((m) => m.method === "password");
+  } catch (e) {
+    return false;
+  }
+};
+const verifiedSession = async () => {
+  if (!account) return null;
+  let answer;
+  try {
+    answer = await account.auth.getSession();
+  } catch (e) {
+    // A hiccup (network, storage): try once more before giving up.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    answer = await account.auth.getSession();
+  }
+  const { session } = answer.data;
+  if (!session) return null;
+  if (passwordOnly(session)) {
+    await account.auth.signOut({ scope: "local" });
+    return null;
+  }
+  return session;
+};
+
+// Sends a signed-out visitor to log in, then back to this page.
+const goLogin = () => {
+  // The page's file name, as it's written in links (the address bar shows
+  // "/work" for work.html, and "/" for the home page).
+  const page = location.pathname.split("/").pop().replace(/\.html$/, "") || "index";
+  local.set("next", `${page}.html${location.search}${location.hash}`);
+  location.href = "login.html";
+};
+
+// Sales can be paused from the admin panel (to catch up on orders): no new
+// orders or payments then, except for admins.
+const salesPaused = (settings) => settings.sales_open === false && local.get("admin") !== "1";
+const SALES_PAUSED = "Sales are paused for a little while. Please check back soon.";
+// Online payment (Supabase Edge Function "payment", Zarinpal). Open when
+// the admin panel sets it live, or in test mode for admins only.
+const paymentsOpen = (settings) =>
+  !salesPaused(settings) &&
+  (settings.payments === "live" || (settings.payments === "test" && local.get("admin") === "1"));
+const PAYMENT_ERRORS = {
+  payment_review: "Payment received for review. Do not pay again; contact support with your order number.",
+  storage: "The payment record could not be saved. Retry this page; do not start another payment.",
+  paused: "Sales are paused for a little while. Your order is saved; you can pay once they reopen.",
+  closed: "Online payment isn't open yet. Your order is saved, and we'll email you when you can pay.",
+  not_configured: "Online payment isn't open yet. Your order is saved, and we'll email you when you can pay.",
+  gateway: "The bank gateway didn't answer. Try again in a moment.",
+  not_payable: "This order can't be paid any more. See its status in your orders.",
+  signed_out: "Your session has ended. Log in again to pay.",
+};
+const callFunction = async (name, body, session) => {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_KEY,
+        ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify(body),
+      signal: timeout(30000),
+    });
+    return await res.json();
+  } catch (e) {
+    return { error: "network" };
+  }
+};
+const payment = (body, session) => callFunction("payment", body, session);
+// Files of the works a member owns (Edge Function "library").
+const library = (body, session) => callFunction("library", body, session);
+const PLATFORMS = { windows: "Windows", mac: "macOS", linux: "Linux", android: "Android", other: "Download" };
+const fileSize = (bytes) => {
+  if (!(bytes > 0)) return "";
+  const [value, unit] =
+    bytes >= 1e9 ? [bytes / 1e9, LANG === "fa" ? "گیگابایت" : "GB"] : [bytes / 1e6, LANG === "fa" ? "مگابایت" : "MB"];
+  return `${num(value, value < 10 ? 1 : 0)} ${unit}`;
+};
+// Sends the member to the bank. Returns a message if that can't happen.
+const payOrder = async (orderId) => {
+  const session = await verifiedSession();
+  if (!session) return PAYMENT_ERRORS.signed_out;
+  const answer = await payment({ action: "start", order_id: orderId }, session);
+  if (answer.url) {
+    location.href = answer.url;
+    return "";
+  }
+  return PAYMENT_ERRORS[answer.error] || "Couldn't reach the payment service. Check your connection and try again.";
+};
+
+// ---------- Subscriptions ----------
+// Iron, Gold and Titanium (public.plans; settings.plans), each sold for
+// 7 days, 1, 3 or 6 months or a year at its own price (public.plan_prices;
+// plan.prices by days). A paid plan order gives the member that many days;
+// the database takes the plan's discount off every work they order.
+const PLAN_NAMES = { iron: "Iron", gold: "Gold", titanium: "Titanium" };
+const planName = (id) => PLAN_NAMES[id] || id;
+const PLAN_LENGTHS = [
+  [7, "7 days"],
+  [30, "1 month"],
+  [90, "3 months"],
+  [180, "6 months"],
+  [365, "1 year"],
+];
+const lengthName = (days) => (PLAN_LENGTHS.find(([d]) => d === Number(days)) || [0, `${days} days`])[1];
+// The free-viewing line for a plan's free_kinds.
+const FREE_LINES = {
+  novel: "Read every novel free in the online reader",
+  animation: "Watch every animation free",
+  film: "Watch every film free",
+  "animation,novel": "Watch every animation free, and read every novel",
+  "film,novel": "Watch every film free, and read every novel",
+  "animation,film": "Watch every film and animation free",
+  "animation,film,novel": "Watch every film and animation free, and read every novel",
+};
+const freeLine = (kinds) => FREE_LINES[[...(kinds || [])].sort().join(",")] || "";
+// Which of animation / film / novel a work is (same as private.kind_class).
+const kindClass = (kind) =>
+  /film|movie/i.test(kind) ? "film" : /anim/i.test(kind) ? "animation" : /novel|book/i.test(kind) ? "novel" : "";
+// The signed-in member's plan: { plan, ends_at, discount_percent,
+// free_kinds } or null. Asked once per page, and remembered in this
+// browser for the pages that don't talk to the account (the home page).
+let membershipAsk = null;
+const myMembership = () =>
+  (membershipAsk ||= (async () => {
+    if (!local.get("session")) return null;
+    const session = await verifiedSession();
+    if (!session) return null;
+    const { data, error } = await account.rpc("my_membership");
+    if (error) return savedMembership();
+    local.set("plan", data ? JSON.stringify({ plan: data.plan, ends_at: data.ends_at }) : null);
+    return data;
+  })());
+const savedMembership = () => {
+  try {
+    const saved = local.get("session") && JSON.parse(local.get("plan") || "null");
+    return saved && new Date(saved.ends_at) > new Date() ? saved : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Mobile numbers typed with Persian or Arabic digits, spaces or dashes.
+const cleanPhone = (text) =>
+  text
+    .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+    .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    .replace(/[\s().-]/g, "");
+
+// Keeps the name, photo and currency in this browser too, so the header and
+// the price cards can show them straight away on the next visit.
+const cacheProfile = (profile) => {
+  if (!profile) return;
+  local.set("name", profile.name || null);
+  local.set("avatar", profile.avatar_url || null);
+  local.set("currency", profile.currency || null);
+};
+
+const fetchProfile = async (user) => {
+  const { data } = await account
+    .from("profiles")
+    .select("name, currency, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+  return data;
+};
+
+// Section 1 — Header: split each call-to-action into two lines of letters.
+// The resting line runs the orange -> white wave; the hover line (from
+// data-hover-text) replaces it letter by letter on hover. CSS staggers the
+// motion with each letter's --i.
+(function animateLetters() {
+  const buildLine = (text, kind) => {
+    const line = document.createElement("span");
+    line.className = `cta__line cta__line--${kind}`;
+    line.setAttribute("aria-hidden", "true");
+    const chars = LANG === "fa" ? text.split(/(\s+)/).filter(Boolean) : Array.from(text);
+    // Short words get a slower, clearly readable wave; long ones stay ~1.4s.
+    const step = Math.min(140, 1400 / chars.length);
+    chars.forEach((ch, i) => {
+      const span = document.createElement("span");
+      span.className = "cta__char";
+      span.textContent = ch;
+      span.style.setProperty("--i", i);
+      span.style.animationDelay = `${Math.round(i * step)}ms`;
+      line.append(span);
+    });
+    return line;
+  };
+
+  document.querySelectorAll("[data-animate-letters]").forEach((el) => {
+    const text = el.textContent.trim();
+    el.setAttribute("aria-label", text);
+    el.textContent = "";
+    el.append(buildLine(text, "rest"));
+    if (el.dataset.hoverText) el.append(buildLine(el.dataset.hoverText, "hover"));
+  });
+})();
+
+// Section 1 — Header: logotype blur follows the mouse (desktop only).
+// Header backdrop (WebGL): slow smoke in the site's dark silver with faint
+// orange embers drifting through it, and a soft warm light under the
+// mouse. Drawn at half resolution and ~30 fps, paused while the tab is
+// hidden; one still frame for reduced motion; nothing without WebGL.
+(function headerShader() {
+  const header = document.querySelector(".site-header");
+  if (!header) return;
+  const canvas = document.createElement("canvas");
+  canvas.className = "site-header__shader";
+  canvas.setAttribute("aria-hidden", "true");
+  const gl = canvas.getContext("webgl", { alpha: false, antialias: false, powerPreference: "low-power" });
+  if (!gl) return;
+  const VERT = "attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}";
+  const FRAG = `precision mediump float;
+uniform vec2 r;uniform float t;uniform vec3 m;
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+vec2(1.,1.)),f.x),f.y);}
+float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
+void main(){
+vec2 uv=gl_FragCoord.xy/r;
+vec2 p=vec2(gl_FragCoord.x/r.y,uv.y)*1.4;
+float T=t*.035;
+vec2 q=vec2(fbm(p+vec2(T,0.)),fbm(p+vec2(-T,T*.5)+5.2));
+float s=fbm(p*1.1+2.2*q+vec2(T*1.6,0.));
+vec3 c=vec3(.059,.059,.067);
+c+=vec3(.78,.79,.84)*smoothstep(.42,.95,s)*.11;
+float e=smoothstep(.64,.95,fbm(p*2.6+q*3.-vec2(0.,T*7.)));
+c+=vec3(1.,.48,.1)*e*.2*(1.-uv.y*.5);
+vec2 d=(gl_FragCoord.xy-m.xy)/r.y;
+c+=vec3(1.,.62,.32)*exp(-dot(d,d)*2.)*.09*m.z;
+gl_FragColor=vec4(c,1.);}`;
+  const shader = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+  };
+  const vs = shader(gl.VERTEX_SHADER, VERT);
+  const fs = shader(gl.FRAGMENT_SHADER, FRAG);
+  if (!vs || !fs) return;
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const a = gl.getAttribLocation(prog, "a");
+  gl.enableVertexAttribArray(a);
+  gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+  const uR = gl.getUniformLocation(prog, "r");
+  const uT = gl.getUniformLocation(prog, "t");
+  const uM = gl.getUniformLocation(prog, "m");
+  header.prepend(canvas);
+
+  const SCALE = 0.5;
+  const size = () => {
+    canvas.width = Math.max(1, Math.round(header.clientWidth * SCALE));
+    canvas.height = Math.max(1, Math.round(header.clientHeight * SCALE));
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  };
+  // The mouse light eases in and out.
+  const mouse = { x: 0, y: 0, on: 0, want: 0 };
+  header.addEventListener("pointermove", (event) => {
+    const box = header.getBoundingClientRect();
+    mouse.x = (event.clientX - box.left) * SCALE;
+    mouse.y = (box.bottom - event.clientY) * SCALE;
+    mouse.want = 1;
+  });
+  header.addEventListener("pointerleave", () => (mouse.want = 0));
+
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const start = performance.now() - Math.random() * 60000;
+  let last = 0;
+  let frame = 0;
+  const draw = (now) => {
+    frame = still ? 0 : requestAnimationFrame(draw);
+    if (now - last < 33) return;
+    last = now;
+    mouse.on += (mouse.want - mouse.on) * 0.08;
+    gl.uniform2f(uR, canvas.width, canvas.height);
+    gl.uniform1f(uT, (now - start) / 1000);
+    gl.uniform3f(uM, mouse.x, mouse.y, mouse.on);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  };
+  size();
+  new ResizeObserver(() => {
+    size();
+    if (still) draw(performance.now() + 1000);
+  }).observe(header);
+  document.addEventListener("visibilitychange", () => {
+    cancelAnimationFrame(frame);
+    if (!document.hidden && !still) frame = requestAnimationFrame(draw);
+  });
+  frame = requestAnimationFrame(draw);
+})();
+
+// The eNamad seal loads from eNamad's own server, which is often slow or
+// out of reach (outside Iran, behind a VPN). A failed image is tried again
+// twice; if it still won't come, a plain badge takes its place, linking to
+// the same verification page, so the spot is never empty.
+(function trustSeals() {
+  document.querySelectorAll(".site-footer__seals a").forEach((link) => {
+    const img = link.querySelector("img");
+    if (!img) return;
+    const src = img.getAttribute("src");
+    let tries = 0;
+    const fallback = () => {
+      if (link.querySelector(".seal-badge")) return;
+      img.hidden = true;
+      const badge = document.createElement("span");
+      badge.className = "seal-badge";
+      badge.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5l8-3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.5 12.2l2.4 2.4 4.6-4.9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const text = document.createElement("span");
+      text.className = "seal-badge__text";
+      const name = document.createElement("strong");
+      name.textContent = t("eNamad");
+      const note = document.createElement("small");
+      note.textContent = t("Trust seal · Verify");
+      text.append(name, note);
+      badge.append(text);
+      link.append(badge);
+      link.setAttribute("aria-label", t("eNamad trust seal"));
+    };
+    const failed = () => {
+      if (tries >= 2) return fallback();
+      tries += 1;
+      setTimeout(() => (img.src = `${src}&retry=${tries}`), 2500 * tries);
+    };
+    img.addEventListener("error", failed);
+    img.addEventListener("load", () => {
+      // eNamad sometimes answers with an empty 1×1 picture instead of an error.
+      if (img.naturalWidth < 20) failed();
+    });
+    // Already finished before this script ran.
+    if (img.complete && (img.naturalWidth < 20)) failed();
+    // Still nothing after 12 seconds: show the badge (the image, if it
+    // turns up later, takes the spot back).
+    setTimeout(() => {
+      if (!img.complete || img.naturalWidth < 20) fallback();
+    }, 12000);
+    img.addEventListener("load", () => {
+      if (img.naturalWidth >= 20) {
+        img.hidden = false;
+        const badge = link.querySelector(".seal-badge");
+        if (badge) badge.remove();
+      }
+    });
+  });
+})();
+
+// Once a visit: support and order help live in the customer portal only.
+// Not on the pages where it would get in the way (sign-in, checkout, the
+// admin panel, status pages).
+(function portalNotice() {
+  if (/\/(login|checkout|admin|launcher|download|status|portal-signin|support|404)(\.html)?$/.test(location.pathname)) return;
+  if (document.querySelector(".status, .admin")) return;
+  try {
+    if (sessionStorage.getItem("saufox.portal-notice")) return;
+  } catch (e) {
+    return;
+  }
+  const PORTAL = "https://portal.saufoxentertainment.ir/";
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const dialog = document.createElement("dialog");
+  dialog.className = "portal-notice";
+  dialog.setAttribute("aria-labelledby", "portal-notice-title");
+  const point = (icon, text) => `<li><span class="portal-notice__tick" aria-hidden="true">${icon}</span>${t(text)}</li>`;
+  const ICON = {
+    box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+    mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+  };
+  dialog.innerHTML = `
+    <div class="portal-notice__card">
+      <span class="portal-notice__ring" aria-hidden="true"></span>
+      <button class="portal-notice__x" type="button" aria-label="${t("Close")}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div class="portal-notice__mark" aria-hidden="true">
+        <span></span><span></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/><path d="M19 20a3 3 0 0 1-3 2h-3"/></svg>
+      </div>
+      <p class="portal-notice__kicker">${t("Customer portal")}</p>
+      <h2 class="portal-notice__title" id="portal-notice-title">${t("Support is only in the customer portal")}</h2>
+      <p class="portal-notice__lead">${t("To follow up an order or get help, please use the customer portal only. Messages sent anywhere else may not reach our team.")}</p>
+      <ul class="portal-notice__points">
+        ${point(ICON.box, "Follow your orders")}
+        ${point(ICON.chat, "Chat with our support team")}
+        ${point(ICON.mail, "Replies by email too")}
+      </ul>
+      <div class="portal-notice__actions">
+        <a class="portal-notice__go" href="${PORTAL}">${t("Open the customer portal")}</a>
+        <button class="portal-notice__later" type="button">${t("Got it")}</button>
+      </div>
+    </div>`;
+  const seen = () => {
+    try {
+      sessionStorage.setItem("saufox.portal-notice", "1");
+    } catch (e) {}
+  };
+  const close = () => {
+    seen();
+    if (calm || !dialog.animate) return dialog.close();
+    dialog.classList.add("is-leaving");
+    setTimeout(() => dialog.close(), 320);
+  };
+  dialog.querySelector(".portal-notice__x").addEventListener("click", close);
+  dialog.querySelector(".portal-notice__later").addEventListener("click", close);
+  dialog.querySelector(".portal-notice__go").addEventListener("click", seen);
+  dialog.addEventListener("cancel", (e) => {
+    e.preventDefault();
+    close();
+  });
+  // A click on the dimmed page around the card closes it too.
+  dialog.addEventListener("click", (e) => e.target === dialog && close());
+  dialog.addEventListener("close", () => dialog.remove());
+  // The card tilts a touch toward the pointer.
+  const card = dialog.querySelector(".portal-notice__card");
+  if (!calm)
+    card.addEventListener("pointermove", (e) => {
+      const box = card.getBoundingClientRect();
+      card.style.setProperty("--mx", `${e.clientX - box.left}px`);
+      card.style.setProperty("--my", `${e.clientY - box.top}px`);
+      card.style.setProperty("--rx", `${((e.clientY - box.top) / box.height - 0.5) * -4}deg`);
+      card.style.setProperty("--ry", `${((e.clientX - box.left) / box.width - 0.5) * 4}deg`);
+    });
+  // After the page has settled, and not over another open dialog.
+  const open = () => {
+    if (document.querySelector("dialog[open]")) return setTimeout(open, 2000);
+    document.body.append(dialog);
+    dialog.showModal();
+    dialog.querySelector(".portal-notice__go").focus({ preventScroll: true });
+  };
+  setTimeout(open, calm ? 400 : 1200);
+})();
+
+(function brandBlur() {
+  const brand = document.querySelector(".brand");
+  if (!brand || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
+  brand.addEventListener("pointermove", (event) => {
+    const box = brand.getBoundingClientRect();
+    brand.style.setProperty("--mx", `${event.clientX - box.left}px`);
+    brand.style.setProperty("--my", `${event.clientY - box.top}px`);
+    brand.classList.add("is-blurring");
+  });
+  brand.addEventListener("pointerleave", () => brand.classList.remove("is-blurring"));
+})();
+
+// Section 1 — Header: profile chip (signed-in users only).
+// Desktop expands it on hover (CSS). On touch screens the first tap expands
+// it, a second tap follows the link, and tapping elsewhere collapses it.
+(function profileChip() {
+  const chip = document.querySelector(".profile-chip");
+  if (!chip) return;
+
+  const avatar = local.get("avatar");
+  if (avatar) chip.querySelector("img").src = avatar;
+
+  const canHover = window.matchMedia("(hover: hover)").matches;
+
+  chip.addEventListener("click", (event) => {
+    if (canHover) return;
+    if (!chip.classList.contains("is-open")) {
+      event.preventDefault();
+      chip.classList.add("is-open");
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!chip.contains(event.target)) chip.classList.remove("is-open");
+  });
+})();
+
+// ---------- YouTube ----------
+// A YouTube link as https://www.youtube.com/watch?v=<id> (from watch, youtu.be,
+// shorts, live or embed links); "" for nothing, null if it isn't one.
+const youtubeId = (url) => {
+  const match = String(url || "").match(
+    /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{6,20})/
+  );
+  return match ? match[1] : "";
+};
+const youtubeUrl = (text) => {
+  const value = String(text || "").trim();
+  if (!value) return "";
+  const id = youtubeId(value);
+  return id ? `https://www.youtube.com/watch?v=${id}` : null;
+};
+// A thumbnail that opens the video on YouTube. The thumbnail uploaded in the
+// admin panel comes from this site (YouTube's own images need a VPN in Iran);
+// without one, YouTube's is tried, and a plain dark frame stays if it fails.
+const youtubeCard = (url, thumb, label = "Watch on YouTube") => {
+  const link = document.createElement("a");
+  link.className = "yt-card";
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener";
+  const frame = document.createElement("span");
+  frame.className = "yt-card__frame";
+  const img = document.createElement("img");
+  img.alt = "";
+  img.loading = "lazy";
+  img.src = thumb || `https://i.ytimg.com/vi/${youtubeId(url)}/hqdefault.jpg`;
+  img.addEventListener("error", () => img.remove());
+  const play = document.createElement("span");
+  play.className = "yt-card__play";
+  play.innerHTML =
+    '<svg viewBox="0 0 68 48" aria-hidden="true"><path d="M66.5 7.7a8.5 8.5 0 0 0-6-6C55.2.3 34 .3 34 .3s-21.2 0-26.5 1.4a8.5 8.5 0 0 0-6 6C.1 13 .1 24 .1 24s0 11 1.4 16.3a8.5 8.5 0 0 0 6 6C12.8 47.7 34 47.7 34 47.7s21.2 0 26.5-1.4a8.5 8.5 0 0 0 6-6C67.9 35 67.9 24 67.9 24s0-11-1.4-16.3z" fill="#f00"/><path d="M45 24 27 14v20z" fill="#fff"/></svg>';
+  frame.append(img, play);
+  const text = document.createElement("span");
+  text.className = "yt-card__label";
+  text.textContent = label;
+  link.append(frame, text);
+  return link;
+};
+
+// The hero's bottom edge, shared by the hero and the work cards. Same shape
+// as the hero's mask in css/style.css, in its 1440 x 520 viewBox: flat at
+// y=370 up to x=460, a cubic down to (1200, 520), then flat. Takes x as a
+// fraction of the hero's width, returns y in viewBox units.
+const heroEdgeY = (() => {
+  const P = [[1200, 520], [900, 520], [780, 370], [460, 370]];
+  const at = (t, k) =>
+    (1 - t) ** 3 * P[0][k] + 3 * (1 - t) ** 2 * t * P[1][k] + 3 * (1 - t) * t ** 2 * P[2][k] + t ** 3 * P[3][k];
+  // Phones drop the curve (css/style.css) so the artwork shows whole.
+  const phone = window.matchMedia("(max-width: 700px)");
+  return (fraction) => {
+    if (phone.matches) return 520;
+    const x = fraction * 1440;
+    if (x <= 460) return 370;
+    if (x >= 1200) return 520;
+    let lo = 0;
+    let hi = 1; // x falls as t rises
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      if (at(mid, 0) > x) lo = mid;
+      else hi = mid;
+    }
+    return at((lo + hi) / 2, 1);
+  };
+})();
+
+// Section 2 — Hero: key art from the studio's releases, one slanted panel per
+// work (up to five, seven on wide screens), or a single full-width image
+// while there is one work. The main work (chosen in the admin panel, else the
+// one with the newest news post, else a random one) takes the left 72% with
+// its banner nearly whole,
+// and its card stays open (an eye button hides it, remembered in this
+// browser); the rest share the right side in equal strips. Works with a news
+// post come first: their panel shows the work's art, a "News" tag, and links
+// to the latest post about it. On a mouse, a strip on the right widens
+// within that side and a card opens on it with the post's or work's details
+// and its YouTube video (thumbnail -> YouTube).
+(async function heroCollage() {
+  const hero = document.querySelector(".hero");
+  if (!hero) return;
+  const CATALOG = await catalog;
+
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const hover = window.matchMedia("(hover: hover) and (pointer: fine)");
+  const SWAP_EVERY = 4500;
+  const MAX_PANELS = window.innerWidth >= 1100 ? 6 : window.innerWidth >= 700 ? 5 : 4;
+
+  const withArt = CATALOG.filter((work) => work.hero || work.images[0]);
+  const artOf = (work) => work.hero || work.images[0];
+  if (!withArt.length) return;
+
+  // The latest post about each work, newest first.
+  let posts = [];
+  try {
+    posts = await getNews(`${NEWS_LIST}&work_id=not.is.null&limit=20`);
+  } catch (e) {}
+  const newsFor = new Map();
+  posts.forEach((post) => {
+    if (!newsFor.has(post.work_id) && withArt.some((w) => w.id === post.work_id)) newsFor.set(post.work_id, post);
+  });
+
+  const shuffle = (list) => {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  // The main work chosen in the admin panel, then works with news (newest
+  // first), then the rest with key art, shuffled.
+  const chosen = withArt.find((w) => w.heroFeatured);
+  const newsWorks = [...newsFor.keys()].map((id) => withArt.find((w) => w.id === id)).filter((w) => w !== chosen);
+  const others = shuffle(withArt.filter((w) => w !== chosen && !newsFor.has(w.id) && w.hero));
+  const picks = [...(chosen ? [chosen] : []), ...newsWorks, ...others].slice(0, MAX_PANELS);
+  const count = picks.length;
+  if (!count) return;
+  // The featured work first (on the left), the rest in a random order.
+  const order = [0, ...shuffle(picks.slice(1).map((_, i) => i + 1))];
+
+  const art = (work) => {
+    const el = document.createElement("span");
+    el.className = "hero__art";
+    el.style.backgroundImage = `url("${artOf(work)}")`;
+    if (work.heroFocus) el.style.backgroundPosition = work.heroFocus;
+    el.dataset.work = work.id;
+    return el;
+  };
+  const STATUS = { released: "Released", preorder: "Pre-order", coming: "Coming soon", production: "In production" };
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text) node.textContent = text;
+    return node;
+  };
+  // The glass card: the post's details (or the work's), its YouTube video,
+  // and a link on.
+  const card = (work, post) => {
+    const box = make("div", "hero__card");
+    const top = make("p", "hero__card-top");
+    if (post) top.append(make("span", "hero__badge", t("News")), make("span", "", dateText(post.published_at)));
+    else top.append(make("span", "hero__badge hero__badge--work", t(work.kind)), make("span", "", t(STATUS[work.status] || "")));
+    const title = make("strong", "hero__card-title", post ? newsField(post, "title") : work.title);
+    title.dir = "auto";
+    title.translate = false;
+    box.append(top, title);
+    const about = post ? newsBlurb(post) : work.statusText || work.synopsis;
+    if (about) {
+      const text = make("p", "hero__card-text", about);
+      text.dir = "auto";
+      text.translate = false;
+      box.append(text);
+    }
+    if (post) {
+      const on = make("p", "hero__card-work");
+      const name = make("span", "", work.title);
+      name.translate = false;
+      on.append(`${t(work.kind)} · `, name);
+      box.append(on);
+    }
+    // The post's video, or else the work's (its trailer).
+    const video = post && post.youtube_url ? [post.youtube_url, post.youtube_thumb_url] : work.youtube ? [work.youtube, work.youtubeThumb] : null;
+    if (video) box.append(youtubeCard(video[0], video[1]));
+    const more = make("a", "hero__card-more", post ? t("Read the news") : t("See the work"));
+    more.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : `work.html?id=${encodeURIComponent(work.id)}`;
+    box.append(more);
+    return box;
+  };
+  const EYE =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+  const EYE_OFF =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.1 3.9M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7c1.7 0 3.2-.5 4.5-1.2M9.9 9.9a3 3 0 0 0 4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // The cards live in a layer just after the hero, outside its clipped
+  // strips and curved mask, so a card is never cut off; each lines up with
+  // its panel.
+  const layer = make("div", "hero-cards");
+  hero.after(layer);
+  const cards = [];
+  // Where a panel goes, and what it shows.
+  const point = (panel, work) => {
+    const post = newsFor.get(work.id);
+    const link = panel.querySelector(".hero__link");
+    link.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : `work.html?id=${encodeURIComponent(work.id)}`;
+    link.setAttribute("aria-label", post ? newsField(post, "title") : work.title);
+    panel.classList.toggle("has-news", Boolean(post));
+    const i = Number(panel.dataset.index);
+    // The featured panel has its card (or the eye button) instead of a tag.
+    panel.querySelector(".hero__tag").hidden = !post || i === 0;
+    const next = card(work, post);
+    // The featured work's card stays open, with an eye button to hide it.
+    if (i === 0) {
+      next.classList.add("is-pinned");
+      const hide = make("button", "hero__eye");
+      hide.type = "button";
+      hide.innerHTML = EYE_OFF;
+      hide.setAttribute("aria-label", t("Hide the news"));
+      hide.title = t("Hide the news");
+      hide.addEventListener("click", () => pin(false));
+      next.querySelector(".hero__card-top").append(hide);
+    }
+    if (cards[i]) cards[i].replaceWith(next);
+    else layer.append(next);
+    cards[i] = next;
+  };
+  // Shown in the card's place while it's hidden: brings it back.
+  const peek = make("button", "hero__peek");
+  peek.type = "button";
+  peek.innerHTML = EYE;
+  peek.setAttribute("aria-label", t("Show the news"));
+  peek.title = t("Show the news");
+  peek.addEventListener("click", () => pin(true));
+  layer.append(peek);
+  let pinned = local.get("heroCard") !== "hidden";
+  let hovered = -1;
+
+  hero.style.setProperty("--n", count);
+  hero.dataset.count = count;
+  hero.replaceChildren(
+    ...order.map((k, i) => {
+      const work = picks[k];
+      const panel = make("div", "hero__panel");
+      panel.style.setProperty("--i", i);
+      panel.dataset.index = i;
+      const link = make("a", "hero__link");
+      const tag = make("span", "hero__tag", t("News"));
+      panel.append(art(work), link, tag);
+      point(panel, work);
+      return panel;
+    })
+  );
+  const panels = [...hero.children];
+
+  // ---------- Layout ----------
+  // Each panel's share of the width: the main one 72%, the others an equal
+  // share of the rest; a hovered strip on the right takes 55% of that side
+  // while its neighbours narrow.
+  const FEATURED = 0.72;
+  const shares = (index) => {
+    const n = panels.length;
+    if (n === 1) return [1];
+    const rest = 1 - FEATURED;
+    return panels.map((_, i) =>
+      i === 0 ? FEATURED : index > 0 && n > 2 ? (i === index ? rest * 0.55 : (rest * 0.45) / (n - 2)) : rest / (n - 1)
+    );
+  };
+  const weights = shares(-1);
+  let targets = weights.slice();
+  let frame = 0;
+
+  // Clip each panel to exactly what shows: its slanted strip, cut off along
+  // the curved bottom edge, with its artwork box under the strip. Besides
+  // looking the same as the mask, the clip keeps the hero from catching
+  // clicks and drags meant for the cards that slide in underneath its curve.
+  const layout = () => {
+    const W = hero.clientWidth;
+    const H = hero.clientHeight;
+    if (!W || !H) return;
+    const css = getComputedStyle(hero);
+    const slant = (parseFloat(css.getPropertyValue("--slant")) / 100) * W;
+    const gap = parseFloat(css.getPropertyValue("--gap"));
+    const total = W + slant;
+    const sum = weights.reduce((a, b) => a + b, 0);
+    const curve = (x) => (heroEdgeY(x / W) * H) / 520;
+
+    // Where a slanted edge (top x -> bottom x) meets the curve.
+    const meet = (top, bottom) => {
+      const edge = (y) => top + ((bottom - top) * y) / H;
+      let lo = 0;
+      let hi = H;
+      for (let i = 0; i < 20; i++) {
+        const mid = (lo + hi) / 2;
+        if (mid < curve(edge(mid))) lo = mid;
+        else hi = mid;
+      }
+      return [edge(hi), hi];
+    };
+
+    let left = 0;
+    panels.forEach((panel, i) => {
+      const width = (total * weights[i]) / sum;
+      const a = left;
+      const b = left + width;
+      left = b;
+      const x0 = i === 0 ? -0.3 * W : a;
+      const x1 = i === panels.length - 1 ? 1.3 * W : b;
+      const [rx, ry] = meet(x1 - gap, x1 - slant - gap);
+      const [lx, ly] = meet(x0 + gap, x0 - slant + gap);
+      const points = [[x0 + gap, 0], [x1 - gap, 0], [rx, ry]];
+      for (let x = rx - 8; x > lx; x -= 8) points.push([x, curve(x)]);
+      points.push([lx, ly]);
+      panel.style.clipPath = `polygon(${points.map(([x, y]) => `${x.toFixed(1)}px ${y.toFixed(1)}px`).join(", ")})`;
+      [...panel.querySelectorAll(".hero__art")].forEach((el) => {
+        el.style.left = `${(a - slant).toFixed(1)}px`;
+        el.style.width = `${(width + slant).toFixed(1)}px`;
+      });
+      // The tag and card sit in the strip's top corner, clear of the slant.
+      const start = Math.max(a, 0) + gap + 18;
+      panel.querySelector(".hero__tag").style.left = `${start.toFixed(1)}px`;
+      const box = cards[i];
+      box.style.top = `${18 - H}px`;
+      box.style.left = `${Math.min(start, W - box.offsetWidth - 18).toFixed(1)}px`;
+      if (i === 0) {
+        peek.style.top = `${18 - H}px`;
+        peek.style.left = `${start.toFixed(1)}px`;
+      }
+    });
+  };
+
+  // Eases the widths toward their targets, one frame at a time.
+  const step = () => {
+    let moving = false;
+    weights.forEach((w, i) => {
+      const next = w + (targets[i] - w) * 0.16;
+      weights[i] = Math.abs(targets[i] - next) < 0.002 ? targets[i] : next;
+      if (weights[i] !== targets[i]) moving = true;
+    });
+    layout();
+    frame = moving ? requestAnimationFrame(step) : 0;
+  };
+  // Which cards are open: the hovered panel's, and the featured one's
+  // unless it's been hidden.
+  const showCards = () => {
+    cards.forEach((box, i) => {
+      const open = i === 0 ? pinned : i === hovered;
+      box.classList.toggle("is-open", open);
+      panels[i].classList.toggle("is-open", open);
+    });
+    peek.hidden = pinned;
+    // A hovered strip's card covers its neighbours' tags; they step aside.
+    hero.classList.toggle("is-hovering", hovered > 0);
+  };
+  const pin = (show) => {
+    pinned = show;
+    local.set("heroCard", show ? null : "hidden");
+    showCards();
+    (show ? cards[0].querySelector(".hero__eye") : peek).focus({ preventScroll: true });
+  };
+  const aim = (index) => {
+    hovered = index;
+    targets = shares(index);
+    showCards();
+    if (calm.matches) {
+      targets.forEach((w, i) => (weights[i] = w));
+      return layout();
+    }
+    if (!frame) frame = requestAnimationFrame(step);
+  };
+  const inside = (node) => node && (hero.contains(node) || layer.contains(node));
+  panels.forEach((panel, i) => {
+    panel.addEventListener("pointerenter", () => hover.matches && aim(i));
+    panel.addEventListener("focusin", () => aim(i));
+  });
+  // Moving from a panel onto its card (or back) keeps it open.
+  hero.addEventListener("pointerleave", (event) => !inside(event.relatedTarget) && aim(-1));
+  layer.addEventListener("pointerleave", (event) => !inside(event.relatedTarget) && aim(-1));
+  layer.addEventListener("focusout", (event) => !inside(event.relatedTarget) && aim(-1));
+  hero.addEventListener("focusout", (event) => !inside(event.relatedTarget) && aim(-1));
+
+  // With more works than panels, every few seconds one random panel that
+  // isn't news or under the pointer crossfades to a work not on screen.
+  const swap = () => {
+    if (document.hidden || calm.matches) return;
+    const shown = new Set(panels.map((p) => [...p.querySelectorAll(".hero__art")].pop().dataset.work));
+    const options = withArt.filter((work) => work.hero && !shown.has(work.id) && !newsFor.has(work.id));
+    const free = panels.filter(
+      (p) => p.dataset.index !== "0" && !p.classList.contains("has-news") && !p.matches(":hover") && !cards[p.dataset.index].classList.contains("is-open")
+    );
+    if (!options.length || !free.length) return;
+    const panel = free[Math.floor(Math.random() * free.length)];
+    const work = options[Math.floor(Math.random() * options.length)];
+    const next = art(work);
+    next.classList.add("is-entering");
+    panel.querySelector(".hero__link").before(next);
+    point(panel, work);
+    layout();
+    requestAnimationFrame(() => requestAnimationFrame(() => next.classList.remove("is-entering")));
+    setTimeout(() => {
+      while (panel.querySelectorAll(".hero__art").length > 1) panel.querySelector(".hero__art").remove();
+    }, 1600);
+  };
+
+  showCards();
+  layout();
+  new ResizeObserver(layout).observe(hero);
+  if (withArt.filter((w) => w.hero).length > count) setInterval(swap, SWAP_EVERY);
+})();
+
+
+// Sliding rows (work cards, category rows): drag like a touch screen on
+// every device. Phones use native touch scrolling. With a mouse the row
+// follows the pointer, then glides on with the release speed and settles on
+// a card.
+const dragScroll = (track) => {
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let drag = null;
+  let glide = 0;
+
+  track.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "mouse" || event.button !== 0) return;
+    cancelAnimationFrame(glide);
+    drag = { x: event.clientX, left: track.scrollLeft, moved: false, v: 0, lastX: event.clientX, lastT: performance.now() };
+  });
+
+  window.addEventListener("pointermove", (event) => {
+    if (!drag) return;
+    const dx = event.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) > 5) {
+      drag.moved = true;
+      track.classList.add("is-dragging");
+    }
+    if (!drag.moved) return;
+    track.scrollLeft = drag.left - dx;
+    const now = performance.now();
+    const dt = Math.max(now - drag.lastT, 1);
+    drag.v = 0.8 * ((event.clientX - drag.lastX) / dt) + 0.2 * drag.v; // px per ms
+    drag.lastX = event.clientX;
+    drag.lastT = now;
+  });
+
+  window.addEventListener("pointerup", () => {
+    if (!drag) return;
+    const { moved } = drag;
+    let v = drag.v * 16; // px per frame
+    drag = null;
+    if (!moved) return;
+
+    // Swallow the click that ends a drag so it doesn't open a card.
+    track.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      },
+      { capture: true, once: true }
+    );
+
+    const settle = () => track.classList.remove("is-dragging"); // snapping resumes
+    if (calm.matches || Math.abs(v) < 0.5) return settle();
+    const tick = () => {
+      track.scrollLeft -= v;
+      v *= 0.94;
+      if (Math.abs(v) > 0.5) glide = requestAnimationFrame(tick);
+      else settle();
+    };
+    glide = requestAnimationFrame(tick);
+  });
+};
+
+// Section 4 — Work cards, rendered from the catalogue.
+
+(async function workCards() {
+  const section = document.querySelector(".works");
+  const track = section && section.querySelector(".works__track");
+  if (!track) return;
+  const CATALOG = await catalog;
+
+  const hero = document.querySelector(".hero");
+  const currencyButtons = [...section.querySelectorAll("[data-currency]")];
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  const CURRENCIES = ["USD", "EUR", "IRR"];
+  const STATUS = {
+    released: "Released",
+    preorder: "Pre-order",
+    coming: "Coming soon",
+    production: "In production",
+  };
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+
+  // Shows item `next` in a list of absolutely stacked items.
+  const step = (items, next, leavingClass) => {
+    items.forEach((item, i) => {
+      const wasActive = item.classList.contains("is-active");
+      item.classList.toggle("is-active", i === next);
+      if (leavingClass) item.classList.toggle(leavingClass, wasActive && i !== next);
+    });
+  };
+
+  let mode = "auto"; // "auto" cycles currencies; otherwise a fixed code
+
+  // ---------- Cards ----------
+  const cards = CATALOG.map((work, index) => {
+    const card = el("article", "card");
+
+    const link = el("a", "card__link");
+    link.href = `work.html?id=${encodeURIComponent(work.id)}`;
+    const media = el("div", "card__media");
+    link.append(media);
+    const slides = work.images.map((src, i) => {
+      const img = el("img", "card__slide" + (i === 0 ? " is-active" : ""));
+      img.src = src;
+      img.alt = i === 0 ? `${work.title} artwork` : "";
+      img.loading = "lazy";
+      img.draggable = false;
+      return img;
+    });
+    const dots = el("div", "card__dots");
+    const dotButtons = slides.map((_, i) => {
+      const dot = el("button", "card__dot" + (i === 0 ? " is-active" : ""));
+      dot.type = "button";
+      dot.setAttribute("aria-label", `Show image ${i + 1} of ${slides.length}`);
+      dots.append(dot);
+      return dot;
+    });
+    const caption = el("div", "card__caption");
+    const title = el("h2", "card__title", work.title);
+    title.translate = false; // titles stay as they are
+    caption.append(title, el("span", "card__kind", work.kind));
+    media.append(...slides, caption);
+    if (slides.length > 1) media.append(dots);
+    setCoverScore(media, work.score, work.reviews);
+
+    const price = el("div", "card__price");
+    const priceTrack = el("div", "card__price-track");
+    // Only the currencies the work is sold in.
+    const codes = CURRENCIES.filter((code) => work.prices && work.prices[code] != null);
+    const amounts = codes.length
+      ? codes.map((code, i) => el("span", "card__amount" + (i === 0 ? " is-active" : ""), priceText(work, code)))
+      : [el("span", "card__amount is-active", "To be announced")];
+    priceTrack.append(...amounts);
+    price.append(el("span", "card__price-label", "Price"), priceTrack);
+
+    const status = el("span", `card__status card__status--${work.status}`, work.statusText || STATUS[work.status]);
+
+    card.append(link, price, status);
+    track.append(card);
+
+    // Image slider: every 4s, paused while the pointer is on the image.
+    let slide = 0;
+    let paused = false;
+    const showSlide = (i) => {
+      slide = i;
+      step(slides, i);
+      step(dotButtons, i);
+    };
+    dotButtons.forEach((dot, i) =>
+      dot.addEventListener("click", (event) => {
+        event.preventDefault(); // the dots sit inside the card's link
+        showSlide(i);
+      })
+    );
+    media.addEventListener("pointerenter", () => (paused = true));
+    media.addEventListener("pointerleave", () => (paused = false));
+
+    // Price: cycles every 2.6s in "auto" mode; staggered per card.
+    let currency = 0;
+    const showCurrency = (i) => {
+      if (i === currency || amounts.length < 2) return;
+      currency = i;
+      step(amounts, i, "is-leaving");
+    };
+
+    setTimeout(() => {
+      setInterval(() => {
+        if (document.hidden || calm.matches || paused) return;
+        showSlide((slide + 1) % slides.length);
+      }, 4000);
+      setInterval(() => {
+        if (document.hidden || calm.matches || mode !== "auto") return;
+        showCurrency((currency + 1) % amounts.length);
+      }, 2600);
+    }, (index % 4) * 350);
+
+    // Pins a currency; works not sold in it keep what they show.
+    const pinCurrency = (code) => codes.includes(code) && showCurrency(codes.indexOf(code));
+
+    return { work, card, pinCurrency };
+  });
+
+  // ---------- Currency buttons ----------
+  // Only currencies some work can show get a button; with one or none the
+  // row goes. A member who picked a currency in Settings sees prices in it
+  // and no buttons (they change it in Settings).
+  const available = CURRENCIES.filter((code) => CATALOG.some((w) => w.prices[code] != null));
+  // (Only the currency group hides; the search box beside it stays.)
+  const controls = section.querySelector(".works__controls .works__group");
+  const choose = (next, remember) => {
+    mode = next;
+    currencyButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.currency === mode)));
+    if (mode !== "auto") cards.forEach((c) => c.pinCurrency(mode));
+    document.dispatchEvent(new CustomEvent("currencymode", { detail: mode }));
+    if (remember) local.set("currencyPick", mode);
+  };
+  currencyButtons.forEach((button) => {
+    const code = button.dataset.currency;
+    button.hidden = code === "auto" ? available.length < 2 : !available.includes(code);
+    button.addEventListener("click", () => choose(code, true));
+  });
+
+  const memberChoice = document.documentElement.dataset.auth === "member" ? local.get("currency") : null;
+  if (memberChoice && memberChoice !== "auto" && available.includes(memberChoice)) {
+    controls.hidden = true;
+    setTimeout(() => choose(memberChoice, false));
+  } else {
+    controls.hidden = available.length < 2;
+    const pick = local.get("currencyPick");
+    if (pick && pick !== "auto" && available.includes(pick)) setTimeout(() => choose(pick, false));
+    else if (available.length === 1) setTimeout(() => choose(available[0], false));
+  }
+
+  dragScroll(track);
+
+  // ---------- Fade under the hero ----------
+  // The row gets a mask that is transparent above the hero's bottom edge
+  // (heroEdgeY) and fades in over FADE px below it.
+  const FADE = 90;
+
+  const updateMask = () => {
+    if (!hero) return;
+    const t = track.getBoundingClientRect();
+    const h = hero.getBoundingClientRect();
+    const W = Math.round(t.width);
+    const H = Math.round(t.height);
+    const points = [];
+    let lowest = -Infinity;
+    for (let x = -80; x <= W + 80; x += 12) {
+      const y = h.top + (heroEdgeY((t.left + x - h.left) / h.width) / 520) * h.height - t.top + FADE / 2;
+      lowest = Math.max(lowest, y);
+      points.push(`${x},${y.toFixed(1)}`);
+    }
+    if (lowest + FADE < 0) {
+      track.style.removeProperty("--curve-mask");
+      return;
+    }
+    points.push(`${W + 80},${H + 300}`, `-80,${H + 300}`);
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
+      `<filter id="f" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${FADE / 3}"/></filter>` +
+      `<polygon points="${points.join(" ")}" filter="url(#f)"/></svg>`;
+    track.style.setProperty("--curve-mask", `url("data:image/svg+xml,${encodeURIComponent(svg)}")`);
+  };
+
+  updateMask();
+  new ResizeObserver(updateMask).observe(track);
+  window.addEventListener("resize", updateMask);
+  if (document.fonts) document.fonts.ready.then(updateMask);
+})();
+
+// The average score in a cover's corner (home cards, poster cards, the work
+// page's poster), once a work has ratings: "★ 8.4".
+const coverScore = (score, count) => {
+  if (!count) return null;
+  const badge = document.createElement("span");
+  badge.className = "cover-score";
+  badge.translate = false;
+  badge.setAttribute("aria-label", `${scoreText(score)}/10`);
+  const star = document.createElement("span");
+  star.className = "cover-score__star";
+  star.textContent = "★";
+  const value = document.createElement("b");
+  value.textContent = scoreText(score);
+  badge.append(star, value);
+  return badge;
+};
+// Puts (or refreshes, or removes) the badge in a cover.
+const setCoverScore = (frame, score, count) => {
+  if (!frame) return;
+  const old = frame.querySelector(":scope > .cover-score");
+  const next = coverScore(score, count);
+  if (old) old.remove();
+  if (next) frame.append(next);
+};
+
+// A small poster card linking to a work's page (category rows, My List).
+const posterCard = (work) => {
+  const link = document.createElement("a");
+  link.className = "poster-card";
+  link.href = `work.html?id=${encodeURIComponent(work.id)}`;
+  const frame = document.createElement("span");
+  frame.className = "poster-card__frame";
+  if (work.images[0]) {
+    const img = document.createElement("img");
+    img.src = work.images[0];
+    img.alt = "";
+    img.loading = "lazy";
+    img.draggable = false;
+    frame.append(img);
+  }
+  const title = document.createElement("span");
+  title.className = "poster-card__title";
+  title.translate = false;
+  title.textContent = work.title;
+  const kind = document.createElement("span");
+  kind.className = "poster-card__kind";
+  kind.textContent = work.kind;
+  setCoverScore(frame, work.score, work.reviews);
+  link.append(frame, title, kind);
+  return link;
+};
+
+// Home page — category rows under the main row, like a streaming service.
+// They only appear once the catalogue spans at least two kinds of work;
+// until then the main row already shows everything.
+(async function shelves() {
+  const section = document.querySelector(".shelves");
+  if (!section) return;
+  const CATALOG = await catalog;
+
+  const KINDS = [
+    ["Games", (w) => /game/i.test(w.kind)],
+    ["Films", (w) => /film|movie/i.test(w.kind)],
+    ["Animation", (w) => /anim/i.test(w.kind)],
+    ["Novels", (w) => /novel|book/i.test(w.kind)],
+  ];
+  const kindsInUse = KINDS.filter(([, test]) => CATALOG.some(test)).length;
+  if (kindsInUse < 2) return;
+
+  // Top rated: by average score out of 10, pulled towards 6 while a work
+  // has few ratings, so one 10 doesn't top the list.
+  const ranked = (w) => (w.score * w.reviews + 6 * 3) / (w.reviews + 3);
   const rows = [
     ["Top rated", (w) => w.reviews > 0, (a, b) => ranked(b) - ranked(a)],
     ["Coming soon", (w) => ["coming", "preorder", "production"].includes(w.status)],
