@@ -311,8 +311,7 @@ const pricesOf = (row, rates) => {
 // or writes leads, actors and voices are the cast, the rest the crew.
 // Credits from before (one role, perhaps a group, "as <character>") are
 // read the same way.
-const DIRECTOR = /^(director|co-director|کارگردان)$/i;
-const WRITER = /^(writer|co-writer|screenplay|screenwriter|story|author|نویسنده|فیلم‌نامه|فیلمنامه|فیلم‌نامه‌نویس)$/i;
+const creditTaxonomy = SauFoxCredits;
 const CAST = /^(actor|actress|cast|voice|voice actor|voice actress|narrator|as .+|voice of .+|بازیگر|صداپیشه|گوینده|راوی|در نقش .+)$/i;
 const creditRoles = (credit) => {
   if (Array.isArray(credit.roles)) return credit.roles.filter(Boolean);
@@ -324,7 +323,7 @@ const creditRoles = (credit) => {
   return role.split(/\s*(?:,|&|\/|\band\b)\s*/i).filter(Boolean);
 };
 // Roles that play a character, so the admin panel asks which one.
-const PLAYS = /^(actor|actress|voice|voice actor|voice actress|بازیگر|صداپیشه)$/i;
+const PLAYS = { test: creditTaxonomy.plays };
 // A credit as { name, photo, roles, character }: "as Anna" roles become
 // the character (with an Actor role if nothing else says so).
 const readCredit = (credit) => {
@@ -333,20 +332,13 @@ const readCredit = (credit) => {
   roles = roles.filter((r) => !/^(as|در نقش)\s+/i.test(r));
   if (played.length && !roles.some((r) => PLAYS.test(r))) roles.unshift("Actor");
   const character = [credit.character, ...played].filter(Boolean).join(", ");
-  return { name: credit.name || "", photo: credit.photo || "", roles, character };
+  return { name: credit.name || "", photo: credit.photo || "", roles: creditTaxonomy.unique(roles), character, department: credit.department || "" };
 };
 // AI tools that helped make the work: listed inside the crew, apart.
 const AI = /^(ai|ai assistant|ai model|دستیار هوش مصنوعی|هوش مصنوعی)$/i;
 // "lead" (directs or writes), "ai" (an AI assistant), "cast" (only acts or
 // voices) or "crew".
-const creditPlace = (roles) =>
-  roles.some((r) => DIRECTOR.test(r) || WRITER.test(r))
-    ? "lead"
-    : roles.some((r) => AI.test(r))
-      ? "ai"
-      : roles.length && roles.every((r) => CAST.test(r))
-        ? "cast"
-        : "crew";
+const creditPlace = (roles, department = "") => creditTaxonomy.department({ roles, department });
 
 const toWork = (row, rates = {}) => ({
   ...pricesOf(row, rates),
@@ -3184,7 +3176,7 @@ const signedInGoHome = async (user) => {
     const box = page.querySelector(".title-credits__groups");
     const SHOWN = 12;
     const person = (credit, lead) => {
-      const cast = !lead && creditPlace(credit.roles) === "cast";
+      const cast = !lead && creditPlace(credit.roles, credit.department) === "cast";
       const item = make("li", lead ? "credit credit--lead" : cast ? "credit credit--cast" : "credit");
       const face = make("span", "credit__face");
       if (credit.photo) {
@@ -3210,7 +3202,7 @@ const signedInGoHome = async (user) => {
       // Each role in this page's language when it's a known one.
       // In the AI Assistant section the heading already says so; the role
       // line shows what else they did.
-      const other = creditPlace(credit.roles) === "ai" ? credit.roles.filter((r) => !AI.test(r)) : [];
+      const other = creditPlace(credit.roles, credit.department) === "ai" ? credit.roles.filter((r) => !AI.test(r)) : [];
       const shownRoles = other.length ? other : credit.roles;
       const role = make("span", "credit__role", shownRoles.map((r) => t(r)).join(" · "));
       role.translate = false;
@@ -3220,35 +3212,37 @@ const signedInGoHome = async (user) => {
       if (lead) {
         role.className = "credit__label";
         text.append(role, name);
-      } else if (cast && credit.character) {
+        if (credit.character && credit.roles.some(PLAYS.test)) {
+          const character = make("span", "credit__role", credit.character);
+          character.translate = false;
+          character.dir = "auto";
+          text.append(character);
+        }
+      } else if (credit.character && credit.roles.some(PLAYS.test)) {
         const character = make("strong", "credit__character", credit.character);
         character.translate = false;
         character.dir = "auto";
         name.className = "credit__player";
-        text.append(character, name);
+        text.append(character, name, role);
       } else text.append(name, role);
       item.append(face, text);
       return item;
     };
-    const leads = work.credits.filter((credit) => creditPlace(credit.roles) === "lead");
+    const leads = work.credits.filter(creditTaxonomy.isLead);
     if (leads.length) {
       const list = make("ul", "title-credits__leads");
       list.append(...leads.map((credit) => person(credit, true)));
       box.append(list);
     }
-    const assistants = work.credits.filter((c) => creditPlace(c.roles) === "ai");
-    // AI assistants get a section of their own beside the crew's, so they
-    // read as part of the making without mixing with the people.
-    const groups = [
-      ["Crew", work.credits.filter((c) => creditPlace(c.roles) === "crew")],
-      ["AI Assistant", assistants],
-      ["Cast", work.credits.filter((c) => creditPlace(c.roles) === "cast")],
-    ].filter(([, people]) => people.length);
-    const pair = groups.some(([l]) => l === "Crew") && assistants.length ? make("div", "title-credits__pair") : null;
-    groups.forEach(([label, people]) => {
+    const leadSet = new Set(leads);
+    const groups = creditTaxonomy.groups.map((department) => [department, work.credits.filter((credit) =>
+      !leadSet.has(credit) && creditPlace(credit.roles, credit.department) === department.id
+    )]).filter(([, people]) => people.length);
+    groups.forEach(([department, people]) => {
       const group = make("div", "title-credits__group");
-      if (groups.length > 1 || leads.length) group.append(make("h3", "title-credits__heading", label));
-      const list = make("ul", label === "Cast" ? "title-credits__list title-credits__list--cast" : "title-credits__list");
+      group.dataset.department = department.id;
+      group.append(make("h3", "title-credits__heading", department.en));
+      const list = make("ul", department.id === "cast" ? "title-credits__list title-credits__list--cast" : "title-credits__list");
       list.append(...people.map((credit) => person(credit)));
       group.append(list);
       if (people.length > SHOWN) {
@@ -3261,11 +3255,7 @@ const signedInGoHome = async (user) => {
         });
         group.append(more);
       }
-      if (pair && label !== "Cast") {
-        group.classList.add(label === "Crew" ? "title-credits__group--crew" : "title-credits__group--ai");
-        pair.append(group);
-        if (label === "AI Assistant") box.append(pair);
-      } else box.append(group);
+      box.append(group);
     });
     page.querySelector('[data-slot="credits-count"]').textContent = digits(work.credits.length);
     page.querySelector(".title-credits").hidden = false;
@@ -4902,6 +4892,13 @@ const ticketThread = async (list, messages, when) => {
   const deleteButton = form.querySelector('[data-action="delete"]');
   const viewLink = form.querySelector('[data-slot="view-link"]');
   const creditsEl = form.querySelector(".admin-credits");
+  const suggestions = document.getElementById("credit-roles");
+  suggestions.replaceChildren(...creditTaxonomy.roles.map((role) => {
+    const option = document.createElement("option");
+    option.value = LANG === "fa" ? role.fa : role.en;
+    option.label = LANG === "fa" ? role.en : role.fa;
+    return option;
+  }));
   const stillsEl = form.querySelector(".admin-stills__list");
 
   const slug = (text) =>
@@ -5026,9 +5023,11 @@ const ticketThread = async (list, messages, when) => {
     typing.setAttribute("aria-label", "Roles");
     typing.setAttribute("list", "credit-roles");
     const chip = (text) => {
+      text = creditTaxonomy.normalize(text);
       const tag = make("span", "admin-roles__chip");
       tag.dataset.role = text;
-      const label = make("span", "", text);
+      const label = make("span", "", t(text));
+      label.translate = false;
       const drop = make("button", "", "×");
       drop.type = "button";
       drop.setAttribute("aria-label", `Remove ${text}`);
@@ -5042,15 +5041,17 @@ const ticketThread = async (list, messages, when) => {
     };
     // The long example only while there are no roles yet.
     const hint = () => {
+      if (picker) updatePicker();
       typing.placeholder = roles.querySelector(".admin-roles__chip") ? "Add a role" : "Roles: Director, Composer, Voice actor…";
       // An actor or voice gets a box for the character they play.
       if (character) character.hidden = ![...roles.querySelectorAll(".admin-roles__chip")].some((c) => PLAYS.test(c.dataset.role));
     };
     let character = null;
+    let picker = null;
     const commit = () => {
       typing.value
         .split(",")
-        .map((part) => part.trim())
+        .map((part) => creditTaxonomy.normalize(part))
         .filter(Boolean)
         .forEach((part) => {
           if (![...roles.querySelectorAll(".admin-roles__chip")].some((c) => c.dataset.role.toLowerCase() === part.toLowerCase())) chip(part);
@@ -5086,7 +5087,48 @@ const ticketThread = async (list, messages, when) => {
     read.roles.forEach(chip);
     hint();
 
-    const nameInput = make("input");
+    picker = make("div", "admin-credit__picker");
+    const categoryLabel = make("label");
+    categoryLabel.append(make("span", "", "Role category"));
+    const category = make("select");
+    category.setAttribute("aria-label", "Role category");
+    category.append(new Option(t("All departments"), ""));
+    creditTaxonomy.groups.forEach((group) => category.append(new Option(t(group.en), group.id)));
+    if (read.roles.length) category.value = creditPlace(read.roles, read.department);
+    categoryLabel.append(category);
+    const selectionLabel = make("label");
+    selectionLabel.append(make("span", "", "Choose a role"));
+    const selection = make("select");
+    selection.setAttribute("aria-label", "Choose a role");
+    selectionLabel.append(selection);
+    const displayLabel = make("label");
+    displayLabel.append(make("span", "", "Show under"));
+    const display = make("select", "admin-credit__department");
+    display.setAttribute("aria-label", "Show under");
+    display.append(new Option(t("Automatic from roles"), ""));
+    creditTaxonomy.groups.forEach((group) => display.append(new Option(t(group.en), group.id)));
+    display.value = creditTaxonomy.groups.some((group) => group.id === read.department) ? read.department : "";
+    displayLabel.append(display);
+    const updatePicker = () => {
+      selection.replaceChildren(new Option(t("Choose a role"), ""));
+      const chosen = new Set([...roles.querySelectorAll(".admin-roles__chip")].map((tag) => tag.dataset.role));
+      creditTaxonomy.groups.filter((group) => !category.value || category.value === group.id).forEach((group) => {
+        const options = document.createElement("optgroup");
+        options.label = t(group.en);
+        group.roles.filter((role) => !chosen.has(role.en)).forEach((role) => options.append(new Option(t(role.en), role.en)));
+        if (options.children.length) selection.append(options);
+      });
+      const guessed = creditPlace([...chosen]);
+      display.options[0].textContent = t("Automatic from roles") + " · " + t(creditTaxonomy.groups.find((group) => group.id === guessed).en);
+    };
+    category.addEventListener("change", updatePicker);
+    selection.addEventListener("change", () => {
+      if (selection.value) chip(selection.value);
+    });
+    picker.append(categoryLabel, selectionLabel, displayLabel);
+    updatePicker();
+
+    const nameInput = make("input", "admin-credit__name");
     nameInput.type = "text";
     nameInput.placeholder = "Name";
     nameInput.value = credit.name || "";
@@ -5103,7 +5145,8 @@ const ticketThread = async (list, messages, when) => {
         [...row.querySelectorAll(".admin-roles__chip")]
           .map((c) => c.dataset.role)
           .concat(row.querySelector(".admin-roles input").value.split(",").map((r) => r.trim()))
-          .filter(Boolean)
+          .filter(Boolean),
+        row.querySelector(".admin-credit__department").value
       );
     up.addEventListener("click", () => {
       const mine = placeOf(item);
@@ -5120,7 +5163,7 @@ const ticketThread = async (list, messages, when) => {
     remove.type = "button";
     remove.setAttribute("aria-label", "Remove this person");
     remove.addEventListener("click", () => item.remove());
-    item.append(photo, nameInput, roles, up, remove, character);
+    item.append(photo, nameInput, roles, up, remove, picker, character);
     creditsEl.append(item);
     return nameInput;
   };
@@ -5439,9 +5482,11 @@ const ticketThread = async (list, messages, when) => {
           // A role still being typed counts too.
           const pending = item.querySelector(".admin-roles input").value.split(",").map((r) => r.trim());
           const roles = [...item.querySelectorAll(".admin-roles__chip")].map((chip) => chip.dataset.role).concat(pending).filter(Boolean);
-          const credit = { name: item.querySelector('input[aria-label="Name"]').value.trim(), roles };
+          const credit = { name: item.querySelector(".admin-credit__name").value.trim(), roles: creditTaxonomy.unique(roles) };
+          const department = item.querySelector(".admin-credit__department").value;
+          if (department) credit.department = department;
           const character = item.querySelector(".admin-credit__character");
-          if (!character.hidden && character.querySelector("input").value.trim()) credit.character = character.querySelector("input").value.trim();
+          if (character.querySelector("input").value.trim()) credit.character = character.querySelector("input").value.trim();
           if (item.dataset.photo) credit.photo = item.dataset.photo;
           return credit;
         })
