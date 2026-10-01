@@ -307,6 +307,10 @@
             <input id="file-version" type="text" maxlength="40" placeholder="e.g. 1.0.0" required>
           </label>
           <label class="admin-field admin-field--wide">
+            <span>Windows executable path inside the ZIP (or EXE filename)</span>
+            <input id="file-entrypoint" type="text" maxlength="260" placeholder="e.g. bin/Game.exe">
+          </label>
+          <label class="admin-field admin-field--wide">
             <span>File</span>
             <input id="file-input" type="file" required>
           </label>
@@ -733,6 +737,6 @@
   </main>
 
   <script src="js/vendor/supabase.js?v=89" defer></script>
-  <script src="js/main.js?v=100" defer></script>
+  <script src="js/main.js?v=101" defer></script>
 </body>
 </html>

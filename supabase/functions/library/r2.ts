@@ -11,7 +11,7 @@
 const enc = new TextEncoder();
 const hex = (buf: ArrayBuffer) => Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
 const sha256 = async (text: string) => hex(await crypto.subtle.digest("SHA-256", enc.encode(text)));
-const hmac = async (key: ArrayBuffer | Uint8Array, text: string) =>
+const hmac = async (key: ArrayBuffer | Uint8Array<ArrayBuffer>, text: string) =>
   crypto.subtle.sign("HMAC", await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]), enc.encode(text));
 // RFC 3986: everything but A-Z a-z 0-9 - _ . ~ is escaped.
 const escape = (text: string) =>
@@ -48,7 +48,7 @@ export const presign = async ({ method, host, path, accessKey, secretKey, region
   const canonicalPath = path.split("/").map(escape).join("/");
   const request = [method, canonicalPath, canonicalQuery, `host:${host}`, "", "host", "UNSIGNED-PAYLOAD"].join("\n");
   const toSign = ["AWS4-HMAC-SHA256", stamp, scope, await sha256(request)].join("\n");
-  let key: ArrayBuffer | Uint8Array = enc.encode(`AWS4${secretKey}`);
+  let key: ArrayBuffer | Uint8Array<ArrayBuffer> = enc.encode(`AWS4${secretKey}`);
   for (const part of [day, region, "s3", "aws4_request"]) key = await hmac(key, part);
   const signature = hex(await hmac(key, toSign));
   return `https://${host}${canonicalPath}?${canonicalQuery}&X-Amz-Signature=${signature}`;

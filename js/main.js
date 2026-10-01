@@ -501,6 +501,8 @@ const paymentsOpen = (settings) =>
   !salesPaused(settings) &&
   (settings.payments === "live" || (settings.payments === "test" && local.get("admin") === "1"));
 const PAYMENT_ERRORS = {
+  payment_review: "Payment received for review. Do not pay again; contact support with your order number.",
+  storage: "The payment record could not be saved. Retry this page; do not start another payment.",
   paused: "Sales are paused for a little while. Your order is saved; you can pay once they reopen.",
   closed: "Online payment isn't open yet. Your order is saved, and we'll email you when you can pay.",
   not_configured: "Online payment isn't open yet. Your order is saved, and we'll email you when you can pay.",
@@ -3071,6 +3073,14 @@ const signedInGoHome = async (user) => {
     }
     verifiedSession().then(async (session) => {
       if (!session) return;
+      const { data: owned, error: ownershipError } = await account.rpc("owns_work", { p_work: work.id });
+      if (ownershipError) return;
+      if (owned) {
+        buy.hidden = false; buySoon.hidden = true;
+        buy.href = "profile.html#library"; buy.classList.add("is-ordered");
+        buyLabel.textContent = "In your library";
+        return;
+      }
       const { data } = await account
         .from("orders")
         .select("status")
@@ -3082,9 +3092,9 @@ const signedInGoHome = async (user) => {
       const paid = data[0].status !== "awaiting_payment";
       buy.hidden = false;
       buySoon.hidden = true;
-      buy.href = paid ? "profile.html#library" : "profile.html#orders";
+      buy.href = "profile.html#orders";
       buy.classList.add("is-ordered");
-      buyLabel.textContent = paid ? "In your library" : "Ordered · awaiting payment";
+      buyLabel.textContent = paid ? "View order" : "Ordered · awaiting payment";
     });
   } else buySoon.hidden = !prices.length;
 
@@ -5729,6 +5739,9 @@ const ticketThread = async (list, messages, when) => {
     pick.value = order.status;
     pick.dataset.status = order.status;
     pick.addEventListener("change", async () => {
+      if (pick.value === "cancelled" && !window.confirm("Cancel this order? Its license and device access will be revoked. This does not refund the bank payment.")) {
+        pick.value = order.status; return;
+      }
       pick.disabled = true;
       const { error } = await account.from("orders").update({ status: pick.value }).eq("id", order.id);
       if (error) pick.value = order.status;
@@ -5903,7 +5916,7 @@ const ticketThread = async (list, messages, when) => {
       box.disabled = true;
       const { error } = await account.from("coupons").update({ active: box.checked }).eq("code", c.code);
       box.disabled = false;
-      if (error) box.checked = !box.checked;
+      if (error) { box.checked = !box.checked; fileSay("Could not publish this file. Check its checksum, size and executable path."); }
       row.classList.toggle("is-off", !box.checked);
     });
     const remove = make("button", "admin-button admin-button--danger", "Delete");
@@ -6495,6 +6508,7 @@ const ticketThread = async (list, messages, when) => {
   const fileVersion = fileForm.querySelector("#file-version");
   const filePlatform = fileForm.querySelector("#file-platform");
   const filePublished = fileForm.querySelector("#file-published");
+  const fileEntrypoint = fileForm.querySelector("#file-entrypoint");
   const fileProgress = fileForm.querySelector(".admin-files__progress");
   const fileList = fileForm.querySelector(".admin-files__list");
   const fileSubmit = fileForm.querySelector('[type="submit"]');
@@ -6524,7 +6538,7 @@ const ticketThread = async (list, messages, when) => {
     box.addEventListener("change", async () => {
       box.disabled = true;
       const { error } = await account.from("builds").update({ published: box.checked }).eq("id", build.id);
-      if (error) box.checked = !box.checked;
+      if (error) { box.checked = !box.checked; fileSay("Could not publish this file. Check its checksum, size and executable path."); }
       box.disabled = false;
     });
     const remove = make("button", "admin-button admin-button--danger", "Delete");
@@ -6582,7 +6596,21 @@ const ticketThread = async (list, messages, when) => {
     if (!version) return fileSay("Enter the version, such as 1.0.0.");
     if (!file) return fileSay("Choose the file to upload.");
     if (file.size > 5e9) return fileSay("Files over 5 GB can't be uploaded here. Upload it with rclone or wrangler, then tell Claude.");
+    const entrypoint = fileEntrypoint.value.trim();
+    if (filePlatform.value === "windows" && (!/^[A-Za-z0-9_-][A-Za-z0-9_ ./-]*[.]exe$/.test(entrypoint) || entrypoint.split("/").some(p => !p || p === "." || p === ".." || /[. ]$/.test(p))))
+      return fileSay("Enter the game's executable path inside the ZIP, such as bin/Game.exe.");
+    if (filePlatform.value === "windows" && !/\.(zip|exe)$/i.test(file.name)) return fileSay("Windows builds must be ZIP or EXE files.");
+    if (!file.size) return fileSay("The file is empty.");
     fileSubmit.disabled = true;
+    fileSay("Checking the file…", true);
+    let sha256;
+    try {
+      const { hashFile } = await import("./hash-file.mjs");
+      sha256 = await hashFile(file);
+    } catch {
+      fileSubmit.disabled = false;
+      return fileSay("Couldn't check the file. Nothing was uploaded. Try again.");
+    }
     fileSay("Getting the upload ready…", true);
     const answer = await library({ action: "upload", work_id: fileWork.value, file_name: file.name }, await verifiedSession());
     if (!answer.url) {
@@ -6598,20 +6626,6 @@ const ticketThread = async (list, messages, when) => {
       fileSubmit.disabled = false;
       return fileSay("The upload failed. Check the bucket's CORS settings and your connection, then try again.");
     }
-    // A checksum, so the launcher can tell a download arrived whole. Big
-    // files (over 1.5 GB) are left without one — the browser can't hash
-    // them without running out of memory — and the launcher checks the
-    // size instead.
-    let sha256 = null;
-    if (file.size <= 1.5e9 && crypto.subtle) {
-      try {
-        fileSay("Checking the file…", true);
-        const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-        sha256 = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
-      } catch (e) {
-        sha256 = null;
-      }
-    }
     const { error } = await account.from("builds").insert({
       work_id: fileWork.value,
       platform: filePlatform.value,
@@ -6620,6 +6634,7 @@ const ticketThread = async (list, messages, when) => {
       file_name: file.name,
       size_bytes: file.size,
       sha256,
+      entrypoint: filePlatform.value === "windows" ? entrypoint : null,
       published: filePublished.checked,
     });
     fileSubmit.disabled = false;
@@ -6707,11 +6722,11 @@ const ticketThread = async (list, messages, when) => {
       authority: params.get("Authority") || "",
       status: params.get("Status") || "",
     });
-    // Reloading shouldn't ask the bank again.
-    history.replaceState(null, "", `checkout.html?order=${encodeURIComponent(returning)}`);
+    // Keep the authority on reload: verification is idempotent and a failed
+    // database write must be retryable without starting another payment.
     if (answer.error === "not_found" || answer.error === "bad_request") return show(missing);
     if (answer.error) {
-      gate.textContent = "Couldn't reach the payment service. Reload the page in a moment to check again.";
+      gate.textContent = t(PAYMENT_ERRORS[answer.error] || "Couldn't reach the payment service. Reload the page in a moment to check again.");
       return;
     }
     plan = answer.plan || null;
@@ -6742,6 +6757,11 @@ const ticketThread = async (list, messages, when) => {
   const id = params.get("id");
   const work = plan ? null : (await catalog).find((w) => w.id === id);
   if (!plan && (!work || !work.prices || work.prices.IRR == null)) return show(missing);
+  if (work) {
+    const { data: owned, error } = await account.rpc("owns_work", { p_work: work.id });
+    if (error) { show(missing); return; }
+    if (owned) return location.replace("profile.html#library");
+  }
   const membership = await myMembership();
 
   // Already ordered: that order is in the profile. (One unpaid plan order
