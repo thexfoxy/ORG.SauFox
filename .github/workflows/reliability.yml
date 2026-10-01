@@ -26,6 +26,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node scripts/generate-work-pages.mjs
+      - run: git diff --exit-code -- works js/work-paths.js
       - run: npm test
       - run: npm run check:edge
       - run: node --check js/main.js
