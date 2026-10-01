@@ -21,6 +21,19 @@ const local = {
   },
 };
 
+// ---------- Work routes ----------
+const workUrl = SauFoxRoutes.workUrl;
+const currentWorkId = () => SauFoxRoutes.workId(location.href);
+const workReturn = (hash) => {
+  const url = new URL(SauFoxRoutes.canonical(location.href) || location.href, location.href);
+  if (hash !== undefined) url.hash = hash;
+  return url.pathname + url.search + url.hash;
+};
+if (document.querySelector('.title-page')) {
+  const clean = SauFoxRoutes.canonical(location.href);
+  if (clean && clean !== location.pathname + location.search + location.hash) location.replace(clean);
+}
+
 // ---------- Clean addresses, fresh pages ----------
 // Links never show ".html" (GitHub Pages serves /work for work.html; the
 // home page is "/"), including links the scripts add later. The inline
@@ -29,8 +42,13 @@ const local = {
   const PAGE = /^(?:\.\/|\/)?([a-z0-9-]+)\.html(?=$|[?#])(.*)$/i;
   const tidy = (el) => {
     const name = el.tagName === "FORM" ? "action" : "href";
-    const m = PAGE.exec(el.getAttribute(name) || "");
-    if (m) el.setAttribute(name, (m[1].toLowerCase() === "index" ? "/" : m[1]) + m[2]);
+    const raw = el.getAttribute(name) || "";
+    if (raw.startsWith("#") && location.pathname.startsWith("/works/")) {
+      el.setAttribute(name, location.pathname + location.search + raw);
+      return;
+    }
+    const m = PAGE.exec(raw);
+    if (m) el.setAttribute(name, (m[1].toLowerCase() === "index" ? "/" : "/" + m[1]) + m[2]);
   };
   const SELECT = "a[href], form[action]";
   document.querySelectorAll(SELECT).forEach(tidy);
@@ -484,10 +502,8 @@ const verifiedSession = async () => {
 
 // Sends a signed-out visitor to log in, then back to this page.
 const goLogin = () => {
-  // The page's file name, as it's written in links (the address bar shows
-  // "/work" for work.html, and "/" for the home page).
-  const page = location.pathname.split("/").pop().replace(/\.html$/, "") || "index";
-  local.set("next", `${page}.html${location.search}${location.hash}`);
+  // Keep the full local path and any selected options after signing in.
+  local.set("next", location.pathname + location.search + location.hash);
   location.href = "login.html";
 };
 
@@ -1075,7 +1091,7 @@ const heroEdgeY = (() => {
     const video = post && post.youtube_url ? [post.youtube_url, post.youtube_thumb_url] : work.youtube ? [work.youtube, work.youtubeThumb] : null;
     if (video) box.append(youtubeCard(video[0], video[1]));
     const more = make("a", "hero__card-more", post ? t("Read the news") : t("See the work"));
-    more.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : `work.html?id=${encodeURIComponent(work.id)}`;
+    more.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : workUrl(work.id);
     box.append(more);
     return box;
   };
@@ -1093,7 +1109,7 @@ const heroEdgeY = (() => {
   const point = (panel, work) => {
     const post = newsFor.get(work.id);
     const link = panel.querySelector(".hero__link");
-    link.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : `work.html?id=${encodeURIComponent(work.id)}`;
+    link.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : workUrl(work.id);
     link.setAttribute("aria-label", post ? newsField(post, "title") : work.title);
     panel.classList.toggle("has-news", Boolean(post));
     const i = Number(panel.dataset.index);
@@ -1401,7 +1417,7 @@ const dragScroll = (track) => {
     const card = el("article", "card");
 
     const link = el("a", "card__link");
-    link.href = `work.html?id=${encodeURIComponent(work.id)}`;
+    link.href = workUrl(work.id);
     const media = el("div", "card__media");
     link.append(media);
     const slides = work.images.map((src, i) => {
@@ -1583,7 +1599,7 @@ const setCoverScore = (frame, score, count) => {
 const posterCard = (work) => {
   const link = document.createElement("a");
   link.className = "poster-card";
-  link.href = `work.html?id=${encodeURIComponent(work.id)}`;
+  link.href = workUrl(work.id);
   const frame = document.createElement("span");
   frame.className = "poster-card__frame";
   if (work.images[0]) {
@@ -1922,7 +1938,7 @@ const signedInGoHome = async (user) => {
   cacheProfile(await fetchProfile(user));
   const next = local.get("next");
   local.set("next", null);
-  const target = next && /^[a-z0-9-]+\.html([?#][^\s]*)?$/i.test(next) ? next : "index.html";
+  const target = SauFoxRoutes.loginReturn(next);
   setTimeout(() => (location.href = target), 700);
 };
 
@@ -2589,7 +2605,7 @@ const signedInGoHome = async (user) => {
     const row = make("li", "order");
     const thumb = make(work ? "a" : "span", "order__thumb");
     if (work) {
-      thumb.href = `work.html?id=${encodeURIComponent(work.id)}`;
+      thumb.href = workUrl(work.id);
       thumb.setAttribute("aria-label", order.title);
       if (work.images[0]) {
         const img = make("img");
@@ -2973,7 +2989,7 @@ const signedInGoHome = async (user) => {
   if (!page) return;
   const CATALOG = await catalog;
 
-  const id = new URLSearchParams(location.search).get("id");
+  const id = currentWorkId();
   const work = CATALOG.find((w) => w.id === id);
   if (!work) {
     page.querySelectorAll(":scope > section:not(.title-missing)").forEach((s) => (s.hidden = true));
@@ -2993,7 +3009,7 @@ const signedInGoHome = async (user) => {
 
   document.title = `${work.title} · SauFox Entertainment`;
   pageMeta({
-    path: `/work.html?id=${encodeURIComponent(work.id)}`,
+    path: workUrl(work.id),
     title: `${work.title} · SauFox Entertainment`,
     description: work.synopsis || `${work.title} — ${work.kind} by SauFox Entertainment.`,
     image: work.images[0],
@@ -3338,7 +3354,7 @@ const signedInGoHome = async (user) => {
 (async function notifyButton() {
   const button = document.querySelector('[data-action="notify"]');
   if (!button || !account) return;
-  const id = new URLSearchParams(location.search).get("id");
+  const id = currentWorkId();
   const work = (await catalog).find((w) => w.id === id);
   if (!work || work.status === "released") return;
   const label = button.querySelector("span");
@@ -3364,7 +3380,7 @@ const signedInGoHome = async (user) => {
   button.addEventListener("click", async () => {
     const now = await verifiedSession();
     if (!now) {
-      local.set("next", `work.html?id=${encodeURIComponent(work.id)}`);
+      local.set("next", workReturn());
       location.href = "login.html";
       return;
     }
@@ -3411,7 +3427,7 @@ const scoreOf = (score, className = "score", whole = false) => {
 (async function reviewsSection() {
   const section = document.querySelector(".title-reviews");
   if (!section || !account) return;
-  const id = new URLSearchParams(location.search).get("id");
+  const id = currentWorkId();
   const work = (await catalog).find((w) => w.id === id);
   if (!work) return;
   const released = work.status === "released";
@@ -3584,7 +3600,7 @@ const scoreOf = (score, className = "score", whole = false) => {
     talk.addEventListener("click", (event) => {
       event.preventDefault();
       section.scrollIntoView({ behavior: "smooth" });
-      history.replaceState(null, "", "#reviews");
+      history.replaceState(null, "", location.pathname + location.search + "#reviews");
     });
     box.append(average, yours, talk);
     document.querySelector(".title-head").append(box);
@@ -3758,7 +3774,7 @@ const scoreOf = (score, className = "score", whole = false) => {
   const voted = new Set();
   const reported = new Set();
   const needLogin = () => {
-    local.set("next", `work.html?id=${encodeURIComponent(work.id)}#reviews`);
+    local.set("next", workReturn("#reviews"));
     location.href = "login.html";
   };
   const REASONS = [
@@ -3924,7 +3940,7 @@ const scoreOf = (score, className = "score", whole = false) => {
     login.hidden = false;
     login.querySelector("a").addEventListener("click", (event) => {
       event.preventDefault();
-      local.set("next", `work.html?id=${encodeURIComponent(work.id)}#reviews`);
+      local.set("next", workReturn("#reviews"));
       location.href = "login.html";
     });
   } else {
@@ -4155,7 +4171,7 @@ const newsCard = (post, works) => {
     const work = post.work_id && (await catalog).find((w) => w.id === post.work_id);
     if (work) {
       const link = view.querySelector(".news-post__work");
-      link.href = `work.html?id=${encodeURIComponent(work.id)}`;
+      link.href = workUrl(work.id);
       link.textContent = t(`See ${work.title}`);
       link.hidden = false;
     }
@@ -5149,7 +5165,7 @@ const ticketThread = async (list, messages, when) => {
     deleteButton.hidden = !row;
     resetDelete();
     viewLink.hidden = !(row && liveState(row) === "live");
-    if (row) viewLink.href = `work.html?id=${encodeURIComponent(row.id)}`;
+    if (row) viewLink.href = workUrl(row.id);
     listView.hidden = true;
     form.hidden = false;
     window.scrollTo(0, 0);
@@ -6827,7 +6843,7 @@ const ticketThread = async (list, messages, when) => {
     }
   } else {
     document.title = `Checkout · ${work.title} · SauFox Entertainment`;
-    back.href = `work.html?id=${encodeURIComponent(work.id)}`;
+    back.href = workUrl(work.id);
     if (work.images[0]) poster.src = work.images[0];
     else poster.hidden = true;
     form.querySelector(".checkout-summary__kind").textContent = work.kind;
