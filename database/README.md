@@ -7,7 +7,7 @@ Run `npm ci`, `npm test`, and `npm run check:edge`. By default database tests ru
 ## Release order
 
 1. Verify both this change and the companion Launcher.SauFox change in CI. Take a managed database backup. Check for schema drift since the baseline and for any newly published builds missing a checksum, positive byte size, or Windows entrypoint; the migration deliberately fails on invalid published builds.
-2. Apply `supabase/migrations/20260929173747_purchase_install_reliability.sql` once. It preserves manual license revocation, separately marks cancelled-order licenses, and adds the support outbox. Historic ticket messages are not mailed again.
+2. Apply `supabase/migrations/20260930174628_purchase_install_reliability.sql` once. It preserves manual license revocation, separately marks cancelled-order licenses, and adds the support outbox. Historic ticket messages are not mailed again.
 3. Deploy the payment, library and account Edge Functions with their shared auth helper and the committed Deno lockfile. The existing retry-order-emails scheduler now also drains support mail. No new scheduler or paid branch is required.
 4. Publish the site changes, then the companion launcher. New launchers require checksum, size, platform and executable metadata from the updated library function. Old installations without a recorded executable need reinstalling. Opening a game now requires an online ownership/device check.
 5. Smoke-test with a test account and the sandbox gateway: purchase, repeat callback, delivery, gift redemption, download, device release, cancellation, and session revocation. Verify real support delivery separately; automated tests never send email or charge money.

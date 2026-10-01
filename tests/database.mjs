@@ -61,7 +61,7 @@ export async function restore(db) {
   for (const grant of baseline.grants) if (['anon','authenticated','service_role'].includes(grant.grantee))
     await db.exec(`grant ${grant.privilege_type} on ${q(grant.table_schema)}.${q(grant.table_name)} to ${q(grant.grantee)};`);
   await db.exec('grant usage,select on all sequences in schema public to authenticated,service_role;');
-  await db.exec(await readFile(new URL('../supabase/migrations/20260929173747_purchase_install_reliability.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20260930174628_purchase_install_reliability.sql',import.meta.url),'utf8'));
 }
 export const A='10000000-0000-4000-8000-000000000001', B='10000000-0000-4000-8000-000000000002', C='10000000-0000-4000-8000-000000000003';
 export const SA='20000000-0000-4000-8000-000000000001', SB='20000000-0000-4000-8000-000000000002', SC='20000000-0000-4000-8000-000000000003';
