@@ -45,6 +45,11 @@ const esc = (text: unknown) =>
 const faNum = (n: number | string) => String(n).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
 const rialsFa = (n: number) => `${n.toLocaleString("fa-IR")} ریال`;
 const rialsEn = (n: number) => `${n.toLocaleString("en-US")} Rials`;
+// Until the bank gateway opens, orders are paid through this PayPing link
+// and matched to the order by hand (same link as js/main.js).
+const PAYPING_LINK = "https://payping.net/d/aEZq";
+const tomansFa = (rials: number) => `${Math.round(rials / 10).toLocaleString("fa-IR")} تومان`;
+const tomansEn = (rials: number) => `${Math.round(rials / 10).toLocaleString("en-US")} Tomans`;
 const whenFa = (iso: string) =>
   new Date(iso).toLocaleString("fa-IR", { timeZone: "Asia/Tehran", dateStyle: "long", timeStyle: "short" });
 const whenEn = (iso: string) =>
@@ -112,7 +117,7 @@ export const placedEmail = (order: Order, payable: boolean) => {
     `<p style="margin:16px 0 0;">${
       payable
         ? "اگر پرداخت را کامل نکرده‌اید، از بخش «سفارش‌ها» در پروفایل می‌توانید پرداخت کنید."
-        : "پرداخت آنلاین به‌زودی فعال می‌شود. وقتی فعال شد خبرتان می‌کنیم؛ تا آن زمان مبلغی دریافت نمی‌شود."
+        : `برای پرداخت، دکمه‌ی «پرداخت با پی‌پینگ» را بزنید و در پی‌پینگ دقیقاً <strong>${tomansFa(order.amount_irr)}</strong> وارد کنید، شماره‌ی سفارش (<strong>${faNum(order.number)}</strong>) را در توضیحات بنویسید و از همین ایمیل استفاده کنید. پرداخت را دستی بررسی می‌کنیم و معمولاً ظرف چند ساعت سفارش تأیید می‌شود.`
     }</p>`;
   const en =
     hello(order.name, false) +
@@ -129,7 +134,7 @@ export const placedEmail = (order: Order, payable: boolean) => {
     `<p style="margin:16px 0 0;">${
       payable
         ? "If you didn&rsquo;t finish paying, you can pay from Orders in your profile."
-        : "Online payment opens soon. We&rsquo;ll let you know when it does; nothing is charged until then."
+        : `To pay, press “Pay with PayPing”, enter exactly <strong>${tomansEn(order.amount_irr)}</strong> on PayPing, write your order number (<strong>${order.number}</strong>) in the description and use this email. We check each payment by hand and usually confirm the order within a few hours.`
     }</p>`;
   return {
     to: order.email,
@@ -137,7 +142,9 @@ export const placedEmail = (order: Order, payable: boolean) => {
     html: page(
       fa,
       en,
-      button(`${SITE}/profile.html#orders`, "سفارش‌های من", "My orders"),
+      payable
+        ? button(`${SITE}/profile.html#orders`, "سفارش‌های من", "My orders")
+        : button(PAYPING_LINK, "پرداخت با پی‌پینگ", "Pay with PayPing"),
       "لغو سفارش پرداخت‌نشده از پروفایل شما ممکن است.",
       "You can cancel an unpaid order from your profile."
     ),
