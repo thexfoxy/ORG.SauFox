@@ -2509,10 +2509,15 @@ const signedInGoHome = async (user) => {
       const problem = item.querySelector(".library-item__problem");
       button.disabled = true;
       problem.textContent = "";
-      const answer = await library({ action: "download", build_id: build.id, source: "site" }, await verifiedSession());
-      button.disabled = false;
-      if (answer.url) location.href = answer.url;
-      else problem.textContent = DOWNLOAD_ERRORS[answer.error] || "The download didn't start. Check your connection and try again.";
+      try {
+        const answer = await library({ action: "download", build_id: build.id, source: "site" }, await verifiedSession());
+        if (answer.url) location.href = answer.url;
+        else problem.textContent = t(DOWNLOAD_ERRORS[answer.error] || "The download didn't start. Check your connection and try again.");
+      } catch (e) {
+        problem.textContent = t("The download didn't start. Check your connection and try again.");
+      } finally {
+        button.disabled = false;
+      }
     });
     return button;
   };
@@ -2537,47 +2542,90 @@ const signedInGoHome = async (user) => {
     wrap.append(copy);
     return wrap;
   };
+  const libraryBody = document.querySelector(".library-body");
+  const emptyLibrary = libraryBody.firstElementChild.cloneNode(true);
+  const libraryUI = window.SauFoxLibrary;
+  const libraryState = {};
+  let libraryRevision = 0;
+  const libraryMessage = (key, retry = false) => {
+    const box = document.createElement("div");
+    box.className = "library-message";
+    const message = document.createElement("p");
+    message.setAttribute("role", "status");
+    message.textContent = libraryUI.text(key, LANG);
+    box.append(message);
+    if (retry) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "library-toolbar__refresh";
+      button.textContent = t("Try again");
+      button.addEventListener("click", showLibrary);
+      box.append(button);
+    }
+    return box;
+  };
   const showLibrary = async () => {
-    const { data, error } = await account.rpc("my_licenses");
-    if (error || !data.length) return;
-    const works = await catalog;
-    // Only files of owned works come back (row-level security).
-    const { data: builds } = await account
-      .from("builds")
-      .select("id, work_id, platform, version, size_bytes, created_at")
-      .eq("published", true)
-      .order("created_at", { ascending: false });
-    const cards = data
-      .map((lic) => {
-        const work = works.find((w) => w.id === lic.work_id);
+    const revision = ++libraryRevision;
+    libraryBody.setAttribute("aria-busy", "true");
+    libraryBody.replaceChildren(libraryMessage("loading"));
+    try {
+      const { data, error } = await account.rpc("my_licenses");
+      if (error || !Array.isArray(data)) throw new Error("library unavailable");
+      if (revision !== libraryRevision) return;
+      if (!data.length) return libraryBody.replaceChildren(emptyLibrary.cloneNode(true));
+      const works = revision === 1 ? await catalog : (await loadSite()).works;
+      if (!works.length) throw new Error("catalog unavailable");
+      // The existing ownership policy limits these files to the member.
+      let builds = [], filesFailed = false;
+      try {
+        const result = await account.from("builds")
+          .select("id, work_id, platform, version, size_bytes, created_at")
+          .eq("published", true).order("created_at", { ascending: false });
+        filesFailed = Boolean(result.error);
+        builds = result.data || [];
+      } catch (e) { filesFailed = true; }
+      if (revision !== libraryRevision) return;
+      const entries = data.map(lic => {
+        const work = works.find(w => w.id === lic.work_id);
         if (!work) return null;
+        const pending = work.status !== "released";
+        const files = pending || filesFailed ? [] : libraryUI.latestBuilds(builds, work.id);
         const card = posterCard(work);
         const note = document.createElement("span");
         note.className = "poster-card__note";
-        note.textContent =
-          (work.status === "released" ? "Yours" : "Pre-ordered · arrives on release day") + (lic.mine ? "" : " · gift");
+        note.textContent = t((pending ? "Pre-ordered · arrives on release day" : "Yours") + (lic.mine ? "" : " · gift"));
         card.append(note);
         const item = document.createElement("div");
         item.className = "library-item";
-        item.append(card, keyLine(lic.code));
-        // The newest file for each platform.
-        const files = (builds || [])
-          .filter((b) => b.work_id === work.id)
-          .filter((b, i, all) => all.findIndex((other) => other.platform === b.platform) === i);
-        if (files.length) {
-          const problem = document.createElement("span");
-          problem.className = "library-item__problem";
-          problem.setAttribute("role", "status");
-          item.append(...files.map(downloadButton), problem);
-        }
-        return item;
-      })
-      .filter(Boolean);
-    if (!cards.length) return;
-    const grid = document.createElement("div");
-    grid.className = "poster-grid";
-    grid.append(...cards);
-    (document.querySelector(".library-body") || document.getElementById("panel-library")).replaceChildren(grid);
+        item.append(card);
+        if (lic.code) item.append(keyLine(lic.code));
+        const problem = document.createElement("p");
+        problem.className = "library-item__problem";
+        problem.setAttribute("role", "status");
+        item.append(...files.map(downloadButton), problem);
+        if (!files.length) item.append(libraryMessage(pending ? "pending" : filesFailed ? "filesFailed" : "noFiles"));
+        const actions = document.createElement("div");
+        actions.className = "library-item__actions";
+        const link = (key, href) => {
+          const a = document.createElement("a");
+          a.textContent = libraryUI.text(key, LANG);
+          a.href = href;
+          actions.append(a);
+        };
+        if (work.kind === "game") link("launcher", "/download");
+        link("support", "/support");
+        item.append(actions);
+        return { work, element: item, pending, available: files.length > 0 };
+      }).filter(Boolean);
+      if (!entries.length) throw new Error("catalog unavailable");
+      libraryBody.replaceChildren(libraryUI.create({ entries, lang: LANG, onRefresh: showLibrary, state: libraryState }));
+      if (filesFailed) libraryBody.prepend(libraryMessage("filesFailed", true));
+      if (entries.length < data.length) libraryBody.prepend(libraryMessage("partial", true));
+    } catch (e) {
+      if (revision === libraryRevision) libraryBody.replaceChildren(libraryMessage("failed", true));
+    } finally {
+      if (revision === libraryRevision) libraryBody.removeAttribute("aria-busy");
+    }
   };
 
   // Redeeming a key from the library tab.
