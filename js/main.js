@@ -2516,32 +2516,25 @@ const signedInGoHome = async (user) => {
     });
     return button;
   };
-  // A game's key, shown under its card, with a button to copy it.
+  // Keep activation keys out of the rendered page, including copy failures.
   const keyLine = (code) => {
     const wrap = document.createElement("div");
     wrap.className = "library-key";
-    const value = document.createElement("code");
-    value.className = "library-key__code selectable";
-    value.textContent = code;
     const copy = document.createElement("button");
     copy.type = "button";
     copy.className = "library-key__copy";
-    copy.textContent = t("Copy");
+    copy.textContent = t("Copy key");
     copy.setAttribute("aria-label", t("Copy key"));
     copy.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(code);
         copy.textContent = t("Copied");
-        setTimeout(() => (copy.textContent = t("Copy")), 1500);
+        setTimeout(() => (copy.textContent = t("Copy key")), 1500);
       } catch (e) {
-        const range = document.createRange();
-        range.selectNodeContents(value);
-        const sel = getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
+        copy.textContent = t("Try again");
       }
     });
-    wrap.append(value, copy);
+    wrap.append(copy);
     return wrap;
   };
   const showLibrary = async () => {
