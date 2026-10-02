@@ -593,46 +593,6 @@ const payOrder = async (orderId) => {
   }
   return PAYMENT_ERRORS[answer.error] || "Couldn't reach the payment service. Check your connection and try again.";
 };
-// Until the bank gateway is open, some works are paid through their own
-// PayPing link, set to that work's price. Only an order for the full price
-// gets the link (a discounted order would be charged too much); the buyer
-// writes the order number there, and an admin matches the payment to the
-// order by hand (manual delivery in the admin panel). Same list as
-// supabase/functions/payment/mail.ts.
-const PAYPING = { "the-candlewood": { link: "https://payping.net/d/aEZq", rials: 780000 } };
-const paypingFor = (workId, amount) => {
-  const entry = workId && PAYPING[workId];
-  return entry && entry.rials === amount ? entry.link : "";
-};
-const tomans = (rials) => num(Math.round(rials / 10));
-const paypingBox = ({ number, amount, email, link }) => {
-  const make = (tag, className, text) => {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text != null) node.textContent = text;
-    return node;
-  };
-  const box = make("div", "payping");
-  const head = make("div", "payping__head");
-  head.append(make("span", "payping__label", "Amount to pay"), make("strong", "payping__amount", `${tomans(amount)} Tomans`));
-  const steps = make("ol", "payping__steps");
-  steps.append(
-    make("li", "", `Pay ${tomans(amount)} Tomans on PayPing.`),
-    make("li", "", `Write your order number (${number}) in the description.`),
-    make("li", "", `Use the same email as your account: ${email}`)
-  );
-  const go = make("a", "payping__go", "Pay with PayPing");
-  go.href = link;
-  go.target = "_blank";
-  go.rel = "noopener";
-  box.append(
-    head,
-    steps,
-    go,
-    make("p", "payping__note", "We check every payment by hand and confirm your order, usually within a few hours. It then shows in your Library.")
-  );
-  return box;
-};
 
 // ---------- Subscriptions ----------
 // Iron, Gold and Titanium (public.plans; settings.plans), each sold for
@@ -2751,15 +2711,6 @@ const signedInGoHome = async (user) => {
         text.append(make("span", "order__problem", problem));
       });
       side.append(pay);
-    }
-    const paypingLink = order.status === "awaiting_payment" && !canPay ? paypingFor(order.work_id, order.amount_irr) : "";
-    if (paypingLink) {
-      const pay = make("a", "order__pay", "Pay with PayPing");
-      pay.href = paypingLink;
-      pay.target = "_blank";
-      pay.rel = "noopener";
-      side.append(pay);
-      text.append(make("span", "", `Pay through PayPing and write order ${order.number} in the description.`));
     }
     if (order.status === "awaiting_payment") {
       // Press twice: the first press asks.
@@ -6867,13 +6818,11 @@ const ticketThread = async (list, messages, when) => {
   // "paid", or "failed" (back from the bank without paying).
   const doneSlot = (name) => done.querySelector(`[data-slot="${name}"]`);
   const retry = done.querySelector('[data-action="pay-again"]');
-  const finish = (state, { number, ref, amount, link = "", note = "" }) => {
+  const finish = (state, { number, ref, note = "" }) => {
     const TEXT = {
       placed: [
         "Your order is in",
-        link
-          ? "Now pay for it through PayPing with the details below. You can follow or cancel it in your profile."
-          : "It’s waiting for payment. Online payment opens soon, and we’ll email you when you can pay. You can follow or cancel it in your profile.",
+        "It’s waiting for payment. Online payment opens soon, and we’ll email you when you can pay. You can follow or cancel it in your profile.",
       ],
       paid: plan
         ? ["Payment received", "Thank you! Your plan is on, and its discount now comes off every work. See it in your profile."]
@@ -6896,9 +6845,6 @@ const ticketThread = async (list, messages, when) => {
       numberLine.append(" · ", refText);
     }
     doneSlot("done-message").textContent = note;
-    done.querySelector(".payping")?.remove();
-    if (state === "placed" && link)
-      doneSlot("done-text").after(paypingBox({ number, amount, link, email: (session && session.user.email) || "" }));
     retry.hidden = state !== "failed";
     doneSlot("orders-link").classList.toggle("empty__button--accent", state !== "failed");
     show(done);
@@ -6908,7 +6854,6 @@ const ticketThread = async (list, messages, when) => {
   // ---------- Back from the bank ----------
   const params = new URLSearchParams(location.search);
   let plan = null;
-  let session = null;
   const returning = params.get("order");
   if (returning) {
     gate.textContent = "Checking your payment…";
@@ -6941,7 +6886,7 @@ const ticketThread = async (list, messages, when) => {
     return;
   }
 
-  session = await verifiedSession();
+  const session = await verifiedSession();
   if (!session) return goLogin();
   const user = session.user;
   const { settings } = await site;
@@ -7128,12 +7073,6 @@ const ticketThread = async (list, messages, when) => {
     submit.disabled = true;
     say(SALES_PAUSED);
   }
-  // PayPing only for works that have a link (at their full price).
-  if (!canPay && !plan && PAYPING[work.id]) {
-    form.querySelector('[data-slot="pay-note"]').textContent =
-      "After you place the order, you pay through PayPing's secure page. We confirm the payment by hand, usually within a few hours.";
-    submit.textContent = "Place order and pay";
-  }
   if (canPay) {
     form.querySelector('[data-slot="pay-note"]').textContent =
       settings.payments === "test"
@@ -7164,7 +7103,7 @@ const ticketThread = async (list, messages, when) => {
     const { data, error } = await account
       .from("orders")
       .insert(plan ? { plan_id: plan.id, plan_days: planDays, name, phone } : { work_id: work.id, name, phone, ...(coupon ? { coupon_code: coupon.code } : {}) })
-      .select("id, number, amount_irr")
+      .select("id, number")
       .single();
     if (error) {
       submit.disabled = false;
@@ -7190,11 +7129,11 @@ const ticketThread = async (list, messages, when) => {
     local.set("phone", phone);
     if (!canPay) {
       payment({ action: "placed", order_id: data.id }, session); // the "order received" email
-      return finish("placed", { number: data.number, amount: data.amount_irr, link: plan ? "" : paypingFor(work.id, data.amount_irr) });
+      return finish("placed", { number: data.number });
     }
     say("Taking you to the bank…", true);
     const problem = await payOrder(data.id);
-    if (problem) finish("placed", { number: data.number, amount: data.amount_irr, note: problem });
+    if (problem) finish("placed", { number: data.number, note: problem });
   });
 })();
 
