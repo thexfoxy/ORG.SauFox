@@ -91,9 +91,10 @@ if (document.querySelector('.title-page')) {
 const LANG = document.documentElement.lang === "fa" && typeof FA !== "undefined" ? "fa" : "en";
 
 const faDigits = (text) => String(text).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
-const digits = (text) => (LANG === "fa" ? faDigits(text) : String(text));
+const isolateNumbers = (text) => (LANG === "fa" ? SauFoxNumbers.isolate(text) : String(text));
+const digits = (text) => isolateNumbers(LANG === "fa" ? faDigits(text) : text);
 const num = (n, decimals = 0) =>
-  n.toLocaleString(LANG === "fa" ? "fa-IR" : "en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  isolateNumbers(n.toLocaleString(LANG === "fa" ? "fa-IR" : "en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }));
 const money = {
   USD: (n) => (LANG === "fa" ? `${num(n, 2)} دلار` : `$${num(n, 2)}`),
   EUR: (n) => (LANG === "fa" ? `${num(n, 2)} یورو` : `€${num(n, 2)}`),
@@ -138,7 +139,7 @@ const t = (text) => {
       break;
     }
   }
-  return out === undefined ? text : text.replace(trimmed, out);
+  return out === undefined ? text : text.replace(trimmed, isolateNumbers(out));
 };
 
 (function translatePage() {
@@ -148,7 +149,8 @@ const t = (text) => {
 
   const translateText = (node) => {
     if (!node.parentElement || node.parentElement.closest(SKIP)) return;
-    const next = t(node.nodeValue);
+    const translated = t(node.nodeValue);
+    const next = /[آ-ی]/.test(translated) ? isolateNumbers(translated) : translated;
     if (next !== node.nodeValue) node.nodeValue = next;
   };
   const translateAttr = (el, name) => {
@@ -3027,7 +3029,9 @@ const signedInGoHome = async (user) => {
   facts.forEach(([label, value]) => {
     if (!value) return;
     const row = make("div");
-    row.append(make("dt", "", label), make("dd", "", value));
+    const detail = make("dd", "", label === "Age rating" && /^\d+\+?$/.test(value) ? digits(value) : value);
+    if (label === "Age rating") detail.dir = "ltr";
+    row.append(make("dt", "", label), detail);
     factList.append(row);
   });
   factList.hidden = !factList.children.length;
@@ -3395,7 +3399,7 @@ const starsFor = (score, className = "stars") => {
 const scoreText = (score) => num(score, 1);
 // A count as IMDb writes it: 950, 1.2K, 3.4M.
 const compact = (n) =>
-  n >= 1e6 ? `${num(n / 1e6, 1)}M` : n >= 1e3 ? `${num(n / 1e3, 1)}K` : num(n);
+  n >= 1e6 ? `${num(n / 1e6, 1)}${LANG === "fa" ? " میلیون" : "M"}` : n >= 1e3 ? `${num(n / 1e3, 1)}${LANG === "fa" ? " هزار" : "K"}` : num(n);
 // An average keeps one decimal (8.0); one person's rating is whole (9).
 const scoreOf = (score, className = "score", whole = false) => {
   const el = document.createElement("span");
