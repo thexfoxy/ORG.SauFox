@@ -449,24 +449,22 @@ a {
 }
 
 /* ---------- Profile button (signed-in users only) ----------
-   A pinched rectangle: the short sides are straight, the long top and bottom
-   sides curve inward toward each other. At rest the avatar shows blurred.
-   On hover (desktop) or first tap (touch) it comes into focus, "Profile"
-   appears over it, and meanwhile the curved sides straighten. Both shapes use the same path commands so clip-path can
-   morph between them. */
+   Rounded photo button with a soft entrance and interactive lift. */
 
 .profile-chip {
-  --shape-curved: path("M0 0 Q52 12 104 0 L104 48 Q52 36 0 48 Z");
-  --shape-flat: path("M0 0 Q52 0 104 0 L104 48 Q52 48 0 48 Z");
   grid-area: left;
   justify-self: start;
   display: grid;
   width: 104px;
   height: 48px;
   background: var(--surface-2);
-  clip-path: var(--shape-curved);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   text-decoration: none;
-  transition: clip-path 0.55s var(--ease-out);
+  animation: profile-chip-enter 420ms var(--ease-out);
+  transition: transform 280ms var(--ease-out), border-color 280ms ease, box-shadow 280ms ease;
 }
 
 .profile-chip > * {
@@ -516,7 +514,9 @@ a {
 
 .profile-chip.is-open,
 .profile-chip:focus-visible {
-  clip-path: var(--shape-flat);
+  transform: translateY(-2px) scale(1.035);
+  border-color: rgba(255, 136, 51, 0.65);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 18px rgba(255, 120, 24, 0.18);
 }
 
 .profile-chip.is-open img,
@@ -545,7 +545,9 @@ a {
 
 @media (hover: hover) {
   .profile-chip:hover {
-    clip-path: var(--shape-flat);
+    transform: translateY(-2px) scale(1.035);
+    border-color: rgba(255, 136, 51, 0.65);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 18px rgba(255, 120, 24, 0.18);
   }
 
   .profile-chip:hover img {
@@ -587,8 +589,6 @@ a {
   }
 
   .profile-chip {
-    --shape-curved: path("M0 0 Q42 10 84 0 L84 42 Q42 32 0 42 Z");
-    --shape-flat: path("M0 0 Q42 0 84 0 L84 42 Q42 42 0 42 Z");
     width: 84px;
     height: 42px;
   }
@@ -8593,4 +8593,23 @@ a.hero__panel {
   direction: ltr;
   unicode-bidi: isolate;
   text-align: start;
+}
+
+.profile-chip:active {
+  transform: translateY(0) scale(0.97);
+}
+
+@keyframes profile-chip-enter {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-chip, .profile-chip *, .profile-chip__avatar::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .profile-chip:is(:hover, :focus-visible, :active, .is-open) {
+    transform: none;
+  }
 }
