@@ -2602,6 +2602,8 @@ main.profile-page {
 }
 
 .countdown__units {
+  direction: ltr;
+  unicode-bidi: isolate;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -2618,6 +2620,8 @@ main.profile-page {
 }
 
 .countdown__unit b {
+  direction: ltr;
+  unicode-bidi: isolate;
   font: 600 30px/1 var(--font-body);
   font-variant-numeric: tabular-nums;
 }
@@ -8421,8 +8425,9 @@ a.hero__panel {
   background: none;
 }
 
-[dir="rtl"] .title-stage .countdown__unit {
-  padding: 0 0 0 22px;
+[dir="rtl"] .countdown__unit small {
+  direction: rtl;
+  unicode-bidi: isolate;
 }
 
 .title-stage .countdown__unit:not(:last-child)::after {
@@ -8581,4 +8586,11 @@ a.hero__panel {
   .title-stage .title-gallery__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Numeric entry remains left-to-right within Persian forms. */
+[dir="rtl"] input:is([type="number"], [type="tel"], [type="email"], [inputmode="numeric"], [inputmode="decimal"]) {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: start;
 }

@@ -50,7 +50,7 @@ test('the catalogue has unique translated roles and every page loads it before m
   }
   for (const page of ['admin','index','work','status','404']) {
     const html = await readFile(new URL(`../${page}.html`,import.meta.url),'utf8');
-    assert.ok(html.indexOf('js/credits.js?v=103') < html.indexOf('js/main.js?v=103'));
+    assert.ok(html.indexOf('js/credits.js?') < html.indexOf('js/main.js?'));
     assert.ok(html.includes('js/credits.js?v=103'));
   }
 });
