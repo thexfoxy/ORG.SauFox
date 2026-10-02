@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 const main = await readFile(new URL('../js/main.js', import.meta.url), 'utf8');
-const keyUI = main.slice(main.indexOf('  const keyLine ='), main.indexOf('  const showLibrary ='));
+const keyUI = main.slice(main.indexOf('  const keyLine ='), main.indexOf('  const libraryBody ='));
 const secret = 'SFOX-TEST-ONLY-FAKE-0000';
 function render(writeText) {
   const timers = [];
