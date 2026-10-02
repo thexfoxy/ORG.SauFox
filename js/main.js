@@ -188,20 +188,55 @@ const t = (text) => {
 })();
 document.documentElement.classList.remove("i18n-pending");
 
-// Language switch (footer, login pages): remembers the choice and reloads.
-document.querySelectorAll("[data-lang-switch]").forEach((button) => {
-  button.textContent = LANG === "fa" ? "English" : "فارسی";
-  button.lang = LANG === "fa" ? "en" : "fa";
-  button.addEventListener("click", () => {
-    const next = LANG === "fa" ? "en" : "fa";
-    local.set("lang", next);
-    // An address that names the language (?lang=fa) gets the new one.
-    const url = new URL(location.href);
-    if (url.searchParams.has("lang")) {
-      url.searchParams.set("lang", next);
-      location.replace(url.href);
-    } else location.reload();
-  });
+// Language picker: visible in the header, with both languages and an active state.
+document.querySelectorAll("[data-lang-switch]").forEach((source) => {
+  const picker = document.createElement("div");
+  picker.className = "lang-picker";
+  if (source.classList.contains("lang-switch--corner")) picker.classList.add("lang-picker--corner");
+  picker.dir = "ltr";
+  picker.setAttribute("translate", "no");
+  picker.setAttribute("role", "group");
+  picker.setAttribute("aria-label", LANG === "fa" ? "انتخاب زبان" : "Site language");
+  const globe = document.createElement("span");
+  globe.className = "lang-picker__globe";
+  globe.setAttribute("aria-hidden", "true");
+  globe.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 4 6 4 9s-1 6-4 9c-3-3-4-6-4-9s1-6 4-9Z"/></svg>';
+  picker.append(globe);
+  for (const [code, label, name] of [["en", "EN", "English"], ["fa", "فارسی", "فارسی"]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "lang-picker__option";
+    button.textContent = label;
+    button.lang = code;
+    button.dir = code === "fa" ? "rtl" : "ltr";
+    button.setAttribute("aria-label", name);
+    button.setAttribute("aria-pressed", String(code === LANG));
+    button.addEventListener("click", () => {
+      if (code === LANG) return;
+      local.set("lang", code);
+      const url = new URL(location.href);
+      if (url.searchParams.has("lang")) {
+        url.searchParams.set("lang", code);
+        location.replace(url.href);
+      } else location.reload();
+    });
+    picker.append(button);
+  }
+  const header = document.querySelector(".site-header__inner");
+  if (header) {
+    const accountActions = document.createElement("div");
+    accountActions.className = "site-header__account";
+    header.querySelectorAll(".profile-chip, .cta").forEach((control) => {
+      if (control.classList.contains("cta")) {
+        control.dataset.compactText = control.classList.contains("cta--signup")
+          ? (LANG === "fa" ? "ثبت‌نام" : "Join") : (LANG === "fa" ? "ورود" : "Login");
+      }
+      accountActions.append(control);
+    });
+    header.prepend(accountActions);
+    header.append(picker);
+    source.remove();
+  } else source.replaceWith(picker);
 });
 
 // Search engines and link previews. Each page's <head> has its English
