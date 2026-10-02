@@ -1,3 +1,4 @@
+import { verifiedCaller, memberClient } from "../_shared/auth.ts";
 // Deleting a member's account, from the profile page.
 //
 // POST { action: "delete", confirm }   signed-in member (code or Google)
@@ -5,7 +6,7 @@
 //   files and the account itself; with it go their profile, list, reviews,
 //   alerts and download log. Orders stay (payment records) but are no
 //   longer linked to anyone. Admin accounts can't be deleted here.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -21,20 +22,7 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 // The caller, if their session came through an emailed code or Google
 // (same rule as the database's private.verified()).
-const caller = async (req: Request) => {
-  const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  if (!token) return null;
-  const { data, error } = await db.auth.getUser(token);
-  if (error || !data.user) return null;
-  try {
-    const claims = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    const methods: { method: string }[] = claims.amr || [];
-    if (!methods.some((m) => m.method !== "password")) return null;
-  } catch {
-    return null;
-  }
-  return data.user;
-};
+const caller = (req: Request) => verifiedCaller(req, db);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return reply({});

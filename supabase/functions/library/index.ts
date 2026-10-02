@@ -1,3 +1,4 @@
+import { verifiedCaller, memberClient } from "../_shared/auth.ts";
 // A buyer's files, and signing in the SauFox launcher.
 //
 // POST { action: "download", build_id, source? }   signed-in member who paid
@@ -16,7 +17,7 @@
 //
 // Files live in a private S3-compatible bucket (r2.ts); the builds table
 // says which file belongs to which work.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 import { r2Link, r2Ready } from "./r2.ts";
 
 const cors = {
@@ -37,20 +38,7 @@ const UUID = /^[0-9a-f-]{36}$/i;
 
 // The caller, if their session came through an emailed code or Google
 // (same rule as the database's private.verified()).
-const caller = async (req: Request) => {
-  const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  if (!token) return null;
-  const { data, error } = await db.auth.getUser(token);
-  if (error || !data.user) return null;
-  try {
-    const claims = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    const methods: { method: string }[] = claims.amr || [];
-    if (!methods.some((m) => m.method !== "password")) return null;
-  } catch {
-    return null;
-  }
-  return data.user;
-};
+const caller = (req: Request) => verifiedCaller(req, db);
 const isAdmin = async (userId: string) =>
   Boolean((await db.from("admins").select("user_id").eq("user_id", userId).maybeSingle()).data);
 
@@ -89,24 +77,16 @@ Deno.serve(async (req) => {
     if (!UUID.test(String(body.build_id || ""))) return reply({ error: "bad_request" }, 400);
     const { data: build } = await db
       .from("builds")
-      .select("id, work_id, version, file_key, file_name, size_bytes, published")
+      .select("id, work_id, version, file_key, file_name, size_bytes, published, sha256, entrypoint, platform")
       .eq("id", body.build_id)
       .maybeSingle();
     if (!build || (!build.published && !admin)) return reply({ error: "not_found" }, 404);
+    if (body.source === "launcher" && (!/^[a-fA-F0-9]{64}$/.test(build.sha256 || "") || !build.size_bytes || !build.entrypoint || build.platform !== "windows"))
+      return reply({ error: "invalid_build" }, 409);
     if (!admin) {
-      // Owns the work if a non-revoked license for it is theirs — bought
-      // (user_id, not gifted away) or redeemed (redeemed_by).
-      const { data: licenses } = await db
-        .from("licenses")
-        .select("user_id, redeemed_by, delivered_at")
-        .eq("work_id", build.work_id)
-        .eq("revoked", false)
-        .not("delivered_at", "is", null)
-        .or(`user_id.eq.${user.id},redeemed_by.eq.${user.id}`);
-      const owned = (licenses || []).some(
-        (l) => l.redeemed_by === user.id || (l.user_id === user.id && !l.redeemed_by),
-      );
-      if (!owned) return reply({ error: "not_owned" }, 403);
+      const { data: owned, error: ownershipError } = await memberClient(req).rpc("owns_work", { p_work: build.work_id });
+      if (ownershipError) return reply({ error: "storage" }, 503);
+      if (owned !== true) return reply({ error: "not_owned" }, 403);
       const { count } = await db
         .from("downloads")
         .select("id", { count: "exact", head: true })
@@ -115,11 +95,12 @@ Deno.serve(async (req) => {
         .gte("created_at", new Date(Date.now() - 86400000).toISOString());
       if ((count || 0) >= DAILY_LINKS) return reply({ error: "limit" }, 429);
     }
-    await db.from("downloads").insert({ user_id: user.id, build_id: build.id, source: body.source === "launcher" ? "launcher" : "site" });
+    const { error: logError } = await db.from("downloads").insert({ user_id: user.id, build_id: build.id, source: body.source === "launcher" ? "launcher" : "site" });
+    if (logError) return reply({ error: "storage" }, 503);
     const url = await r2Link("GET", build.file_key, LINK_SECONDS, {
       "response-content-disposition": `attachment; filename="${safeName(build.file_name)}"`,
     });
-    return reply({ url, file_name: build.file_name, size_bytes: build.size_bytes, version: build.version });
+    return reply({ url, file_name: build.file_name, size_bytes: build.size_bytes, version: build.version, work_id: build.work_id, sha256: build.sha256, entrypoint: build.entrypoint, platform: build.platform });
   }
 
   if (!admin) return reply({ error: "forbidden" }, 403);

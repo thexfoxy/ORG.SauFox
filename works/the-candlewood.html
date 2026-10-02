@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en" data-auth="new">
+<head>
+  <base href="/">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Clean addresses: never ".html" in the address bar (GitHub Pages
+    // serves /work for work.html), and the home page is just "/". Pages
+    // start at the top: the browser doesn't bring back the old scroll
+    // position, and a reload or Back forgets any "#section" too.
+    (function () {
+      // Never inside another site's frame (clickjacking): GitHub Pages
+      // can't send X-Frame-Options, so the page leaves the frame itself,
+      // or stays blank if it can't.
+      if (window.top !== window.self) {
+        document.documentElement.style.display = "none";
+        try { window.top.location = window.location.href; } catch (e) {}
+        return;
+      }
+      try {
+        var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+        var fresh = nav && (nav.type === "reload" || nav.type === "back_forward");
+        var p = location.pathname, c = p.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
+        var hash = location.hash;
+        if (c !== p || hash !== location.hash) history.replaceState(history.state, "", c + location.search + hash);
+        if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      } catch (e) {}
+    })();
+  </script>
+  <script>
+    // Language: the visitor's choice, else Persian if their browser prefers
+    // it. A Persian page stays hidden until js/main.js has put its text in.
+    (function () {
+      var lang = "en";
+      try {
+        // ?lang=fa or ?lang=en in the address wins (links, search engines).
+        var asked = /[?&]lang=(fa|en)(&|$)/.exec(location.search);
+        if (asked) lang = asked[1];
+        if (asked) localStorage.setItem("saufox.lang", lang);
+        else lang = localStorage.getItem("saufox.lang") ||
+          ((navigator.languages || [navigator.language]).some(function (l) { return /^fa\b/i.test(l); }) ? "fa" : "en");
+      } catch (e) {}
+      if (lang !== "fa") return;
+      var root = document.documentElement;
+      root.lang = "fa";
+      root.dir = "rtl";
+      root.classList.add("i18n-pending");
+      setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
+    })();
+  </script>
+  <title>The CandleWood · SauFox Entertainment</title>
+  <link rel="canonical" href="https://saufoxentertainment.ir/works/the-candlewood">
+  <meta name="description" content="A release from SauFox Entertainment.">
+  <link rel="icon" href="assets/favicon.png" type="image/png" sizes="64x64">
+  <link rel="icon" href="assets/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta name="theme-color" content="#0f0f11">
+  <meta property="og:site_name" content="SauFox Entertainment">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="SauFox Entertainment">
+  <meta property="og:description" content="A release from SauFox Entertainment.">
+  <meta property="og:image" content="https://saufoxentertainment.ir/assets/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="fa_IR">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css?v=108">
+  <script>
+    // Same header states as the home page (see index.html).
+    (function () {
+      var state = "new";
+      try {
+        if (localStorage.getItem("saufox.session")) state = "member";
+        else if (localStorage.getItem("saufox.hasAccount")) state = "returning";
+      } catch (e) {}
+      document.documentElement.dataset.auth = state;
+    })();
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="profile-chip" href="profile" aria-label="Profile">
+        <span class="profile-chip__avatar">
+          <img src="assets/avatar-default.svg" alt="">
+        </span>
+        <span class="profile-chip__label">Profile</span>
+      </a>
+
+      <a class="brand" href="/" aria-label="SauFox Entertainment">
+        <span class="brand__text"><img src="assets/wordmark.webp" alt="SauFox" width="1012" height="360"></span>
+        <span class="brand__blur" aria-hidden="true"><img src="assets/wordmark.webp" alt="" width="1012" height="360"></span>
+      </a>
+
+      <a class="cta cta--login" href="login" data-animate-letters data-hover-text="Welcome Back">Login</a>
+      <a class="cta cta--signup" href="login#signup" data-animate-letters data-hover-text="Sign Up Now">Wanna create an account?</a>
+    </div>
+  </header>
+
+  <!-- One page for every work in js/content.js: work.html?id=<id>.
+       js/main.js (titlePage) fills it in; sections without data stay
+       hidden. -->
+  <main class="title-page">
+    <!-- The stage: the key art across the whole width, fading to dark on
+         the reading side, with everything about the work written on the
+         dark part in white. -->
+    <section class="title-stage">
+      <span class="title-hero__art" aria-hidden="true"></span>
+      <span class="title-stage__shade" aria-hidden="true"></span>
+
+      <div class="title-stage__info">
+      <div class="title-head">
+        <p class="title-head__kicker"></p>
+        <h1 class="title-head__name" translate="no"></h1>
+      </div>
+
+      <div class="title-body">
+        <dl class="title-facts"></dl>
+
+        <div class="title-actions">
+          <button class="title-button title-button--play" type="button" data-action="trailer" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 8 5.5z"/></svg>
+            <span>Watch trailer</span>
+          </button>
+          <span class="title-button title-button--soon" data-slot="trailer-soon" hidden></span>
+          <button class="title-button title-button--list" type="button" data-action="my-list" aria-pressed="false" hidden>
+            <svg class="icon-add" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <svg class="icon-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>My List</span>
+          </button>
+          <a class="title-button title-button--buy" data-action="buy" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2.2l2.3 11h11l2-8H7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="19.5" r="1.5" fill="currentColor"/><circle cx="17" cy="19.5" r="1.5" fill="currentColor"/></svg>
+            <span>Buy</span>
+          </a>
+          <span class="title-button title-button--soon" data-slot="buy-soon" hidden>Purchases open soon</span>
+          <button class="title-button title-button--notify" type="button" data-action="notify" aria-pressed="false" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Notify me</span>
+          </button>
+        </div>
+
+        <div class="countdown" hidden>
+          <p class="countdown__label"></p>
+          <div class="countdown__units">
+            <span class="countdown__unit"><b data-unit="days">0</b><small>Days</small></span>
+            <span class="countdown__unit"><b data-unit="hours">0</b><small>Hours</small></span>
+            <span class="countdown__unit"><b data-unit="minutes">0</b><small>Minutes</small></span>
+            <span class="countdown__unit"><b data-unit="seconds">0</b><small>Seconds</small></span>
+          </div>
+        </div>
+
+        <p class="title-synopsis" dir="auto" hidden></p>
+      </div>
+      </div>
+
+      <!-- The stills, on the art's side of the stage, low down. -->
+      <div class="title-gallery" aria-labelledby="gallery-title" role="region" hidden>
+        <h2 class="title-section__heading" id="gallery-title">Gallery</h2>
+        <div class="title-gallery__grid"></div>
+      </div>
+    </section>
+
+
+    <!-- Cast & crew: everyone who made the work, with a photo, in two groups
+         (works.credits, set in the admin panel). js/main.js fills it in. -->
+    <section class="title-section title-credits" aria-labelledby="credits-title" hidden>
+      <h2 class="title-section__heading" id="credits-title">Cast &amp; crew <span class="title-credits__count" data-slot="credits-count"></span></h2>
+      <div class="title-credits__groups"></div>
+    </section>
+
+    <!-- Ratings and reviews (comments only until the work is released).
+         js/main.js (reviews) fills it in; the database keeps one review
+         per member and works out who bought the work. -->
+    <section class="title-section title-reviews" id="reviews" aria-labelledby="reviews-title" hidden>
+      <h2 class="title-section__heading" id="reviews-title">Ratings &amp; reviews</h2>
+      <div class="reviews__summary" hidden>
+        <div class="reviews__score">
+          <div data-slot="score"></div>
+          <small data-slot="count"></small>
+        </div>
+        <ol class="reviews__bars" aria-label="Ratings by stars"></ol>
+      </div>
+
+      <form class="review-form" novalidate hidden>
+        <h3 class="review-form__title">Your review</h3>
+        <button class="review-form__rate" type="button" hidden></button>
+        <textarea name="body" rows="4" maxlength="2000" autocomplete="off" placeholder="What did you think?"></textarea>
+        <div class="review-form__foot">
+          <p class="auth__message" role="status" aria-live="polite"></p>
+          <button class="review-form__submit" type="submit">Post review</button>
+        </div>
+      </form>
+      <p class="reviews__login" hidden><a href="login">Log in</a> <span>to rate and review.</span></p>
+
+      <label class="reviews__sort">
+        <span>Sort by</span>
+        <select data-slot="sort">
+          <option value="newest">Newest</option>
+          <option value="helpful">Most helpful</option>
+        </select>
+      </label>
+      <ol class="reviews__list"></ol>
+      <p class="reviews__empty" hidden>No reviews yet. Be the first.</p>
+      <button class="reviews__more" type="button" hidden>Show more</button>
+    </section>
+
+    <section class="title-missing" hidden>
+      <h1 class="title-head__name">We couldn&rsquo;t find that work</h1>
+      <p>It may have moved or been renamed.</p>
+      <a class="empty__button" href="/">Back to all works</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <div class="site-footer__brand">
+        <a class="site-footer__logo" href="/" aria-label="SauFox Entertainment"><img src="assets/logo.webp" alt="SauFox" width="480" height="533"></a>
+        <!-- Trust seals: paste the snippet eNamad gives (and later others,
+             such as Zarinpal's) inside this div, unchanged. It stays hidden
+             while empty. -->
+        <div class="site-footer__seals"><a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=7933711&Code=bmrlXpeqo3ruMStc0SYwA5DAULWrzjwZ'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=7933711&Code=bmrlXpeqo3ruMStc0SYwA5DAULWrzjwZ' alt='' style='cursor:pointer' code='bmrlXpeqo3ruMStc0SYwA5DAULWrzjwZ'></a></div>
+      </div>
+
+      <nav class="site-footer__col" aria-label="Studio">
+        <h2>Studio</h2>
+        <a href="browse">All works</a>
+        <a href="download">Windows launcher</a>
+        <a href="news">News</a>
+        <a href="about">About us</a>
+        <a href="about#contact">Contact</a>
+        <a href="faq">Help &amp; FAQ</a>
+        <a href="https://portal.saufoxentertainment.ir/">Support</a>
+        <a href="/#plans">Subscriptions</a>
+      </nav>
+
+      <nav class="site-footer__col" aria-label="Legal">
+        <h2>Legal</h2>
+        <a href="terms">Terms of use</a>
+        <a href="privacy">Privacy policy</a>
+      </nav>
+
+      <div class="site-footer__col">
+        <h2>Contact</h2>
+        <a class="selectable" href="mailto:saufoxentertainment@gmail.com">saufoxentertainment@gmail.com</a>
+        <a class="selectable" href="tel:+985133409142" dir="ltr">+98 51 3340 9142</a>
+        <a class="selectable" href="tel:+989301053524" dir="ltr">+98 930 105 3524</a>
+        <div class="social-links">
+          <a href="https://www.instagram.com/saufox.entertainment" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.3" cy="6.7" r="1.2" fill="currentColor"/></svg>
+          </a>
+          <a href="https://t.me/saufoxentertainment" target="_blank" rel="noopener" aria-label="Telegram">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.4 3.6 2.9 10.8c-1 .4-1 1.7.1 2l4.6 1.4 1.8 5.5c.3.8 1.2 1 1.8.5l2.6-2.4 4.9 3.6c.7.5 1.6.1 1.8-.7l3.1-15c.2-1-.8-1.7-1.7-1.3zM9.7 14.2l-.4 3.7-1.3-4.2 9.3-6.5-7.6 7z"/></svg>
+          </a>
+          <a href="https://x.com/saufoxent" target="_blank" rel="noopener" aria-label="X">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.7 3h3.1l-6.8 7.8L22 21h-6.3l-4.9-6.4L5.2 21H2.1l7.3-8.3L1.8 3h6.4l4.4 5.9L17.7 3zm-1.1 16.2h1.7L7.2 4.7H5.4l11.2 14.5z"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="site-footer__bottom">
+      <p>&copy; 2026 SauFox Entertainment. All rights reserved.</p>
+      <button class="lang-switch" type="button" data-lang-switch translate="no">فارسی</button>
+    </div>
+  </footer>
+
+  <!-- Full-size stills and the trailer player. -->
+  <div class="viewer" role="dialog" aria-modal="true" aria-label="Viewer" hidden>
+    <button class="viewer__close" type="button" aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <button class="viewer__step viewer__step--prev" type="button" aria-label="Previous image">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="viewer__stage"></div>
+    <button class="viewer__step viewer__step--next" type="button" aria-label="Next image">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <script src="/js/work-paths.js?v=102" defer></script>
+  <script src="/js/routes.js?v=102" defer></script>
+  <script src="js/vendor/supabase.js?v=89" defer></script>
+  <script src="js/numbers.js?v=104" defer></script>
+  <script src="js/fa.js?v=105" defer></script>
+  <script src="/js/credits.js?v=103" defer></script>
+  <script src="js/main.js?v=109" defer></script>
+</body>
+</html>

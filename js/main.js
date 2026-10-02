@@ -21,6 +21,19 @@ const local = {
   },
 };
 
+// ---------- Work routes ----------
+const workUrl = SauFoxRoutes.workUrl;
+const currentWorkId = () => SauFoxRoutes.workId(location.href);
+const workReturn = (hash) => {
+  const url = new URL(SauFoxRoutes.canonical(location.href) || location.href, location.href);
+  if (hash !== undefined) url.hash = hash;
+  return url.pathname + url.search + url.hash;
+};
+if (document.querySelector('.title-page')) {
+  const clean = SauFoxRoutes.canonical(location.href);
+  if (clean && clean !== location.pathname + location.search + location.hash) location.replace(clean);
+}
+
 // ---------- Clean addresses, fresh pages ----------
 // Links never show ".html" (GitHub Pages serves /work for work.html; the
 // home page is "/"), including links the scripts add later. The inline
@@ -29,8 +42,13 @@ const local = {
   const PAGE = /^(?:\.\/|\/)?([a-z0-9-]+)\.html(?=$|[?#])(.*)$/i;
   const tidy = (el) => {
     const name = el.tagName === "FORM" ? "action" : "href";
-    const m = PAGE.exec(el.getAttribute(name) || "");
-    if (m) el.setAttribute(name, (m[1].toLowerCase() === "index" ? "/" : m[1]) + m[2]);
+    const raw = el.getAttribute(name) || "";
+    if (raw.startsWith("#") && location.pathname.startsWith("/works/")) {
+      el.setAttribute(name, location.pathname + location.search + raw);
+      return;
+    }
+    const m = PAGE.exec(raw);
+    if (m) el.setAttribute(name, (m[1].toLowerCase() === "index" ? "/" : "/" + m[1]) + m[2]);
   };
   const SELECT = "a[href], form[action]";
   document.querySelectorAll(SELECT).forEach(tidy);
@@ -73,9 +91,10 @@ const local = {
 const LANG = document.documentElement.lang === "fa" && typeof FA !== "undefined" ? "fa" : "en";
 
 const faDigits = (text) => String(text).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
-const digits = (text) => (LANG === "fa" ? faDigits(text) : String(text));
+const isolateNumbers = (text) => (LANG === "fa" ? SauFoxNumbers.isolate(text) : String(text));
+const digits = (text) => isolateNumbers(LANG === "fa" ? faDigits(text) : text);
 const num = (n, decimals = 0) =>
-  n.toLocaleString(LANG === "fa" ? "fa-IR" : "en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  isolateNumbers(n.toLocaleString(LANG === "fa" ? "fa-IR" : "en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }));
 const money = {
   USD: (n) => (LANG === "fa" ? `${num(n, 2)} دلار` : `$${num(n, 2)}`),
   EUR: (n) => (LANG === "fa" ? `${num(n, 2)} یورو` : `€${num(n, 2)}`),
@@ -120,7 +139,7 @@ const t = (text) => {
       break;
     }
   }
-  return out === undefined ? text : text.replace(trimmed, out);
+  return out === undefined ? text : text.replace(trimmed, isolateNumbers(out));
 };
 
 (function translatePage() {
@@ -130,7 +149,8 @@ const t = (text) => {
 
   const translateText = (node) => {
     if (!node.parentElement || node.parentElement.closest(SKIP)) return;
-    const next = t(node.nodeValue);
+    const translated = t(node.nodeValue);
+    const next = /[آ-ی]/.test(translated) ? isolateNumbers(translated) : translated;
     if (next !== node.nodeValue) node.nodeValue = next;
   };
   const translateAttr = (el, name) => {
@@ -168,20 +188,55 @@ const t = (text) => {
 })();
 document.documentElement.classList.remove("i18n-pending");
 
-// Language switch (footer, login pages): remembers the choice and reloads.
-document.querySelectorAll("[data-lang-switch]").forEach((button) => {
-  button.textContent = LANG === "fa" ? "English" : "فارسی";
-  button.lang = LANG === "fa" ? "en" : "fa";
-  button.addEventListener("click", () => {
-    const next = LANG === "fa" ? "en" : "fa";
-    local.set("lang", next);
-    // An address that names the language (?lang=fa) gets the new one.
-    const url = new URL(location.href);
-    if (url.searchParams.has("lang")) {
-      url.searchParams.set("lang", next);
-      location.replace(url.href);
-    } else location.reload();
-  });
+// Language picker: visible in the header, with both languages and an active state.
+document.querySelectorAll("[data-lang-switch]").forEach((source) => {
+  const picker = document.createElement("div");
+  picker.className = "lang-picker";
+  if (source.classList.contains("lang-switch--corner")) picker.classList.add("lang-picker--corner");
+  picker.dir = "ltr";
+  picker.setAttribute("translate", "no");
+  picker.setAttribute("role", "group");
+  picker.setAttribute("aria-label", LANG === "fa" ? "انتخاب زبان" : "Site language");
+  const globe = document.createElement("span");
+  globe.className = "lang-picker__globe";
+  globe.setAttribute("aria-hidden", "true");
+  globe.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 4 6 4 9s-1 6-4 9c-3-3-4-6-4-9s1-6 4-9Z"/></svg>';
+  picker.append(globe);
+  for (const [code, label, name] of [["en", "EN", "English"], ["fa", "فارسی", "فارسی"]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "lang-picker__option";
+    button.textContent = label;
+    button.lang = code;
+    button.dir = code === "fa" ? "rtl" : "ltr";
+    button.setAttribute("aria-label", name);
+    button.setAttribute("aria-pressed", String(code === LANG));
+    button.addEventListener("click", () => {
+      if (code === LANG) return;
+      local.set("lang", code);
+      const url = new URL(location.href);
+      if (url.searchParams.has("lang")) {
+        url.searchParams.set("lang", code);
+        location.replace(url.href);
+      } else location.reload();
+    });
+    picker.append(button);
+  }
+  const header = document.querySelector(".site-header__inner");
+  if (header) {
+    const accountActions = document.createElement("div");
+    accountActions.className = "site-header__account";
+    header.querySelectorAll(".profile-chip, .cta").forEach((control) => {
+      if (control.classList.contains("cta")) {
+        control.dataset.compactText = control.classList.contains("cta--signup")
+          ? (LANG === "fa" ? "ثبت‌نام" : "Join") : (LANG === "fa" ? "ورود" : "Login");
+      }
+      accountActions.append(control);
+    });
+    header.prepend(accountActions);
+    header.append(picker);
+    source.remove();
+  } else source.replaceWith(picker);
 });
 
 // Search engines and link previews. Each page's <head> has its English
@@ -293,8 +348,7 @@ const pricesOf = (row, rates) => {
 // or writes leads, actors and voices are the cast, the rest the crew.
 // Credits from before (one role, perhaps a group, "as <character>") are
 // read the same way.
-const DIRECTOR = /^(director|co-director|کارگردان)$/i;
-const WRITER = /^(writer|co-writer|screenplay|screenwriter|story|author|نویسنده|فیلم‌نامه|فیلمنامه|فیلم‌نامه‌نویس)$/i;
+const creditTaxonomy = SauFoxCredits;
 const CAST = /^(actor|actress|cast|voice|voice actor|voice actress|narrator|as .+|voice of .+|بازیگر|صداپیشه|گوینده|راوی|در نقش .+)$/i;
 const creditRoles = (credit) => {
   if (Array.isArray(credit.roles)) return credit.roles.filter(Boolean);
@@ -306,7 +360,7 @@ const creditRoles = (credit) => {
   return role.split(/\s*(?:,|&|\/|\band\b)\s*/i).filter(Boolean);
 };
 // Roles that play a character, so the admin panel asks which one.
-const PLAYS = /^(actor|actress|voice|voice actor|voice actress|بازیگر|صداپیشه)$/i;
+const PLAYS = { test: creditTaxonomy.plays };
 // A credit as { name, photo, roles, character }: "as Anna" roles become
 // the character (with an Actor role if nothing else says so).
 const readCredit = (credit) => {
@@ -315,20 +369,13 @@ const readCredit = (credit) => {
   roles = roles.filter((r) => !/^(as|در نقش)\s+/i.test(r));
   if (played.length && !roles.some((r) => PLAYS.test(r))) roles.unshift("Actor");
   const character = [credit.character, ...played].filter(Boolean).join(", ");
-  return { name: credit.name || "", photo: credit.photo || "", roles, character };
+  return { name: credit.name || "", photo: credit.photo || "", roles: creditTaxonomy.unique(roles), character, department: credit.department || "" };
 };
 // AI tools that helped make the work: listed inside the crew, apart.
 const AI = /^(ai|ai assistant|ai model|دستیار هوش مصنوعی|هوش مصنوعی)$/i;
 // "lead" (directs or writes), "ai" (an AI assistant), "cast" (only acts or
 // voices) or "crew".
-const creditPlace = (roles) =>
-  roles.some((r) => DIRECTOR.test(r) || WRITER.test(r))
-    ? "lead"
-    : roles.some((r) => AI.test(r))
-      ? "ai"
-      : roles.length && roles.every((r) => CAST.test(r))
-        ? "cast"
-        : "crew";
+const creditPlace = (roles, department = "") => creditTaxonomy.department({ roles, department });
 
 const toWork = (row, rates = {}) => ({
   ...pricesOf(row, rates),
@@ -484,10 +531,8 @@ const verifiedSession = async () => {
 
 // Sends a signed-out visitor to log in, then back to this page.
 const goLogin = () => {
-  // The page's file name, as it's written in links (the address bar shows
-  // "/work" for work.html, and "/" for the home page).
-  const page = location.pathname.split("/").pop().replace(/\.html$/, "") || "index";
-  local.set("next", `${page}.html${location.search}${location.hash}`);
+  // Keep the full local path and any selected options after signing in.
+  local.set("next", location.pathname + location.search + location.hash);
   location.href = "login.html";
 };
 
@@ -501,6 +546,8 @@ const paymentsOpen = (settings) =>
   !salesPaused(settings) &&
   (settings.payments === "live" || (settings.payments === "test" && local.get("admin") === "1"));
 const PAYMENT_ERRORS = {
+  payment_review: "Payment received for review. Do not pay again; contact support with your order number.",
+  storage: "The payment record could not be saved. Retry this page; do not start another payment.",
   paused: "Sales are paused for a little while. Your order is saved; you can pay once they reopen.",
   closed: "Online payment isn't open yet. Your order is saved, and we'll email you when you can pay.",
   not_configured: "Online payment isn't open yet. Your order is saved, and we'll email you when you can pay.",
@@ -1106,7 +1153,7 @@ const heroEdgeY = (() => {
     const video = post && post.youtube_url ? [post.youtube_url, post.youtube_thumb_url] : work.youtube ? [work.youtube, work.youtubeThumb] : null;
     if (video) box.append(youtubeCard(video[0], video[1]));
     const more = make("a", "hero__card-more", post ? t("Read the news") : t("See the work"));
-    more.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : `work.html?id=${encodeURIComponent(work.id)}`;
+    more.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : workUrl(work.id);
     box.append(more);
     return box;
   };
@@ -1124,7 +1171,7 @@ const heroEdgeY = (() => {
   const point = (panel, work) => {
     const post = newsFor.get(work.id);
     const link = panel.querySelector(".hero__link");
-    link.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : `work.html?id=${encodeURIComponent(work.id)}`;
+    link.href = post ? `news.html?post=${encodeURIComponent(post.slug)}` : workUrl(work.id);
     link.setAttribute("aria-label", post ? newsField(post, "title") : work.title);
     panel.classList.toggle("has-news", Boolean(post));
     const i = Number(panel.dataset.index);
@@ -1432,7 +1479,7 @@ const dragScroll = (track) => {
     const card = el("article", "card");
 
     const link = el("a", "card__link");
-    link.href = `work.html?id=${encodeURIComponent(work.id)}`;
+    link.href = workUrl(work.id);
     const media = el("div", "card__media");
     link.append(media);
     const slides = work.images.map((src, i) => {
@@ -1614,7 +1661,7 @@ const setCoverScore = (frame, score, count) => {
 const posterCard = (work) => {
   const link = document.createElement("a");
   link.className = "poster-card";
-  link.href = `work.html?id=${encodeURIComponent(work.id)}`;
+  link.href = workUrl(work.id);
   const frame = document.createElement("span");
   frame.className = "poster-card__frame";
   if (work.images[0]) {
@@ -1953,7 +2000,7 @@ const signedInGoHome = async (user) => {
   cacheProfile(await fetchProfile(user));
   const next = local.get("next");
   local.set("next", null);
-  const target = next && /^[a-z0-9-]+\.html([?#][^\s]*)?$/i.test(next) ? next : "index.html";
+  const target = SauFoxRoutes.loginReturn(next);
   setTimeout(() => (location.href = target), 700);
 };
 
@@ -2495,82 +2542,123 @@ const signedInGoHome = async (user) => {
       const problem = item.querySelector(".library-item__problem");
       button.disabled = true;
       problem.textContent = "";
-      const answer = await library({ action: "download", build_id: build.id, source: "site" }, await verifiedSession());
-      button.disabled = false;
-      if (answer.url) location.href = answer.url;
-      else problem.textContent = DOWNLOAD_ERRORS[answer.error] || "The download didn't start. Check your connection and try again.";
+      try {
+        const answer = await library({ action: "download", build_id: build.id, source: "site" }, await verifiedSession());
+        if (answer.url) location.href = answer.url;
+        else problem.textContent = t(DOWNLOAD_ERRORS[answer.error] || "The download didn't start. Check your connection and try again.");
+      } catch (e) {
+        problem.textContent = t("The download didn't start. Check your connection and try again.");
+      } finally {
+        button.disabled = false;
+      }
     });
     return button;
   };
-  // A game's key, shown under its card, with a button to copy it.
+  // Keep activation keys out of the rendered page, including copy failures.
   const keyLine = (code) => {
     const wrap = document.createElement("div");
     wrap.className = "library-key";
-    const value = document.createElement("code");
-    value.className = "library-key__code selectable";
-    value.textContent = code;
     const copy = document.createElement("button");
     copy.type = "button";
     copy.className = "library-key__copy";
-    copy.textContent = t("Copy");
+    copy.textContent = t("Copy key");
     copy.setAttribute("aria-label", t("Copy key"));
     copy.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(code);
         copy.textContent = t("Copied");
-        setTimeout(() => (copy.textContent = t("Copy")), 1500);
+        setTimeout(() => (copy.textContent = t("Copy key")), 1500);
       } catch (e) {
-        const range = document.createRange();
-        range.selectNodeContents(value);
-        const sel = getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
+        copy.textContent = t("Try again");
       }
     });
-    wrap.append(value, copy);
+    wrap.append(copy);
     return wrap;
   };
+  const libraryBody = document.querySelector(".library-body");
+  const emptyLibrary = libraryBody.firstElementChild.cloneNode(true);
+  const libraryUI = window.SauFoxLibrary;
+  const libraryState = {};
+  let libraryRevision = 0;
+  const libraryMessage = (key, retry = false) => {
+    const box = document.createElement("div");
+    box.className = "library-message";
+    const message = document.createElement("p");
+    message.setAttribute("role", "status");
+    message.textContent = libraryUI.text(key, LANG);
+    box.append(message);
+    if (retry) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "library-toolbar__refresh";
+      button.textContent = t("Try again");
+      button.addEventListener("click", showLibrary);
+      box.append(button);
+    }
+    return box;
+  };
   const showLibrary = async () => {
-    const { data, error } = await account.rpc("my_licenses");
-    if (error || !data.length) return;
-    const works = await catalog;
-    // Only files of owned works come back (row-level security).
-    const { data: builds } = await account
-      .from("builds")
-      .select("id, work_id, platform, version, size_bytes, created_at")
-      .eq("published", true)
-      .order("created_at", { ascending: false });
-    const cards = data
-      .map((lic) => {
-        const work = works.find((w) => w.id === lic.work_id);
+    const revision = ++libraryRevision;
+    libraryBody.setAttribute("aria-busy", "true");
+    libraryBody.replaceChildren(libraryMessage("loading"));
+    try {
+      const { data, error } = await account.rpc("my_licenses");
+      if (error || !Array.isArray(data)) throw new Error("library unavailable");
+      if (revision !== libraryRevision) return;
+      if (!data.length) return libraryBody.replaceChildren(emptyLibrary.cloneNode(true));
+      const works = revision === 1 ? await catalog : (await loadSite()).works;
+      if (!works.length) throw new Error("catalog unavailable");
+      // The existing ownership policy limits these files to the member.
+      let builds = [], filesFailed = false;
+      try {
+        const result = await account.from("builds")
+          .select("id, work_id, platform, version, size_bytes, created_at")
+          .eq("published", true).order("created_at", { ascending: false });
+        filesFailed = Boolean(result.error);
+        builds = result.data || [];
+      } catch (e) { filesFailed = true; }
+      if (revision !== libraryRevision) return;
+      const entries = data.map(lic => {
+        const work = works.find(w => w.id === lic.work_id);
         if (!work) return null;
+        const pending = work.status !== "released";
+        const files = pending || filesFailed ? [] : libraryUI.latestBuilds(builds, work.id);
         const card = posterCard(work);
         const note = document.createElement("span");
         note.className = "poster-card__note";
-        note.textContent =
-          (work.status === "released" ? "Yours" : "Pre-ordered · arrives on release day") + (lic.mine ? "" : " · gift");
+        note.textContent = t((pending ? "Pre-ordered · arrives on release day" : "Yours") + (lic.mine ? "" : " · gift"));
         card.append(note);
         const item = document.createElement("div");
         item.className = "library-item";
-        item.append(card, keyLine(lic.code));
-        // The newest file for each platform.
-        const files = (builds || [])
-          .filter((b) => b.work_id === work.id)
-          .filter((b, i, all) => all.findIndex((other) => other.platform === b.platform) === i);
-        if (files.length) {
-          const problem = document.createElement("span");
-          problem.className = "library-item__problem";
-          problem.setAttribute("role", "status");
-          item.append(...files.map(downloadButton), problem);
-        }
-        return item;
-      })
-      .filter(Boolean);
-    if (!cards.length) return;
-    const grid = document.createElement("div");
-    grid.className = "poster-grid";
-    grid.append(...cards);
-    (document.querySelector(".library-body") || document.getElementById("panel-library")).replaceChildren(grid);
+        item.append(card);
+        if (lic.code) item.append(keyLine(lic.code));
+        const problem = document.createElement("p");
+        problem.className = "library-item__problem";
+        problem.setAttribute("role", "status");
+        item.append(...files.map(downloadButton), problem);
+        if (!files.length) item.append(libraryMessage(pending ? "pending" : filesFailed ? "filesFailed" : "noFiles"));
+        const actions = document.createElement("div");
+        actions.className = "library-item__actions";
+        const link = (key, href) => {
+          const a = document.createElement("a");
+          a.textContent = libraryUI.text(key, LANG);
+          a.href = href;
+          actions.append(a);
+        };
+        if (work.kind === "game") link("launcher", "/download");
+        link("support", "/support");
+        item.append(actions);
+        return { work, element: item, pending, available: files.length > 0 };
+      }).filter(Boolean);
+      if (!entries.length) throw new Error("catalog unavailable");
+      libraryBody.replaceChildren(libraryUI.create({ entries, lang: LANG, onRefresh: showLibrary, state: libraryState }));
+      if (filesFailed) libraryBody.prepend(libraryMessage("filesFailed", true));
+      if (entries.length < data.length) libraryBody.prepend(libraryMessage("partial", true));
+    } catch (e) {
+      if (revision === libraryRevision) libraryBody.replaceChildren(libraryMessage("failed", true));
+    } finally {
+      if (revision === libraryRevision) libraryBody.removeAttribute("aria-busy");
+    }
   };
 
   // Redeeming a key from the library tab.
@@ -2620,7 +2708,7 @@ const signedInGoHome = async (user) => {
     const row = make("li", "order");
     const thumb = make(work ? "a" : "span", "order__thumb");
     if (work) {
-      thumb.href = `work.html?id=${encodeURIComponent(work.id)}`;
+      thumb.href = workUrl(work.id);
       thumb.setAttribute("aria-label", order.title);
       if (work.images[0]) {
         const img = make("img");
@@ -3012,7 +3100,7 @@ const signedInGoHome = async (user) => {
   if (!page) return;
   const CATALOG = await catalog;
 
-  const id = new URLSearchParams(location.search).get("id");
+  const id = currentWorkId();
   const work = CATALOG.find((w) => w.id === id);
   if (!work) {
     page.querySelectorAll(":scope > section:not(.title-missing)").forEach((s) => (s.hidden = true));
@@ -3032,7 +3120,7 @@ const signedInGoHome = async (user) => {
 
   document.title = `${work.title} · SauFox Entertainment`;
   pageMeta({
-    path: `/work.html?id=${encodeURIComponent(work.id)}`,
+    path: workUrl(work.id),
     title: `${work.title} · SauFox Entertainment`,
     description: work.synopsis || `${work.title} — ${work.kind} by SauFox Entertainment.`,
     image: work.images[0],
@@ -3058,7 +3146,9 @@ const signedInGoHome = async (user) => {
   facts.forEach(([label, value]) => {
     if (!value) return;
     const row = make("div");
-    row.append(make("dt", "", label), make("dd", "", value));
+    const detail = make("dd", "", label === "Age rating" && /^\d+\+?$/.test(value) ? digits(value) : value);
+    if (label === "Age rating") detail.dir = "ltr";
+    row.append(make("dt", "", label), detail);
     factList.append(row);
   });
   factList.hidden = !factList.children.length;
@@ -3112,6 +3202,14 @@ const signedInGoHome = async (user) => {
     }
     verifiedSession().then(async (session) => {
       if (!session) return;
+      const { data: owned, error: ownershipError } = await account.rpc("owns_work", { p_work: work.id });
+      if (ownershipError) return;
+      if (owned) {
+        buy.hidden = false; buySoon.hidden = true;
+        buy.href = "profile.html#library"; buy.classList.add("is-ordered");
+        buyLabel.textContent = "In your library";
+        return;
+      }
       const { data } = await account
         .from("orders")
         .select("status")
@@ -3123,9 +3221,9 @@ const signedInGoHome = async (user) => {
       const paid = data[0].status !== "awaiting_payment";
       buy.hidden = false;
       buySoon.hidden = true;
-      buy.href = paid ? "profile.html#library" : "profile.html#orders";
+      buy.href = "profile.html#orders";
       buy.classList.add("is-ordered");
-      buyLabel.textContent = paid ? "In your library" : "Ordered · awaiting payment";
+      buyLabel.textContent = paid ? "View order" : "Ordered · awaiting payment";
     });
   } else buySoon.hidden = !prices.length;
 
@@ -3199,7 +3297,7 @@ const signedInGoHome = async (user) => {
     const box = page.querySelector(".title-credits__groups");
     const SHOWN = 12;
     const person = (credit, lead) => {
-      const cast = !lead && creditPlace(credit.roles) === "cast";
+      const cast = !lead && creditPlace(credit.roles, credit.department) === "cast";
       const item = make("li", lead ? "credit credit--lead" : cast ? "credit credit--cast" : "credit");
       const face = make("span", "credit__face");
       if (credit.photo) {
@@ -3225,7 +3323,7 @@ const signedInGoHome = async (user) => {
       // Each role in this page's language when it's a known one.
       // In the AI Assistant section the heading already says so; the role
       // line shows what else they did.
-      const other = creditPlace(credit.roles) === "ai" ? credit.roles.filter((r) => !AI.test(r)) : [];
+      const other = creditPlace(credit.roles, credit.department) === "ai" ? credit.roles.filter((r) => !AI.test(r)) : [];
       const shownRoles = other.length ? other : credit.roles;
       const role = make("span", "credit__role", shownRoles.map((r) => t(r)).join(" · "));
       role.translate = false;
@@ -3235,35 +3333,37 @@ const signedInGoHome = async (user) => {
       if (lead) {
         role.className = "credit__label";
         text.append(role, name);
-      } else if (cast && credit.character) {
+        if (credit.character && credit.roles.some(PLAYS.test)) {
+          const character = make("span", "credit__role", credit.character);
+          character.translate = false;
+          character.dir = "auto";
+          text.append(character);
+        }
+      } else if (credit.character && credit.roles.some(PLAYS.test)) {
         const character = make("strong", "credit__character", credit.character);
         character.translate = false;
         character.dir = "auto";
         name.className = "credit__player";
-        text.append(character, name);
+        text.append(character, name, role);
       } else text.append(name, role);
       item.append(face, text);
       return item;
     };
-    const leads = work.credits.filter((credit) => creditPlace(credit.roles) === "lead");
+    const leads = work.credits.filter(creditTaxonomy.isLead);
     if (leads.length) {
       const list = make("ul", "title-credits__leads");
       list.append(...leads.map((credit) => person(credit, true)));
       box.append(list);
     }
-    const assistants = work.credits.filter((c) => creditPlace(c.roles) === "ai");
-    // AI assistants get a section of their own beside the crew's, so they
-    // read as part of the making without mixing with the people.
-    const groups = [
-      ["Crew", work.credits.filter((c) => creditPlace(c.roles) === "crew")],
-      ["AI Assistant", assistants],
-      ["Cast", work.credits.filter((c) => creditPlace(c.roles) === "cast")],
-    ].filter(([, people]) => people.length);
-    const pair = groups.some(([l]) => l === "Crew") && assistants.length ? make("div", "title-credits__pair") : null;
-    groups.forEach(([label, people]) => {
+    const leadSet = new Set(leads);
+    const groups = creditTaxonomy.groups.map((department) => [department, work.credits.filter((credit) =>
+      !leadSet.has(credit) && creditPlace(credit.roles, credit.department) === department.id
+    )]).filter(([, people]) => people.length);
+    groups.forEach(([department, people]) => {
       const group = make("div", "title-credits__group");
-      if (groups.length > 1 || leads.length) group.append(make("h3", "title-credits__heading", label));
-      const list = make("ul", label === "Cast" ? "title-credits__list title-credits__list--cast" : "title-credits__list");
+      group.dataset.department = department.id;
+      group.append(make("h3", "title-credits__heading", department.en));
+      const list = make("ul", department.id === "cast" ? "title-credits__list title-credits__list--cast" : "title-credits__list");
       list.append(...people.map((credit) => person(credit)));
       group.append(list);
       if (people.length > SHOWN) {
@@ -3276,11 +3376,7 @@ const signedInGoHome = async (user) => {
         });
         group.append(more);
       }
-      if (pair && label !== "Cast") {
-        group.classList.add(label === "Crew" ? "title-credits__group--crew" : "title-credits__group--ai");
-        pair.append(group);
-        if (label === "AI Assistant") box.append(pair);
-      } else box.append(group);
+      box.append(group);
     });
     page.querySelector('[data-slot="credits-count"]').textContent = digits(work.credits.length);
     page.querySelector(".title-credits").hidden = false;
@@ -3369,7 +3465,7 @@ const signedInGoHome = async (user) => {
 (async function notifyButton() {
   const button = document.querySelector('[data-action="notify"]');
   if (!button || !account) return;
-  const id = new URLSearchParams(location.search).get("id");
+  const id = currentWorkId();
   const work = (await catalog).find((w) => w.id === id);
   if (!work || work.status === "released") return;
   const label = button.querySelector("span");
@@ -3395,7 +3491,7 @@ const signedInGoHome = async (user) => {
   button.addEventListener("click", async () => {
     const now = await verifiedSession();
     if (!now) {
-      local.set("next", `work.html?id=${encodeURIComponent(work.id)}`);
+      local.set("next", workReturn());
       location.href = "login.html";
       return;
     }
@@ -3420,7 +3516,7 @@ const starsFor = (score, className = "stars") => {
 const scoreText = (score) => num(score, 1);
 // A count as IMDb writes it: 950, 1.2K, 3.4M.
 const compact = (n) =>
-  n >= 1e6 ? `${num(n / 1e6, 1)}M` : n >= 1e3 ? `${num(n / 1e3, 1)}K` : num(n);
+  n >= 1e6 ? `${num(n / 1e6, 1)}${LANG === "fa" ? " میلیون" : "M"}` : n >= 1e3 ? `${num(n / 1e3, 1)}${LANG === "fa" ? " هزار" : "K"}` : num(n);
 // An average keeps one decimal (8.0); one person's rating is whole (9).
 const scoreOf = (score, className = "score", whole = false) => {
   const el = document.createElement("span");
@@ -3442,7 +3538,7 @@ const scoreOf = (score, className = "score", whole = false) => {
 (async function reviewsSection() {
   const section = document.querySelector(".title-reviews");
   if (!section || !account) return;
-  const id = new URLSearchParams(location.search).get("id");
+  const id = currentWorkId();
   const work = (await catalog).find((w) => w.id === id);
   if (!work) return;
   const released = work.status === "released";
@@ -3615,7 +3711,7 @@ const scoreOf = (score, className = "score", whole = false) => {
     talk.addEventListener("click", (event) => {
       event.preventDefault();
       section.scrollIntoView({ behavior: "smooth" });
-      history.replaceState(null, "", "#reviews");
+      history.replaceState(null, "", location.pathname + location.search + "#reviews");
     });
     box.append(average, yours, talk);
     document.querySelector(".title-head").append(box);
@@ -3789,7 +3885,7 @@ const scoreOf = (score, className = "score", whole = false) => {
   const voted = new Set();
   const reported = new Set();
   const needLogin = () => {
-    local.set("next", `work.html?id=${encodeURIComponent(work.id)}#reviews`);
+    local.set("next", workReturn("#reviews"));
     location.href = "login.html";
   };
   const REASONS = [
@@ -3955,7 +4051,7 @@ const scoreOf = (score, className = "score", whole = false) => {
     login.hidden = false;
     login.querySelector("a").addEventListener("click", (event) => {
       event.preventDefault();
-      local.set("next", `work.html?id=${encodeURIComponent(work.id)}#reviews`);
+      local.set("next", workReturn("#reviews"));
       location.href = "login.html";
     });
   } else {
@@ -4186,7 +4282,7 @@ const newsCard = (post, works) => {
     const work = post.work_id && (await catalog).find((w) => w.id === post.work_id);
     if (work) {
       const link = view.querySelector(".news-post__work");
-      link.href = `work.html?id=${encodeURIComponent(work.id)}`;
+      link.href = workUrl(work.id);
       link.textContent = t(`See ${work.title}`);
       link.hidden = false;
     }
@@ -4917,6 +5013,13 @@ const ticketThread = async (list, messages, when) => {
   const deleteButton = form.querySelector('[data-action="delete"]');
   const viewLink = form.querySelector('[data-slot="view-link"]');
   const creditsEl = form.querySelector(".admin-credits");
+  const suggestions = document.getElementById("credit-roles");
+  suggestions.replaceChildren(...creditTaxonomy.roles.map((role) => {
+    const option = document.createElement("option");
+    option.value = LANG === "fa" ? role.fa : role.en;
+    option.label = LANG === "fa" ? role.en : role.fa;
+    return option;
+  }));
   const stillsEl = form.querySelector(".admin-stills__list");
 
   const slug = (text) =>
@@ -5041,9 +5144,11 @@ const ticketThread = async (list, messages, when) => {
     typing.setAttribute("aria-label", "Roles");
     typing.setAttribute("list", "credit-roles");
     const chip = (text) => {
+      text = creditTaxonomy.normalize(text);
       const tag = make("span", "admin-roles__chip");
       tag.dataset.role = text;
-      const label = make("span", "", text);
+      const label = make("span", "", t(text));
+      label.translate = false;
       const drop = make("button", "", "×");
       drop.type = "button";
       drop.setAttribute("aria-label", `Remove ${text}`);
@@ -5057,15 +5162,17 @@ const ticketThread = async (list, messages, when) => {
     };
     // The long example only while there are no roles yet.
     const hint = () => {
+      if (picker) updatePicker();
       typing.placeholder = roles.querySelector(".admin-roles__chip") ? "Add a role" : "Roles: Director, Composer, Voice actor…";
       // An actor or voice gets a box for the character they play.
       if (character) character.hidden = ![...roles.querySelectorAll(".admin-roles__chip")].some((c) => PLAYS.test(c.dataset.role));
     };
     let character = null;
+    let picker = null;
     const commit = () => {
       typing.value
         .split(",")
-        .map((part) => part.trim())
+        .map((part) => creditTaxonomy.normalize(part))
         .filter(Boolean)
         .forEach((part) => {
           if (![...roles.querySelectorAll(".admin-roles__chip")].some((c) => c.dataset.role.toLowerCase() === part.toLowerCase())) chip(part);
@@ -5101,7 +5208,48 @@ const ticketThread = async (list, messages, when) => {
     read.roles.forEach(chip);
     hint();
 
-    const nameInput = make("input");
+    picker = make("div", "admin-credit__picker");
+    const categoryLabel = make("label");
+    categoryLabel.append(make("span", "", "Role category"));
+    const category = make("select");
+    category.setAttribute("aria-label", "Role category");
+    category.append(new Option(t("All departments"), ""));
+    creditTaxonomy.groups.forEach((group) => category.append(new Option(t(group.en), group.id)));
+    if (read.roles.length) category.value = creditPlace(read.roles, read.department);
+    categoryLabel.append(category);
+    const selectionLabel = make("label");
+    selectionLabel.append(make("span", "", "Choose a role"));
+    const selection = make("select");
+    selection.setAttribute("aria-label", "Choose a role");
+    selectionLabel.append(selection);
+    const displayLabel = make("label");
+    displayLabel.append(make("span", "", "Show under"));
+    const display = make("select", "admin-credit__department");
+    display.setAttribute("aria-label", "Show under");
+    display.append(new Option(t("Automatic from roles"), ""));
+    creditTaxonomy.groups.forEach((group) => display.append(new Option(t(group.en), group.id)));
+    display.value = creditTaxonomy.groups.some((group) => group.id === read.department) ? read.department : "";
+    displayLabel.append(display);
+    const updatePicker = () => {
+      selection.replaceChildren(new Option(t("Choose a role"), ""));
+      const chosen = new Set([...roles.querySelectorAll(".admin-roles__chip")].map((tag) => tag.dataset.role));
+      creditTaxonomy.groups.filter((group) => !category.value || category.value === group.id).forEach((group) => {
+        const options = document.createElement("optgroup");
+        options.label = t(group.en);
+        group.roles.filter((role) => !chosen.has(role.en)).forEach((role) => options.append(new Option(t(role.en), role.en)));
+        if (options.children.length) selection.append(options);
+      });
+      const guessed = creditPlace([...chosen]);
+      display.options[0].textContent = t("Automatic from roles") + " · " + t(creditTaxonomy.groups.find((group) => group.id === guessed).en);
+    };
+    category.addEventListener("change", updatePicker);
+    selection.addEventListener("change", () => {
+      if (selection.value) chip(selection.value);
+    });
+    picker.append(categoryLabel, selectionLabel, displayLabel);
+    updatePicker();
+
+    const nameInput = make("input", "admin-credit__name");
     nameInput.type = "text";
     nameInput.placeholder = "Name";
     nameInput.value = credit.name || "";
@@ -5118,7 +5266,8 @@ const ticketThread = async (list, messages, when) => {
         [...row.querySelectorAll(".admin-roles__chip")]
           .map((c) => c.dataset.role)
           .concat(row.querySelector(".admin-roles input").value.split(",").map((r) => r.trim()))
-          .filter(Boolean)
+          .filter(Boolean),
+        row.querySelector(".admin-credit__department").value
       );
     up.addEventListener("click", () => {
       const mine = placeOf(item);
@@ -5135,7 +5284,7 @@ const ticketThread = async (list, messages, when) => {
     remove.type = "button";
     remove.setAttribute("aria-label", "Remove this person");
     remove.addEventListener("click", () => item.remove());
-    item.append(photo, nameInput, roles, up, remove, character);
+    item.append(photo, nameInput, roles, up, remove, picker, character);
     creditsEl.append(item);
     return nameInput;
   };
@@ -5180,7 +5329,7 @@ const ticketThread = async (list, messages, when) => {
     deleteButton.hidden = !row;
     resetDelete();
     viewLink.hidden = !(row && liveState(row) === "live");
-    if (row) viewLink.href = `work.html?id=${encodeURIComponent(row.id)}`;
+    if (row) viewLink.href = workUrl(row.id);
     listView.hidden = true;
     form.hidden = false;
     window.scrollTo(0, 0);
@@ -5454,9 +5603,11 @@ const ticketThread = async (list, messages, when) => {
           // A role still being typed counts too.
           const pending = item.querySelector(".admin-roles input").value.split(",").map((r) => r.trim());
           const roles = [...item.querySelectorAll(".admin-roles__chip")].map((chip) => chip.dataset.role).concat(pending).filter(Boolean);
-          const credit = { name: item.querySelector('input[aria-label="Name"]').value.trim(), roles };
+          const credit = { name: item.querySelector(".admin-credit__name").value.trim(), roles: creditTaxonomy.unique(roles) };
+          const department = item.querySelector(".admin-credit__department").value;
+          if (department) credit.department = department;
           const character = item.querySelector(".admin-credit__character");
-          if (!character.hidden && character.querySelector("input").value.trim()) credit.character = character.querySelector("input").value.trim();
+          if (character.querySelector("input").value.trim()) credit.character = character.querySelector("input").value.trim();
           if (item.dataset.photo) credit.photo = item.dataset.photo;
           return credit;
         })
@@ -5770,6 +5921,9 @@ const ticketThread = async (list, messages, when) => {
     pick.value = order.status;
     pick.dataset.status = order.status;
     pick.addEventListener("change", async () => {
+      if (pick.value === "cancelled" && !window.confirm("Cancel this order? Its license and device access will be revoked. This does not refund the bank payment.")) {
+        pick.value = order.status; return;
+      }
       pick.disabled = true;
       const { error } = await account.from("orders").update({ status: pick.value }).eq("id", order.id);
       if (error) pick.value = order.status;
@@ -5944,7 +6098,7 @@ const ticketThread = async (list, messages, when) => {
       box.disabled = true;
       const { error } = await account.from("coupons").update({ active: box.checked }).eq("code", c.code);
       box.disabled = false;
-      if (error) box.checked = !box.checked;
+      if (error) { box.checked = !box.checked; fileSay("Could not publish this file. Check its checksum, size and executable path."); }
       row.classList.toggle("is-off", !box.checked);
     });
     const remove = make("button", "admin-button admin-button--danger", "Delete");
@@ -6536,6 +6690,7 @@ const ticketThread = async (list, messages, when) => {
   const fileVersion = fileForm.querySelector("#file-version");
   const filePlatform = fileForm.querySelector("#file-platform");
   const filePublished = fileForm.querySelector("#file-published");
+  const fileEntrypoint = fileForm.querySelector("#file-entrypoint");
   const fileProgress = fileForm.querySelector(".admin-files__progress");
   const fileList = fileForm.querySelector(".admin-files__list");
   const fileSubmit = fileForm.querySelector('[type="submit"]');
@@ -6565,7 +6720,7 @@ const ticketThread = async (list, messages, when) => {
     box.addEventListener("change", async () => {
       box.disabled = true;
       const { error } = await account.from("builds").update({ published: box.checked }).eq("id", build.id);
-      if (error) box.checked = !box.checked;
+      if (error) { box.checked = !box.checked; fileSay("Could not publish this file. Check its checksum, size and executable path."); }
       box.disabled = false;
     });
     const remove = make("button", "admin-button admin-button--danger", "Delete");
@@ -6623,7 +6778,21 @@ const ticketThread = async (list, messages, when) => {
     if (!version) return fileSay("Enter the version, such as 1.0.0.");
     if (!file) return fileSay("Choose the file to upload.");
     if (file.size > 5e9) return fileSay("Files over 5 GB can't be uploaded here. Upload it with rclone or wrangler, then tell Claude.");
+    const entrypoint = fileEntrypoint.value.trim();
+    if (filePlatform.value === "windows" && (!/^[A-Za-z0-9_-][A-Za-z0-9_ ./-]*[.]exe$/.test(entrypoint) || entrypoint.split("/").some(p => !p || p === "." || p === ".." || /[. ]$/.test(p))))
+      return fileSay("Enter the game's executable path inside the ZIP, such as bin/Game.exe.");
+    if (filePlatform.value === "windows" && !/\.(zip|exe)$/i.test(file.name)) return fileSay("Windows builds must be ZIP or EXE files.");
+    if (!file.size) return fileSay("The file is empty.");
     fileSubmit.disabled = true;
+    fileSay("Checking the file…", true);
+    let sha256;
+    try {
+      const { hashFile } = await import("./hash-file.mjs");
+      sha256 = await hashFile(file);
+    } catch {
+      fileSubmit.disabled = false;
+      return fileSay("Couldn't check the file. Nothing was uploaded. Try again.");
+    }
     fileSay("Getting the upload ready…", true);
     const answer = await library({ action: "upload", work_id: fileWork.value, file_name: file.name }, await verifiedSession());
     if (!answer.url) {
@@ -6639,20 +6808,6 @@ const ticketThread = async (list, messages, when) => {
       fileSubmit.disabled = false;
       return fileSay("The upload failed. Check the bucket's CORS settings and your connection, then try again.");
     }
-    // A checksum, so the launcher can tell a download arrived whole. Big
-    // files (over 1.5 GB) are left without one — the browser can't hash
-    // them without running out of memory — and the launcher checks the
-    // size instead.
-    let sha256 = null;
-    if (file.size <= 1.5e9 && crypto.subtle) {
-      try {
-        fileSay("Checking the file…", true);
-        const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-        sha256 = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
-      } catch (e) {
-        sha256 = null;
-      }
-    }
     const { error } = await account.from("builds").insert({
       work_id: fileWork.value,
       platform: filePlatform.value,
@@ -6661,6 +6816,7 @@ const ticketThread = async (list, messages, when) => {
       file_name: file.name,
       size_bytes: file.size,
       sha256,
+      entrypoint: filePlatform.value === "windows" ? entrypoint : null,
       published: filePublished.checked,
     });
     fileSubmit.disabled = false;
@@ -6752,11 +6908,11 @@ const ticketThread = async (list, messages, when) => {
       authority: params.get("Authority") || "",
       status: params.get("Status") || "",
     });
-    // Reloading shouldn't ask the bank again.
-    history.replaceState(null, "", `checkout.html?order=${encodeURIComponent(returning)}`);
+    // Keep the authority on reload: verification is idempotent and a failed
+    // database write must be retryable without starting another payment.
     if (answer.error === "not_found" || answer.error === "bad_request") return show(missing);
     if (answer.error) {
-      gate.textContent = "Couldn't reach the payment service. Reload the page in a moment to check again.";
+      gate.textContent = t(PAYMENT_ERRORS[answer.error] || "Couldn't reach the payment service. Reload the page in a moment to check again.");
       return;
     }
     plan = answer.plan || null;
@@ -6787,6 +6943,11 @@ const ticketThread = async (list, messages, when) => {
   const id = params.get("id");
   const work = plan ? null : (await catalog).find((w) => w.id === id);
   if (!plan && (!work || !work.prices || work.prices.IRR == null)) return show(missing);
+  if (work) {
+    const { data: owned, error } = await account.rpc("owns_work", { p_work: work.id });
+    if (error) { show(missing); return; }
+    if (owned) return location.replace("profile.html#library");
+  }
   const membership = await myMembership();
 
   // Already ordered: that order is in the profile. (One unpaid plan order
@@ -6852,7 +7013,7 @@ const ticketThread = async (list, messages, when) => {
     }
   } else {
     document.title = `Checkout · ${work.title} · SauFox Entertainment`;
-    back.href = `work.html?id=${encodeURIComponent(work.id)}`;
+    back.href = workUrl(work.id);
     if (work.images[0]) poster.src = work.images[0];
     else poster.hidden = true;
     form.querySelector(".checkout-summary__kind").textContent = work.kind;
