@@ -209,11 +209,8 @@
     .dlbtn::after {
       content: ""; position: absolute; inset: 0; z-index: -1;
       background: radial-gradient(160px circle at var(--mx, 50%) var(--my, 50%), rgba(255,235,210,0.35), transparent 62%);
-      opacity: 0; transition: opacity .7s cubic-bezier(.16,1,.3,1), --mx .35s ease-out, --my .35s ease-out;
+      opacity: 0; transition: opacity .7s cubic-bezier(.16,1,.3,1);
     }
-    /* Registered so the glow glides after the pointer instead of jumping. */
-    @property --mx { syntax: "<length-percentage>"; inherits: true; initial-value: 50%; }
-    @property --my { syntax: "<length-percentage>"; inherits: true; initial-value: 50%; }
     .dlbtn:hover { transform: translateY(-3px); box-shadow: 0 24px 50px -12px rgba(255,100,10,0.95), 0 0 0 1px rgba(255,210,160,0.7), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -3px 6px rgba(140,40,0,0.35); }
     .dlbtn:hover::after { opacity: 1; }
     .dlbtn:active { transform: translateY(1px); box-shadow: 0 8px 18px -8px rgba(255,100,10,0.8), inset 0 3px 8px rgba(120,30,0,0.45); transition-duration: .12s; }
@@ -436,15 +433,21 @@
       loop();
     })();
 
-    // Pointer glow on the button.
+    // Pointer glow on the button: eased toward the pointer every frame, so
+    // it glides instead of snapping. It starts where the pointer comes in.
     (function () {
       var b = document.getElementById("dlbtn");
       if (!b) return;
-      ["pointerenter", "pointermove"].forEach(function (ev) { b.addEventListener(ev, function (e) {
-        var r = b.getBoundingClientRect();
-        b.style.setProperty("--mx", (e.clientX - r.left) + "px");
-        b.style.setProperty("--my", (e.clientY - r.top) + "px");
-      }); });
+      var x = 0, y = 0, tx = 0, ty = 0, raf = 0;
+      function at(e) { var r = b.getBoundingClientRect(); tx = e.clientX - r.left; ty = e.clientY - r.top; }
+      function paint() { b.style.setProperty("--mx", x.toFixed(1) + "px"); b.style.setProperty("--my", y.toFixed(1) + "px"); }
+      function step() {
+        x += (tx - x) * 0.12; y += (ty - y) * 0.12;
+        paint();
+        raf = Math.abs(tx - x) + Math.abs(ty - y) > 0.3 ? requestAnimationFrame(step) : 0;
+      }
+      b.addEventListener("pointerenter", function (e) { at(e); x = tx; y = ty; paint(); });
+      b.addEventListener("pointermove", function (e) { at(e); if (!raf) raf = requestAnimationFrame(step); });
     })();
   </script>
 
