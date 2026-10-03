@@ -275,4 +275,10 @@ grant execute on function public.inbox(bigint) to authenticated;
 grant execute on function public.mark_read(uuid) to authenticated;
 grant execute on function public.my_friends() to authenticated;
 
+-- Writes only through the functions above (row-level security already
+-- refuses them; this removes the default grants as well).
+revoke insert, update, delete, truncate, references, trigger
+  on public.messages, public.blocks, public.friendships, public.play_sessions from anon, authenticated;
+revoke select on public.messages, public.blocks, public.friendships, public.play_sessions from anon;
+
 select 'done' as result;
