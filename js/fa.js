@@ -7,6 +7,32 @@
 // terms, privacy) carry their Persian in the HTML instead.
 
 const FA = {
+  // ---------- Player profiles (user.html) ----------
+  "Player profile · SauFox Entertainment": "پروفایل بازیکن · ساوفاکس اینترتینمنت",
+  "Loading…": "در حال بارگذاری…",
+  "Something went wrong. Try again.": "مشکلی پیش آمد. دوباره امتحان کنید.",
+  "No one has that username.": "کسی با این نام کاربری پیدا نشد.",
+  "Couldn't load this profile. Check your connection and try again.": "پروفایل باز نشد. اینترنت را بررسی کنید و دوباره امتحان کنید.",
+  "This profile is private.": "این پروفایل خصوصی است.",
+  "Playing {game}": "در حال بازی {game}",
+  "Online": "آنلاین",
+  "Offline": "آفلاین",
+  "Last online {when}": "آخرین بازدید {when}",
+  "{n} min ago": "{n} دقیقه پیش",
+  "{n} h ago": "{n} ساعت پیش",
+  "{n} d ago": "{n} روز پیش",
+  "Edit your profile and find friends in the SauFox launcher.": "پروفایلتان را ویرایش کنید و دوستانتان را در لانچر ساوفاکس پیدا کنید.",
+  "Friends": "دوستان",
+  "Request sent": "درخواست ارسال شد",
+  "Accept friend request": "پذیرفتن درخواست دوستی",
+  "Add friend": "افزودن دوست",
+  "Get the launcher": "دریافت لانچر",
+  "Level": "سطح",
+  "Hours played": "ساعت بازی",
+  "Member since {when}": "عضو از {when}",
+  "{h} hrs on record": "{h} ساعت بازی",
+  "Last played {when}": "آخرین اجرا {when}",
+
   // ---------- Header, footer, general ----------
   "Profile": "حساب کاربری",
   "Login": "ورود",

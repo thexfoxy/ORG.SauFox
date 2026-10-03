@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en" data-auth="new">
 <head>
-  <base href="/">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>
@@ -22,7 +21,7 @@
         var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
         var fresh = nav && (nav.type === "reload" || nav.type === "back_forward");
         var p = location.pathname, c = p.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
-        var hash = location.hash;
+        var hash = fresh ? "" : location.hash;
         if (c !== p || hash !== location.hash) history.replaceState(history.state, "", c + location.search + hash);
         if ("scrollRestoration" in history) history.scrollRestoration = "manual";
       } catch (e) {}
@@ -49,17 +48,22 @@
       setTimeout(function () { root.classList.remove("i18n-pending"); }, 2500);
     })();
   </script>
-  <title>The CandleWood · SauFox Entertainment</title>
-  <link rel="canonical" href="https://saufoxentertainment.ir/works/the-candlewood">
-  <meta name="description" content="A release from SauFox Entertainment.">
+  <title>Player profile · SauFox Entertainment</title>
+  <meta name="description" content="A SauFox player: their games, hours played and friends.">
   <link rel="icon" href="assets/favicon.png" type="image/png" sizes="64x64">
   <link rel="icon" href="assets/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <meta name="theme-color" content="#0f0f11">
+  <link rel="canonical" href="https://saufoxentertainment.ir/user">
+  <link rel="alternate" hreflang="en" href="https://saufoxentertainment.ir/user">
+  <link rel="alternate" hreflang="fa" href="https://saufoxentertainment.ir/user?lang=fa">
+  <link rel="alternate" hreflang="x-default" href="https://saufoxentertainment.ir/user">
   <meta property="og:site_name" content="SauFox Entertainment">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="SauFox Entertainment">
-  <meta property="og:description" content="A release from SauFox Entertainment.">
+  <meta property="og:type" content="profile">
+  <meta name="robots" content="noindex">
+  <meta property="og:title" content="Player profile · SauFox Entertainment">
+  <meta property="og:description" content="A SauFox player: their games, hours played and friends.">
+  <meta property="og:url" content="https://saufoxentertainment.ir/user">
   <meta property="og:image" content="https://saufoxentertainment.ir/assets/og.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -101,118 +105,8 @@
     </div>
   </header>
 
-  <!-- One page for every work in js/content.js: work.html?id=<id>.
-       js/main.js (titlePage) fills it in; sections without data stay
-       hidden. -->
-  <main class="title-page">
-    <!-- The stage: the key art across the whole width, fading to dark on
-         the reading side, with everything about the work written on the
-         dark part in white. -->
-    <section class="title-stage">
-      <span class="title-hero__art" aria-hidden="true"></span>
-      <span class="title-stage__shade" aria-hidden="true"></span>
-
-      <div class="title-stage__info">
-      <div class="title-head">
-        <p class="title-head__kicker"></p>
-        <h1 class="title-head__name" translate="no"></h1>
-      </div>
-
-      <div class="title-body">
-        <dl class="title-facts"></dl>
-
-        <div class="title-actions">
-          <button class="title-button title-button--play" type="button" data-action="trailer" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 8 5.5z"/></svg>
-            <span>Watch trailer</span>
-          </button>
-          <span class="title-button title-button--soon" data-slot="trailer-soon" hidden></span>
-          <button class="title-button title-button--list" type="button" data-action="my-list" aria-pressed="false" hidden>
-            <svg class="icon-add" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-            <svg class="icon-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span>My List</span>
-          </button>
-          <a class="title-button title-button--buy" data-action="buy" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2.2l2.3 11h11l2-8H7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="19.5" r="1.5" fill="currentColor"/><circle cx="17" cy="19.5" r="1.5" fill="currentColor"/></svg>
-            <span>Buy</span>
-          </a>
-          <span class="title-button title-button--soon" data-slot="buy-soon" hidden>Purchases open soon</span>
-          <button class="title-button title-button--notify" type="button" data-action="notify" aria-pressed="false" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16zM10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span>Notify me</span>
-          </button>
-        </div>
-
-        <div class="countdown" hidden>
-          <p class="countdown__label"></p>
-          <div class="countdown__units">
-            <span class="countdown__unit"><b data-unit="days">0</b><small>Days</small></span>
-            <span class="countdown__unit"><b data-unit="hours">0</b><small>Hours</small></span>
-            <span class="countdown__unit"><b data-unit="minutes">0</b><small>Minutes</small></span>
-            <span class="countdown__unit"><b data-unit="seconds">0</b><small>Seconds</small></span>
-          </div>
-        </div>
-
-        <p class="title-synopsis" dir="auto" hidden></p>
-      </div>
-      </div>
-
-      <!-- The stills, on the art's side of the stage, low down. -->
-      <div class="title-gallery" aria-labelledby="gallery-title" role="region" hidden>
-        <h2 class="title-section__heading" id="gallery-title">Gallery</h2>
-        <div class="title-gallery__grid"></div>
-      </div>
-    </section>
-
-
-    <!-- Cast & crew: everyone who made the work, with a photo, in two groups
-         (works.credits, set in the admin panel). js/main.js fills it in. -->
-    <section class="title-section title-credits" aria-labelledby="credits-title" hidden>
-      <h2 class="title-section__heading" id="credits-title">Cast &amp; crew <span class="title-credits__count" data-slot="credits-count"></span></h2>
-      <div class="title-credits__groups"></div>
-    </section>
-
-    <!-- Ratings and reviews (comments only until the work is released).
-         js/main.js (reviews) fills it in; the database keeps one review
-         per member and works out who bought the work. -->
-    <section class="title-section title-reviews" id="reviews" aria-labelledby="reviews-title" hidden>
-      <h2 class="title-section__heading" id="reviews-title">Ratings &amp; reviews</h2>
-      <div class="reviews__summary" hidden>
-        <div class="reviews__score">
-          <div data-slot="score"></div>
-          <small data-slot="count"></small>
-        </div>
-        <ol class="reviews__bars" aria-label="Ratings by stars"></ol>
-      </div>
-
-      <form class="review-form" novalidate hidden>
-        <h3 class="review-form__title">Your review</h3>
-        <button class="review-form__rate" type="button" hidden></button>
-        <textarea name="body" rows="4" maxlength="2000" autocomplete="off" placeholder="What did you think?"></textarea>
-        <div class="review-form__foot">
-          <p class="auth__message" role="status" aria-live="polite"></p>
-          <button class="review-form__submit" type="submit">Post review</button>
-        </div>
-      </form>
-      <p class="reviews__login" hidden><a href="login">Log in</a> <span>to rate and review.</span></p>
-
-      <label class="reviews__sort">
-        <span>Sort by</span>
-        <select data-slot="sort">
-          <option value="newest">Newest</option>
-          <option value="helpful">Most helpful</option>
-        </select>
-      </label>
-      <ol class="reviews__list"></ol>
-      <p class="reviews__empty" hidden>No reviews yet. Be the first.</p>
-      <button class="reviews__more" type="button" hidden>Show more</button>
-    </section>
-
-    <section class="title-missing" hidden>
-      <h1 class="title-head__name">We couldn&rsquo;t find that work</h1>
-      <p>It may have moved or been renamed.</p>
-      <a class="empty__button" href="/">Back to all works</a>
-    </section>
+  <main class="user-page" data-user-page>
+    <p class="user-page__loading">Loading…</p>
   </main>
 
   <footer class="site-footer">
@@ -266,20 +160,6 @@
       <button class="lang-switch" type="button" data-lang-switch translate="no">فارسی</button>
     </div>
   </footer>
-
-  <!-- Full-size stills and the trailer player. -->
-  <div class="viewer" role="dialog" aria-modal="true" aria-label="Viewer" hidden>
-    <button class="viewer__close" type="button" aria-label="Close">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </button>
-    <button class="viewer__step viewer__step--prev" type="button" aria-label="Previous image">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <div class="viewer__stage"></div>
-    <button class="viewer__step viewer__step--next" type="button" aria-label="Next image">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-  </div>
 
   <script src="/js/work-paths.js?v=102" defer></script>
   <script src="/js/routes.js?v=102" defer></script>

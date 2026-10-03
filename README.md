@@ -491,6 +491,27 @@ nobody can log in.
   and `mark_license_delivered` back this; non-game works are delivered at
   once, as before. A redeemed (gifted) key is delivered on redemption.
 
+## Players: profiles, friends and playtime
+
+Migration `supabase/migrations/20261003120000_social_profiles_friends.sql`
+(tests: `tests/social.test.mjs`).
+
+- Each member picks a **username** (`profiles.handle`, 3–20 letters,
+  numbers or `_`, unique whatever the case) in the launcher. It is the
+  public name: real names and emails never leave the database.
+- `profiles.visibility`: `public` (anyone), `friends` or `private`. Hidden
+  profiles show only the username and picture.
+- **Playtime**: the launcher calls `heartbeat(p_playing)` every minute and
+  when a game starts or ends. Sessions (`play_sessions`) count only for
+  games the member owns, and a session whose heartbeats stop is closed at
+  the last one. `heartbeat` is also "online" (seen in the last 2 minutes);
+  a direct profile update can't change presence (trigger).
+- **Friends** (`friendships`, one row per pair): `friend_request(handle)`
+  (asking back accepts), `friend_respond`, `friend_remove`, `my_friends()`
+  (presence for friends only).
+- `public_profile(handle)`: what the launcher and `user.html?u=<username>`
+  show (games, hours, level, friends count), open to signed-out visitors.
+
 ## Library: files and the launcher
 
 - Files buyers download (game builds now; films and novels later) are in a

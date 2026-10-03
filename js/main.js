@@ -7137,6 +7137,131 @@ const ticketThread = async (list, messages, when) => {
   });
 })();
 
+// Player profile (user.html?u=<username>): a member's public page, the
+// same one the launcher shows. The database decides what's visible
+// (public_profile): real names and emails never come back, and a
+// friends-only or private profile shows just the username and picture.
+(async function userPage() {
+  const page = document.querySelector("[data-user-page]");
+  if (!page) return;
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+  const handle = (new URLSearchParams(location.search).get("u") || "").trim();
+  const say = (text) => page.replaceChildren(make("p", "user-page__empty", t(text)));
+  if (!account || !/^[A-Za-z0-9_]{3,20}$/.test(handle)) return say("No one has that username.");
+  const { data: p, error } = await account.rpc("public_profile", { p_handle: handle });
+  if (error) return say("Couldn't load this profile. Check your connection and try again.");
+  if (!p) return say("No one has that username.");
+  document.title = `${p.handle} · SauFox Entertainment`;
+
+  const hours = (minutes) => num(Math.round(((minutes || 0) / 60) * 10) / 10, minutes % 60 ? 1 : 0);
+  const ago = (iso) => {
+    const mins = Math.max(1, Math.round((Date.now() - new Date(iso)) / 60000));
+    if (mins < 60) return t(`${num(mins)} min ago`);
+    if (mins < 1440) return t(`${num(Math.round(mins / 60))} h ago`);
+    return t(`${num(Math.round(mins / 1440))} d ago`);
+  };
+
+  const card = make("section", "player");
+  const face = make("span", "player__face");
+  if (p.online && !p.hidden) face.classList.add(p.playing ? "is-playing" : "is-online");
+  const img = make("img");
+  img.alt = "";
+  img.src = p.avatar_url || "assets/avatar-default.svg";
+  face.append(img);
+  const who = make("div", "player__who");
+  const name = make("h1", "player__name", p.handle);
+  name.translate = false;
+  who.append(name);
+  if (p.hidden) {
+    who.append(make("p", "player__status", t("This profile is private.")));
+  } else {
+    const status = p.playing
+      ? t(`Playing ${p.playing.title}`)
+      : p.online
+        ? t("Online")
+        : p.last_seen_at
+          ? t(`Last online ${ago(p.last_seen_at)}`)
+          : t("Offline");
+    const line = make("p", "player__status", status);
+    if (p.playing) line.classList.add("is-playing");
+    else if (p.online) line.classList.add("is-online");
+    who.append(line);
+    if (p.bio) {
+      const bio = make("p", "player__bio", p.bio);
+      bio.dir = "auto";
+      who.append(bio);
+    }
+  }
+
+  // Friends: ask from here when signed in; the rest happens in the launcher.
+  const actions = make("div", "player__actions");
+  if (p.relation === "self") {
+    actions.append(make("p", "player__hint", t("Edit your profile and find friends in the SauFox launcher.")));
+  } else if (p.relation === "friend") {
+    actions.append(make("span", "player__chip", t("Friends")));
+  } else if (p.relation === "sent") {
+    actions.append(make("span", "player__chip", t("Request sent")));
+  } else if (await verifiedSession()) {
+    const add = make("button", "player__add", p.relation === "received" ? t("Accept friend request") : t("Add friend"));
+    add.type = "button";
+    add.addEventListener("click", async () => {
+      add.disabled = true;
+      const { data } = await account.rpc("friend_request", { p_handle: p.handle });
+      add.textContent = data === "accepted" ? t("Friends") : data === "sent" || data === "pending" ? t("Request sent") : t("Something went wrong. Try again.");
+    });
+    actions.append(add);
+  }
+  const launcher = make("a", "player__launcher", t("Get the launcher"));
+  launcher.href = "download";
+  actions.append(launcher);
+  who.append(actions);
+  card.append(face, who);
+  if (!p.hidden) {
+    const level = make("div", "player__level");
+    level.append(make("span", "", t("Level")), make("strong", "", num(p.level)));
+    card.append(level);
+  }
+  page.replaceChildren(card);
+  if (p.hidden) return;
+
+  const stats = make("div", "player__stats");
+  [
+    [num(p.games.length), "Games"],
+    [hours(p.minutes_played), "Hours played"],
+    [num(p.friends), "Friends"],
+  ].forEach(([value, label]) => {
+    const box = make("div", "player__stat");
+    box.append(make("strong", "", value), make("span", "", t(label)));
+    stats.append(box);
+  });
+  page.append(stats, make("p", "player__since", t(`Member since ${dateText(p.member_since, { month: "long", year: "numeric" })}`)));
+
+  if (p.games.length) {
+    page.append(make("h2", "player__heading", t("Games")));
+    const list = make("div", "player__games");
+    p.games.forEach((g) => {
+      const row = make("a", "player__game");
+      row.href = workUrl(g.work_id);
+      const cover = make("img");
+      cover.alt = "";
+      cover.loading = "lazy";
+      cover.src = g.cover_url || "assets/logo.webp";
+      const text = make("span", "player__game-text");
+      const title = make("strong", "", g.title);
+      title.translate = false;
+      text.append(title, make("span", "", t(`${hours(g.minutes)} hrs on record`) + (g.last_played ? ` · ${t(`Last played ${ago(g.last_played)}`)}` : "")));
+      row.append(cover, text);
+      list.append(row);
+    });
+    page.append(list);
+  }
+})();
+
 // Status page (404.html, status.html?reason=…) — page not found, no access,
 // maintenance, can't reach the server, or a general error. Maintenance and
 // outages check again by themselves and go back when the site is up.
