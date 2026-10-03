@@ -4,6 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>
+    // Player profiles live at /players/<username>. Usernames are made at
+    // any time, so there's no file per player: GitHub Pages sends such
+    // addresses here, and this hands over to the profile page at once,
+    // which puts the clean address back in the bar.
+    (function () {
+      var m = /^\/players\/([A-Za-z0-9_]{3,20})\/?$/.exec(location.pathname);
+      if (!m) return;
+      document.documentElement.style.visibility = "hidden";
+      var q = location.search ? "&" + location.search.slice(1) : "";
+      location.replace("/user?u=" + m[1] + q + location.hash);
+    })();
+  </script>
+  <script>
     // Clean addresses: never ".html" in the address bar (GitHub Pages
     // serves /work for work.html), and the home page is just "/". Pages
     // start at the top: the browser doesn't bring back the old scroll
@@ -79,6 +92,6 @@
   <script src="/js/numbers.js?v=104" defer></script>
   <script src="/js/fa.js?v=108" defer></script>
   <script src="/js/credits.js?v=103" defer></script>
-  <script src="/js/main.js?v=112" defer></script>
+  <script src="/js/main.js?v=113" defer></script>
 </body>
 </html>

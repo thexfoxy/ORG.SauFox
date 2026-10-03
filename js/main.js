@@ -7150,7 +7150,14 @@ const ticketThread = async (list, messages, when) => {
     if (text != null) node.textContent = text;
     return node;
   };
-  const handle = (new URLSearchParams(location.search).get("u") || "").trim();
+  // /players/<username>; the old user?u=<username> moves to it.
+  const fromPath = /^\/players\/([A-Za-z0-9_]{3,20})\/?$/.exec(location.pathname);
+  const handle = fromPath ? fromPath[1] : (new URLSearchParams(location.search).get("u") || "").trim();
+  if (!fromPath && /^[A-Za-z0-9_]{3,20}$/.test(handle)) {
+    const rest = new URLSearchParams(location.search);
+    rest.delete("u");
+    history.replaceState(history.state, "", `/players/${handle}${rest.size ? `?${rest}` : ""}${location.hash}`);
+  }
   const say = (text) => page.replaceChildren(make("p", "user-page__empty", t(text)));
   if (!account || !/^[A-Za-z0-9_]{3,20}$/.test(handle)) return say("No one has that username.");
   const { data: p, error } = await account.rpc("public_profile", { p_handle: handle });

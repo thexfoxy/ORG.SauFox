@@ -509,8 +509,12 @@ Migration `supabase/migrations/20261003120000_social_profiles_friends.sql`
 - **Friends** (`friendships`, one row per pair): `friend_request(handle)`
   (asking back accepts), `friend_respond`, `friend_remove`, `my_friends()`
   (presence for friends only).
-- `public_profile(handle)`: what the launcher and `user.html?u=<username>`
+- `public_profile(handle)`: what the launcher and the profile page
   show (games, hours, level, friends count), open to signed-out visitors.
+- Profile address: `/players/<username>`. There is no file per player:
+  GitHub Pages serves `404.html` for it, which hands over to `user.html`
+  at once; that page puts `/players/<username>` back in the address bar
+  (old `user?u=` links move to it too). `user.html` has `<base href="/">`.
 
 ## Library: files and the launcher
 
