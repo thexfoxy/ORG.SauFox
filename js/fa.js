@@ -29,6 +29,8 @@ const FA = {
   "Get the launcher": "دریافت لانچر",
   "Level": "سطح",
   "Hours played": "ساعت بازی",
+  "Achievements": "دستاورد",
+  "{a}/{b} achievements": "{a} از {b} دستاورد",
   "Member since {when}": "عضو از {when}",
   "{h} hrs on record": "{h} ساعت بازی",
   "Last played {when}": "آخرین اجرا {when}",

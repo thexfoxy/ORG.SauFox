@@ -11,7 +11,7 @@
   <meta name="theme-color" content="#0f0f11">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=110">
+  <link rel="stylesheet" href="css/style.css?v=111">
   <script>
     // Clean addresses: never ".html" in the address bar (GitHub Pages
     // serves /work for work.html), and the home page is just "/". Pages
@@ -325,6 +325,52 @@
           <button class="admin-button admin-button--primary" type="submit">Upload</button>
         </div>
         <ol class="admin-files__list"></ol>
+      </form>
+
+      <!-- Achievements a game can unlock through the launcher's SDK (the
+           game calls it by the key below). -->
+      <form class="admin-achievements admin-group" novalidate>
+        <h2 class="admin-rates__title">Achievements</h2>
+        <p class="admin-group__hint">The game unlocks an achievement by its key, through the launcher (see the launcher's SDK guide). Players see the title and description in the launcher and on their profile; a hidden one shows only after it's unlocked. Saving an existing key updates it. Removing one also removes it from everyone who has it.</p>
+        <div class="admin-grid admin-grid--3">
+          <label class="admin-field">
+            <span>Work</span>
+            <select id="ach-work" required></select>
+          </label>
+          <label class="admin-field">
+            <span>Key (a–z, 0–9, _)</span>
+            <input id="ach-key" type="text" maxlength="40" placeholder="e.g. first_steps" spellcheck="false" required>
+          </label>
+          <label class="admin-field">
+            <span>Order</span>
+            <input id="ach-sort" type="number" step="1" value="0">
+          </label>
+          <label class="admin-field">
+            <span>Title</span>
+            <input id="ach-title" type="text" maxlength="80" required>
+          </label>
+          <label class="admin-field">
+            <span>Title (Persian)</span>
+            <input id="ach-title-fa" type="text" maxlength="80" dir="rtl">
+          </label>
+          <label class="admin-check">
+            <input id="ach-hidden" type="checkbox">
+            <span>Hidden until unlocked</span>
+          </label>
+          <label class="admin-field admin-field--wide">
+            <span>Description</span>
+            <input id="ach-desc" type="text" maxlength="200">
+          </label>
+          <label class="admin-field admin-field--wide">
+            <span>Description (Persian)</span>
+            <input id="ach-desc-fa" type="text" maxlength="200" dir="rtl">
+          </label>
+        </div>
+        <div class="admin-maintenance__save">
+          <p class="admin-message" role="status" aria-live="polite"></p>
+          <button class="admin-button admin-button--primary" type="submit">Save achievement</button>
+        </div>
+        <ol class="admin-files__list admin-achievements__list"></ol>
       </form>
 
       <!-- Online payment (Zarinpal, through the Supabase Edge Function
@@ -741,6 +787,6 @@
   <script src="js/vendor/supabase.js?v=89" defer></script>
   <script src="/js/numbers.js?v=104" defer></script>
   <script src="/js/credits.js?v=103" defer></script>
-  <script src="js/main.js?v=113" defer></script>
+  <script src="js/main.js?v=114" defer></script>
 </body>
 </html>

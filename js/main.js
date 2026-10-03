@@ -6786,6 +6786,105 @@ const ticketThread = async (list, messages, when) => {
   });
   loadFiles();
 
+  // ---------- Achievements ----------
+  // Saved straight to the achievements table (only admins may write it).
+  const achForm = page.querySelector(".admin-achievements");
+  const achMessage = achForm.querySelector(".admin-message");
+  const achWork = achForm.querySelector("#ach-work");
+  const achList = achForm.querySelector(".admin-achievements__list");
+  const achField = (id) => achForm.querySelector(id);
+  const achSay = (text, ok) => {
+    achMessage.textContent = text;
+    achMessage.classList.toggle("is-ok", Boolean(ok));
+  };
+  const achRow = (a) => {
+    const row = make("li", "admin-file");
+    const main = make("div", "admin-file__main");
+    main.append(
+      make("strong", "", `${a.title}${a.title_fa ? ` · ${a.title_fa}` : ""}${a.hidden ? " · hidden" : ""}`),
+      make("span", "", `${a.key}${a.description ? ` · ${a.description}` : ""}`)
+    );
+    const side = make("div", "admin-file__side");
+    const edit = make("button", "admin-button", "Edit");
+    edit.type = "button";
+    edit.addEventListener("click", () => {
+      achWork.value = a.work_id;
+      achField("#ach-key").value = a.key;
+      achField("#ach-sort").value = a.sort;
+      achField("#ach-title").value = a.title;
+      achField("#ach-title-fa").value = a.title_fa || "";
+      achField("#ach-desc").value = a.description || "";
+      achField("#ach-desc-fa").value = a.description_fa || "";
+      achField("#ach-hidden").checked = a.hidden;
+      achField("#ach-title").focus();
+    });
+    const remove = make("button", "admin-button admin-button--danger", "Remove");
+    remove.type = "button";
+    remove.addEventListener("click", async () => {
+      // Press twice: the first press asks.
+      if (!remove.dataset.armed) {
+        remove.dataset.armed = "1";
+        remove.textContent = "Remove it from everyone?";
+        setTimeout(() => {
+          delete remove.dataset.armed;
+          remove.textContent = "Remove";
+        }, 4000);
+        return;
+      }
+      remove.disabled = true;
+      const { error } = await account.from("achievements").delete().eq("work_id", a.work_id).eq("key", a.key);
+      if (!error) return row.remove();
+      remove.disabled = false;
+      achSay("It wasn't removed. Try again.");
+    });
+    side.append(edit, remove);
+    row.append(main, side);
+    return row;
+  };
+  const loadAchievements = async () => {
+    if (!achWork.options.length) {
+      const { data: works } = await account.from("works").select("id, title").order("sort");
+      (works || []).forEach((w) => {
+        const option = make("option", "", w.title);
+        option.value = w.id;
+        achWork.append(option);
+      });
+    }
+    if (!achWork.value) return achList.replaceChildren();
+    const { data } = await account.from("achievements").select("*").eq("work_id", achWork.value).order("sort").order("created_at");
+    achList.replaceChildren(...(data || []).map(achRow));
+  };
+  achWork.addEventListener("change", loadAchievements);
+  achForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const key = achField("#ach-key").value.trim();
+    const title = achField("#ach-title").value.trim();
+    if (!achWork.value) return achSay("Choose a work.");
+    if (!/^[a-z0-9_]{1,40}$/.test(key)) return achSay("The key takes lowercase letters, digits and _ only, such as first_steps.");
+    if (!title) return achSay("Enter a title.");
+    const text = (id) => achField(id).value.trim() || null;
+    const submit = achForm.querySelector('[type="submit"]');
+    submit.disabled = true;
+    const { error } = await account.from("achievements").upsert({
+      work_id: achWork.value,
+      key,
+      title,
+      title_fa: text("#ach-title-fa"),
+      description: text("#ach-desc"),
+      description_fa: text("#ach-desc-fa"),
+      hidden: achField("#ach-hidden").checked,
+      sort: Number(achField("#ach-sort").value) || 0,
+    });
+    submit.disabled = false;
+    if (error) return achSay("It wasn't saved. Check the fields and try again.");
+    achSay("Saved.", true);
+    const work = achWork.value;
+    achForm.reset();
+    achWork.value = work;
+    loadAchievements();
+  });
+  loadAchievements();
+
   showList();
 })();
 
@@ -7240,6 +7339,7 @@ const ticketThread = async (list, messages, when) => {
   [
     [num(p.games.length), "Games"],
     [hours(p.minutes_played), "Hours played"],
+    [num(p.achievements || 0), "Achievements"],
     [num(p.friends), "Friends"],
   ].forEach(([value, label]) => {
     const box = make("div", "player__stat");
@@ -7261,7 +7361,8 @@ const ticketThread = async (list, messages, when) => {
       const text = make("span", "player__game-text");
       const title = make("strong", "", g.title);
       title.translate = false;
-      text.append(title, make("span", "", t(`${hours(g.minutes)} hrs on record`) + (g.last_played ? ` · ${t(`Last played ${ago(g.last_played)}`)}` : "")));
+      text.append(title, make("span", "", t(`${hours(g.minutes)} hrs on record`) + (g.last_played ? ` · ${t(`Last played ${ago(g.last_played)}`)}` : "") +
+        (g.achievements_total ? ` · ${t(`${g.achievements}/${g.achievements_total} achievements`)}` : "")));
       row.append(cover, text);
       list.append(row);
     });
