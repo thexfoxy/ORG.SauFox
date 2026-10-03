@@ -511,6 +511,18 @@ Migration `supabase/migrations/20261003120000_social_profiles_friends.sql`
   (presence for friends only).
 - `public_profile(handle)`: what the launcher and the profile page
   show (games, hours, level, friends count), open to signed-out visitors.
+- **Chat** (migration `20261003160000_social_chat.sql`, tests
+  `tests/chat.test.mjs`): `messages`, written only by
+  `send_message(to, body)` between friends who haven't blocked each other
+  (1–2000 characters, 30 a minute). The launcher polls `inbox(after_id)`
+  every 4 seconds; `chat_history`, `mark_read`; `my_friends()` adds unread
+  counts. **Blocking** (`blocks`, `block_user` / `unblock_user` /
+  `my_blocks`) ends the friendship and stops requests and messages both
+  ways; a blocked person's request is answered "not found".
+- Review fixes in the same migration: profile pictures only from the
+  site's own storage (an outside address would leak viewers' IPs),
+  usernames like SauFox / admin / support reserved for admins, at most 30
+  friend requests waiting.
 - Profile address: `/players/<username>`. There is no file per player:
   GitHub Pages serves `404.html` for it, which hands over to `user.html`
   at once; that page puts `/players/<username>` back in the address bar

@@ -5,7 +5,7 @@ let db;
 before(async () => { db = await database(); await restore(db); });
 beforeEach(async () => {
   await seed(db);
-  await db.exec(`reset role; truncate public.friendships, public.play_sessions, public.profiles;
+  await db.exec(`reset role; truncate public.friendships, public.play_sessions, public.profiles, public.messages, public.blocks;
     insert into public.profiles(id,name,handle,visibility) values
       ('${A}','Alice Real','alice','public'),('${B}','Bob Real','bob','friends'),('${C}','Carol Real','carol','private');`);
   await as(db);
