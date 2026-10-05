@@ -155,24 +155,25 @@ up. Signed-out visitors log in first and come back to the checkout.
 - Members see their orders under Profile → Orders and can cancel an unpaid
   one. Admins see every order in the admin panel and set it to Paid or
   Cancelled.
-- Online payment goes through Zarinpal, via the Supabase Edge Function
-  `payment` (source in `supabase/functions/payment/`). "Start" checks the
-  member and the order and returns the bank page; Zarinpal sends the buyer
-  back to `checkout.html?order=<id>&Authority=…&Status=…`, where "verify"
-  asks Zarinpal and marks the order paid with its reference number. Only
-  that function can mark an order paid (the trigger lets the service role
-  through); the amount always comes from the order.
+- Online payment goes through Bitpay (bitpay.ir), via the Supabase Edge
+  Function `payment` (source in `supabase/functions/payment/`). "Start"
+  checks the member and the order and returns Bitpay's payment page. Bitpay
+  sends the buyer back to the function (`/payment/return/<order>/<t|l>`, GET
+  or POST), which forwards them to
+  `checkout.html?order=<id>&Authority=bp-<id_get>&Status=…&tx=<trans_id>`,
+  where "verify" asks Bitpay (with our merchant code) and marks the order
+  paid only if the amount and order number match. Only that function can
+  mark an order paid (the trigger lets the service role through); the
+  amount always comes from the order.
 - The admin panel's "Payments" switches it: Off (orders
-  wait; the checkout says payment opens soon), Test (Zarinpal's sandbox,
-  admins only; orders are marked test) or Live. Live needs the Zarinpal
-  merchant ID in Supabase → Edge Functions → Secrets as
-  `ZARINPAL_MERCHANT_ID`.
-- Zarinpal only accepts requests from the server IPs registered with it.
-  Edge Functions leave from a different IP each time, so the function sends
-  its Zarinpal requests through the database (`public.zarinpal_call`, the
-  `http` extension, service role only), which always leaves from the same
-  IP. The admin panel shows that IP (`public.server_ip()`); if it ever
-  changes (after a project restore or upgrade), update it in Zarinpal.
+  wait; the checkout says payment opens soon), Test (Bitpay's test gateway,
+  admins only; orders are marked test) or Live. Live needs the Bitpay
+  merchant code in Supabase → Edge Functions → Secrets as `BITPAY_API`
+  (never in the code or the database).
+- The requests to Bitpay go out from the database (`public.bitpay_call`,
+  the `http` extension, service role only), which always leaves from the
+  same IP (`public.server_ip()`, shown in the admin panel). The old
+  `public.zarinpal_call` is no longer used.
 - Terms of purchase and refunds: `terms.html#purchases`.
 - Order emails (`supabase/functions/payment/mail.ts`), Persian and
   English, with a plain-text copy, through Resend from
@@ -237,7 +238,7 @@ nobody can log in.
   browser never decides the price. A code that stopped working meanwhile
   fails the order with SF002, and the checkout drops it and says why.
 - A use is an order with the code that isn't cancelled. The price never
-  goes below 10,000 Rials (Zarinpal's smallest payment); for a free copy,
+  goes below 10,000 Rials (the gateway's smallest payment); for a free copy,
   mark the order paid in the admin panel.
 - Admin panel → Discount codes: add (with a Random button), turn on/off,
   delete unused; orders show the code and what it took off.
@@ -259,7 +260,7 @@ nobody can log in.
   the length can still be changed. The order carries `plan_id` and
   `plan_days`; the order trigger prices it from `plan_prices` (no discount
   codes), one unpaid plan order at a time, and refuses a plan lower than
-  the one running (SF003). Paying goes through Zarinpal like any order.
+  the one running (SF003). Paying goes through Bitpay like any order.
 - `subscriptions`: one row per paid plan order (trigger
   `orders_plan_events`), from payment for the plan's days, or after the
   same plan's current stretch when renewing. Cancelling the order in the

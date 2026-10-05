@@ -522,10 +522,10 @@ const FA = {
 
   // ---------- Online payment ----------
   "Opens soon": "به‌زودی",
-  "Iranian bank card, through Zarinpal": "کارت بانکی، از طریق زرین‌پال",
+  "Iranian bank card, through Bitpay": "کارت بانکی، از طریق بیت‌پی",
   "You’ll pay in Rials on the secure Shaparak payment page; your card details never reach this site.": "پرداخت به ریال و در صفحهٔ امن پرداخت شاپرک انجام می‌شود؛ اطلاعات کارت شما هرگز به این سایت نمی‌رسد.",
-  "After you place the order, you'll go to Zarinpal's secure page to pay, then come back here.": "پس از ثبت سفارش به صفحهٔ امن زرین‌پال می‌روید، پرداخت می‌کنید و به همین‌جا برمی‌گردید.",
-  "Test mode: you'll go to Zarinpal's sandbox, and no real money moves. Only admins see this.": "حالت آزمایشی: به محیط تست زرین‌پال می‌روید و هیچ پول واقعی جابه‌جا نمی‌شود. این را فقط ادمین‌ها می‌بینند.",
+  "After you place the order, you'll go to Bitpay's secure page to pay, then come back here.": "پس از ثبت سفارش به صفحهٔ امن بیت‌پی می‌روید، پرداخت می‌کنید و به همین‌جا برمی‌گردید.",
+  "Test mode: you'll go to Bitpay's test gateway, and no real money moves. Only admins see this.": "حالت آزمایشی: به درگاه تست بیت‌پی می‌روید و هیچ پول واقعی جابه‌جا نمی‌شود. این را فقط ادمین‌ها می‌بینند.",
   "Place order and pay": "ثبت سفارش و پرداخت",
   "Taking you to the bank…": "در حال انتقال به درگاه بانک…",
   "Checking your payment…": "در حال بررسی پرداخت…",

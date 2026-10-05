@@ -308,7 +308,7 @@ export const studioEmail = (order: Order, event: "placed" | "paid") => {
     ["Mobile", esc(order.phone)],
     ...(paid
       ? ([
-          ["Zarinpal ref", esc(order.ref_id)],
+          ["Bitpay ref", esc(order.ref_id)],
           ["Card", esc(order.card_pan || "—")],
         ] as [string, string][])
       : []),

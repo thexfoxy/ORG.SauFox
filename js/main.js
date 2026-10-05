@@ -540,7 +540,7 @@ const goLogin = () => {
 // orders or payments then, except for admins.
 const salesPaused = (settings) => settings.sales_open === false && local.get("admin") !== "1";
 const SALES_PAUSED = "Sales are paused for a little while. Please check back soon.";
-// Online payment (Supabase Edge Function "payment", Zarinpal). Open when
+// Online payment (Supabase Edge Function "payment", Bitpay). Open when
 // the admin panel sets it live, or in test mode for admins only.
 const paymentsOpen = (settings) =>
   !salesPaused(settings) &&
@@ -808,7 +808,7 @@ gl_FragColor=vec4(c,1.);}`;
 // twice; if it still won't come, a plain badge takes its place, linking to
 // the same verification page, so the spot is never empty.
 (function trustSeals() {
-  document.querySelectorAll(".site-footer__seals a").forEach((link) => {
+  document.querySelectorAll('.site-footer__seals a[href*="enamad"]').forEach((link) => {
     const img = link.querySelector("img");
     if (!img) return;
     const src = img.getAttribute("src");
@@ -5720,8 +5720,8 @@ const ticketThread = async (list, messages, when) => {
       payMode.value = data.payments || "off";
       salesMode.value = data.sales_open === false ? "paused" : "open";
     });
-  // Zarinpal only takes requests from registered IPs; the payment function
-  // sends them from the database, so that's the IP to register.
+  // Requests to the gateway go out from the database, so this is the IP to
+  // give it if it asks for one.
   account.rpc("server_ip").then(({ data, error }) => {
     payForm.querySelector('[data-slot="server-ip"]').textContent = error || !data ? "couldn't check" : data;
   });
@@ -5862,7 +5862,7 @@ const ticketThread = async (list, messages, when) => {
       )
     );
     if (order.ref_id)
-      main.append(make("span", "selectable", `Zarinpal ref ${order.ref_id}${order.card_pan ? ` · card ${order.card_pan}` : ""}`));
+      main.append(make("span", "selectable", `Bitpay ref ${order.ref_id}${order.card_pan ? ` · card ${order.card_pan}` : ""}`));
     const buyer = make("div", "admin-order__buyer selectable");
     const mail = make("a", "", order.email);
     mail.href = `mailto:${order.email}`;
@@ -6893,8 +6893,10 @@ const ticketThread = async (list, messages, when) => {
 // order is saved as "awaiting payment"; the database fills in the title,
 // price (less the member's plan discount and any code) and email itself, so
 // nothing here can change what's charged. When online payment is open, the
-// member goes on to Zarinpal, which sends them back to
-// checkout.html?order=<order id>&Authority=…&Status=OK|NOK.
+// member goes on to Bitpay, which sends them back (through the payment
+// function) to
+// checkout.html?order=<order id>&Authority=…&Status=OK|NOK&tx=<Bitpay's
+// trans_id> (the payment function forwards them from Bitpay).
 (async function checkoutPage() {
   const page = document.querySelector(".checkout");
   if (!page) return;
@@ -6961,6 +6963,7 @@ const ticketThread = async (list, messages, when) => {
       order_id: returning,
       authority: params.get("Authority") || "",
       status: params.get("Status") || "",
+      trans_id: params.get("tx") || "",
     });
     // Keep the authority on reload: verification is idempotent and a failed
     // database write must be retryable without starting another payment.
@@ -7175,8 +7178,8 @@ const ticketThread = async (list, messages, when) => {
   if (canPay) {
     form.querySelector('[data-slot="pay-note"]').textContent =
       settings.payments === "test"
-        ? "Test mode: you'll go to Zarinpal's sandbox, and no real money moves. Only admins see this."
-        : "After you place the order, you'll go to Zarinpal's secure page to pay, then come back here.";
+        ? "Test mode: you'll go to Bitpay's test gateway, and no real money moves. Only admins see this."
+        : "After you place the order, you'll go to Bitpay's secure page to pay, then come back here.";
     submit.textContent = "Place order and pay";
   }
   show(form);

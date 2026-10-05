@@ -129,7 +129,7 @@
       <!-- Discount codes for checkout (public.coupons). -->
       <section class="admin-coupons admin-group">
         <h2 class="admin-rates__title">Discount codes</h2>
-        <p class="admin-group__hint">Buyers type the code at checkout. A percentage or a fixed amount off, for every work or one; optional limits on uses and dates. A cancelled order gives its use back. The price never goes below 10,000 Rials (Zarinpal&rsquo;s smallest payment). A code that&rsquo;s been used can&rsquo;t be deleted; turn it off instead.</p>
+        <p class="admin-group__hint">Buyers type the code at checkout. A percentage or a fixed amount off, for every work or one; optional limits on uses and dates. A cancelled order gives its use back. The price never goes below 10,000 Rials (the gateway&rsquo;s smallest payment). A code that&rsquo;s been used can&rsquo;t be deleted; turn it off instead.</p>
         <form class="admin-coupons__form" novalidate>
           <div class="admin-grid admin-grid--3">
             <label class="admin-field">
@@ -373,11 +373,11 @@
         <ol class="admin-files__list admin-achievements__list"></ol>
       </form>
 
-      <!-- Online payment (Zarinpal, through the Supabase Edge Function
+      <!-- Online payment (Bitpay, through the Supabase Edge Function
            "payment"). -->
       <form class="admin-payments admin-group" novalidate>
         <h2 class="admin-rates__title">Payments</h2>
-        <p class="admin-group__hint">Test mode sends only admins to Zarinpal&rsquo;s sandbox, with no real money. Live needs your Zarinpal merchant ID saved as <code>ZARINPAL_MERCHANT_ID</code> in Supabase (Edge Functions &rarr; Secrets). While it&rsquo;s off, orders wait for payment and the checkout says online payment opens soon.</p>
+        <p class="admin-group__hint">Test mode sends only admins to Bitpay&rsquo;s test gateway, with no real money. Live needs your Bitpay merchant code saved as <code>BITPAY_API</code> in Supabase (Edge Functions &rarr; Secrets). While it&rsquo;s off, orders wait for payment and the checkout says online payment opens soon.</p>
         <p class="admin-group__hint">Pause sales to catch up when orders pile up (or emails hit their daily limit): nobody but admins can place an order or start a payment until you reopen them. Orders already placed stay as they are, and buyers coming back from the bank are still confirmed.</p>
         <div class="admin-grid">
           <label class="admin-field">
@@ -396,7 +396,7 @@
             </select>
           </label>
         </div>
-        <p class="admin-group__hint admin-payments__ip">Server IP to give Zarinpal: <code class="selectable" data-slot="server-ip">checking…</code></p>
+        <p class="admin-group__hint admin-payments__ip">Server IP (if the gateway asks for one): <code class="selectable" data-slot="server-ip">checking…</code></p>
         <div class="admin-payments__mail">
           <button class="admin-button" type="button" data-action="email-test">Send a test email</button>
           <p class="admin-group__hint" data-slot="email-test">Order emails go through Resend (<code>RESEND_API_KEY</code>), or Gmail (<code>SMTP_PASSWORD</code>) if Resend refuses. This sends a sample receipt to the studio inbox.</p>
@@ -787,6 +787,6 @@
   <script src="js/vendor/supabase.js?v=89" defer></script>
   <script src="/js/numbers.js?v=104" defer></script>
   <script src="/js/credits.js?v=103" defer></script>
-  <script src="js/main.js?v=114" defer></script>
+  <script src="js/main.js?v=115" defer></script>
 </body>
 </html>

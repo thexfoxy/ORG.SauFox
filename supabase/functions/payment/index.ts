@@ -1,10 +1,12 @@
 import { verifiedCaller, memberClient } from "../_shared/auth.ts";
-// Online payment through Zarinpal (a Shaparak-licensed gateway).
+// Online payment through Bitpay (bitpay.ir, a Shaparak-licensed gateway).
 //
 // POST { action: "start", order_id }            signed-in member, own order
 //   -> { url }  the bank page to send them to
-// POST { action: "verify", order_id, authority, status }
-//   -> { paid, number, ref_id? }  asks Zarinpal whether the payment went through
+// POST { action: "verify", order_id, authority, status, trans_id }
+//   -> { paid, number, ref_id? }  asks Bitpay whether the payment went through
+// GET or POST /payment/return/<order id>/<t|l>   (Bitpay sends the buyer here)
+//   -> 303 to checkout.html?order=…&Authority=…&Status=OK|NOK&tx=<trans_id>
 // POST { action: "placed", order_id }           signed-in member, own order
 //   -> { ok }  emails "order received" (sent while online payment is closed)
 // POST { action: "status-email", order_id }     admins, after changing a status
@@ -30,21 +32,24 @@ import { verifiedCaller, memberClient } from "../_shared/auth.ts";
 // catch up; coming back from the bank still works.
 //
 // The amount always comes from the order in the database. site_settings
-// .payments switches it: "off", "test" (Zarinpal's sandbox; only admins can
-// start a payment, and orders paid there are marked test) or "live" (needs
-// the ZARINPAL_MERCHANT_ID secret in Edge Functions → Secrets).
+// .payments switches it: "off", "test" (Bitpay's test gateway; only admins
+// can start a payment, and orders paid there are marked test) or "live"
+// (needs the merchant code saved as the BITPAY_API secret in Edge Functions
+// → Secrets; it is never in the code or the database).
 //
-// Zarinpal only accepts requests from registered server IPs. Edge Functions
-// leave from a different IP each time, so the requests themselves go out
-// from the database (public.zarinpal_call), whose IP stays the same; the
-// admin panel shows it.
+// Edge Functions leave from a different IP each time, so the requests to
+// Bitpay go out from the database (public.bitpay_call), whose IP stays the
+// same. A payment is confirmed only by asking Bitpay with our merchant code,
+// and only for the amount and order recorded when it was started.
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 import { alertEmail, keyEmail, mailReady, paidEmail, placedEmail, planEndingEmail, send, stageEmail, STUDIO, studioEmail, ticketReplyEmail, ticketStudioEmail, type Order } from "./mail.ts";
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
 
 const SITE = "https://saufoxentertainment.ir";
-const SANDBOX_MERCHANT = "1344b5d4-0048-11e8-94db-005056a205be"; // any well-formed ID works there
+// Bitpay's published key for its test gateway (not a secret).
+const TEST_API = "adxcv-zzadq-polkjsad-opp13opoz-1sdf455aadzmck1244567";
+const RETURN_URL = `${Deno.env.get("SUPABASE_URL")}/functions/v1/payment/return`;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -60,16 +65,24 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 const gateway = (test: boolean) => ({
   test,
-  merchant: test ? SANDBOX_MERCHANT : Deno.env.get("ZARINPAL_MERCHANT_ID") || "",
-  startPay: (authority: string) =>
-    `${test ? "https://sandbox.zarinpal.com" : "https://payment.zarinpal.com"}/pg/StartPay/${authority}`,
+  merchant: test ? TEST_API : Deno.env.get("BITPAY_API") || "",
+  startPay: (idGet: string) => `https://bitpay.ir/${test ? "payment-test" : "payment"}/gateway-${idGet}-get`,
 });
 
-// Sends a request to Zarinpal through the database (see above).
-const zarinpal = async (test: boolean, action: "request" | "verify", payload: unknown) => {
-  const { data, error } = await db.rpc("zarinpal_call", { test, action, payload });
-  if (error) console.error("zarinpal_call", error.message);
-  return data || {};
+// Sends a request to Bitpay through the database (see above). Answers
+// Bitpay's reply body, or "" when it couldn't be reached.
+const bitpay = async (test: boolean, action: "send" | "verify", fields: Record<string, string | number>) => {
+  const { data, error } = await db.rpc("bitpay_call", { test, action, fields });
+  if (error) console.error("bitpay_call", error.message);
+  return data?.status === 200 ? String(data.body || "").trim() : "";
+};
+
+// A payment's id in our records: Bitpay's id_get, marked test or live (the
+// two gateways count separately).
+const authorityOf = (test: boolean, idGet: string) => `bp${test ? "t" : ""}-${idGet}`;
+const parseAuthority = (authority: string) => {
+  const m = /^bp(t?)-(\d{1,18})$/.exec(authority);
+  return m ? { test: m[1] === "t", idGet: m[2] } : null;
 };
 
 // The caller, if their session came through an emailed code or Google
@@ -263,14 +276,32 @@ const salesOpen = async () => {
 const isAdmin = async (userId: string) =>
   Boolean((await db.from("admins").select("user_id").eq("user_id", userId).maybeSingle()).data);
 
-const mobileOf = (phone: string) => {
-  const digits = phone.replace(/\D/g, "");
-  if (/^989\d{9}$/.test(digits)) return `0${digits.slice(2)}`;
-  return /^09\d{9}$/.test(digits) ? digits : undefined;
-};
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return reply({});
+
+  // ---------- Back from Bitpay ----------
+  // Bitpay sends the buyer here (by GET or POST) with trans_id and id_get;
+  // they go on to the checkout page, which asks us to verify. Nothing is
+  // trusted here: verify checks it all with Bitpay.
+  const back = /\/return\/([0-9a-f-]{36})\/([tl])\/?$/i.exec(new URL(req.url).pathname);
+  if (back) {
+    const params = new URL(req.url).searchParams;
+    if (req.method === "POST") {
+      try {
+        const form = await req.formData();
+        for (const [k, v] of form.entries()) if (typeof v === "string" && !params.has(k)) params.set(k, v);
+      } catch { /* no form */ }
+    }
+    const idGet = /^\d{1,18}$/.test(params.get("id_get") || "") ? params.get("id_get")! : "";
+    const transId = /^\d{1,30}$/.test(params.get("trans_id") || "") ? params.get("trans_id")! : "";
+    const to = new URL(`${SITE}/checkout.html`);
+    to.searchParams.set("order", back[1].toLowerCase());
+    if (idGet) to.searchParams.set("Authority", authorityOf(back[2].toLowerCase() === "t", idGet));
+    to.searchParams.set("Status", idGet && transId ? "OK" : "NOK");
+    if (transId) to.searchParams.set("tx", transId);
+    return new Response(null, { status: 303, headers: { Location: to.toString(), "Cache-Control": "no-store" } });
+  }
+
   if (req.method !== "POST") return reply({ error: "method" }, 405);
   let body: Record<string, string>;
   try {
@@ -424,24 +455,25 @@ Deno.serve(async (req) => {
     if (!order || order.user_id !== user.id) return reply({ error: "not_found" }, 404);
     if (order.status !== "awaiting_payment") return reply({ error: "not_payable", status: order.status }, 409);
 
-    const answer = await zarinpal(test, "request", {
-      merchant_id: zp.merchant,
+    const answer = await bitpay(test, "send", {
+      api: zp.merchant,
       amount: order.amount_irr,
-      currency: "IRR",
-      description: `SauFox order ${order.number}: ${order.title}`,
-      callback_url: `${SITE}/checkout.html?order=${order.id}`,
-      metadata: { email: order.email || undefined, mobile: mobileOf(order.phone), order_id: String(order.number) },
+      redirect: `${RETURN_URL}/${order.id}/${test ? "t" : "l"}`,
+      factorId: String(order.number),
+      name: "",
+      email: order.email || "",
+      description: `SauFox order ${order.number}: ${order.title}`.slice(0, 200),
     });
-    const authority = answer?.data?.authority;
-    if (answer?.data?.code !== 100 || !authority) {
-      console.error("zarinpal request", JSON.stringify(answer));
+    if (!/^\d+$/.test(answer) || Number(answer) <= 0) {
+      console.error("bitpay send", answer.slice(0, 200));
       return reply({ error: "gateway" }, 502);
     }
+    const authority = authorityOf(test, answer);
     const { error: saveError } = await db.rpc("register_payment_attempt", {
       p_order: order.id, p_authority: authority, p_test: test, p_amount: order.amount_irr,
     });
     if (saveError) return reply({ error: "storage" }, 503);
-    return reply({ url: zp.startPay(authority) });
+    return reply({ url: zp.startPay(answer) });
   }
 
   // ---------- Verify (back from the bank) ----------
@@ -460,18 +492,32 @@ Deno.serve(async (req) => {
     if (attempt.verified_at && attempt.ref_id && !attempt.needs_review && order.ref_id === attempt.ref_id
       && ["paid", "processing", "completed"].includes(order.status))
       return reply({ paid: true, number: order.number, ref_id: order.ref_id, plan: order.plan_id });
-    if (body.status !== "OK") return reply({ paid: false, number: order.number, plan: order.plan_id });
+    const transId = String(body.trans_id || "");
+    const parsed = parseAuthority(authority);
+    if (body.status !== "OK" || !parsed || parsed.test !== attempt.test || !/^\d{1,30}$/.test(transId))
+      return reply({ paid: false, number: order.number, plan: order.plan_id });
     const zp = gateway(attempt.test);
-    const answer = await zarinpal(attempt.test, "verify", { merchant_id: zp.merchant, amount: attempt.amount_irr, authority });
-    const code = answer?.data?.code;
-    if (!answer || (!answer.data && !answer.errors?.code)) return reply({ error: "gateway" }, 502);
-    if (code !== 100 && code !== 101) {
-      console.error("zarinpal verify", JSON.stringify(answer));
+    if (!zp.merchant) return reply({ error: "not_configured" }, 503);
+    const raw = await bitpay(attempt.test, "verify", { api: zp.merchant, trans_id: transId, id_get: parsed.idGet, json: 1 });
+    if (!raw) return reply({ error: "gateway" }, 502);
+    let answer: { status?: number | string; amount?: number | string; cardNum?: string; factorId?: string | number } = {};
+    try {
+      answer = JSON.parse(raw);
+    } catch {
+      console.error("bitpay verify", raw.slice(0, 200));
+      return reply({ error: "gateway" }, 502);
+    }
+    const status = Number(answer.status);
+    // 1: paid now. 11: already confirmed with us before (a reload after a
+    // failed save); the amount must still match when Bitpay gives it.
+    const amountOk = answer.amount == null ? status === 11 : Number(answer.amount) === Number(attempt.amount_irr);
+    const factorOk = answer.factorId == null || String(answer.factorId) === String(order.number);
+    if ((status !== 1 && status !== 11) || !amountOk || !factorOk) {
+      console.error("bitpay verify", raw.slice(0, 200));
       return reply({ paid: false, number: order.number, plan: order.plan_id });
     }
-    if (!answer.data.ref_id) return reply({ error: "gateway" }, 502);
     const { data: result, error: saveError } = await db.rpc("confirm_order_payment", {
-      p_order: order.id, p_authority: authority, p_ref: String(answer.data.ref_id), p_card: answer.data.card_pan || null,
+      p_order: order.id, p_authority: authority, p_ref: transId, p_card: answer.cardNum ? String(answer.cardNum).slice(0, 40) : null,
     });
     if (saveError || !result) return reply({ error: "storage" }, 503);
     if (result.paid) later(emailOnce(order.id, "paid"));
