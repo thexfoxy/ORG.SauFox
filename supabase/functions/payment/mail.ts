@@ -68,15 +68,26 @@ const rows = (items: [string, string][], rtl: boolean) =>
 const button = (href: string, fa: string, en: string) =>
   `<a href="${href}" style="display:inline-block;padding:13px 26px;border-radius:10px;background:#ff7a1a;color:#1a0d04;text-decoration:none;font:700 15px/1 ${FA_FONT};">${fa} &middot; ${en}</a>`;
 
-const page = (fa: string, en: string, action = "", footFa = "", footEn = "") => `<!doctype html>
+// A receipt's head: an orange tick, "paid", and the amount, large.
+const paidHero = (amount: number) =>
+  `<tr><td style="padding:8px 32px 4px;text-align:center;">` +
+  `<div style="display:inline-block;width:64px;height:64px;line-height:64px;border-radius:50%;background:#ff7a1a;background-image:linear-gradient(180deg,#ffa75a,#ff6a0a);color:#ffffff;font:700 34px/64px Arial,sans-serif;box-shadow:0 10px 26px rgba(255,106,10,0.45);">&#10003;</div>` +
+  `<p dir="rtl" style="margin:14px 0 0;font:700 15px/1.6 ${FA_FONT};color:#ffb070;">پرداخت موفق <span style="color:#8e8c95;font-family:${EN_FONT};font-weight:400;">&middot; Payment successful</span></p>` +
+  `<p dir="rtl" style="margin:6px 0 0;font:800 30px/1.3 ${FA_FONT};color:#f5f3ef;">${rialsFa(amount)}</p>` +
+  `<p style="margin:2px 0 0;font:13px/1.4 ${EN_FONT};color:#8e8c95;">${rialsEn(amount)}</p>` +
+  `</td></tr>`;
+
+const page = (fa: string, en: string, action = "", footFa = "", footEn = "", hero = "") => `<!doctype html>
 <html><head><meta charset="utf-8"><style>
 @font-face{font-family:"Vazirmatn";src:url("${SITE}/assets/fonts/vazirmatn-nl.woff2") format("woff2");font-weight:100 900;}
 </style></head><body style="margin:0;background:#0f0f11;">
 <div style="margin:0;padding:32px 16px;background:#0f0f11;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#18181b;border-radius:16px;">
-    <tr><td style="padding:32px 32px 8px;text-align:center;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#18181b;border-radius:20px;border:1px solid #2a2a2f;overflow:hidden;">
+    <tr><td style="height:4px;line-height:4px;font-size:0;background:#ff7a1a;background-image:linear-gradient(90deg,#ff6a0a,#ffb35e,#ff6a0a);">&nbsp;</td></tr>
+    <tr><td style="padding:28px 32px 8px;text-align:center;">
       <span style="font:italic 30px/1 Georgia,'Times New Roman',serif;color:#f5f3ef;">SauFox <span style="color:#8e8c95;">Entertainment</span></span>
     </td></tr>
+    ${hero}
     <tr><td dir="rtl" style="padding:24px 32px 8px;text-align:right;font:16px/2 ${FA_FONT};color:#d9d6d0;">${fa}</td></tr>
     ${action ? `<tr><td style="padding:16px 32px 8px;text-align:center;">${action}</td></tr>` : ""}
     <tr><td style="padding:8px 32px 8px;text-align:left;font:15px/1.7 ${EN_FONT};color:#d9d6d0;">
@@ -207,7 +218,8 @@ export const paidEmail = (order: Order, released: boolean, planEnds?: string | n
         ? button(`${SITE}/profile.html`, "پروفایل من", "My profile")
         : button(`${SITE}/profile.html#library`, "کتابخانه‌ی من", "My library"),
       `برای بازگشت وجه، طبق <a href="${SITE}/terms.html#${plan ? "subscriptions" : "purchases"}" style="color:#ff7a1a;">قوانین خرید</a>، شماره‌ی سفارش را به همین ایمیل پاسخ دهید.`,
-      `For a refund under the <a href="${SITE}/terms.html#${plan ? "subscriptions" : "purchases"}" style="color:#ff7a1a;">terms of purchase</a>, reply to this email with your order number.`
+      `For a refund under the <a href="${SITE}/terms.html#${plan ? "subscriptions" : "purchases"}" style="color:#ff7a1a;">terms of purchase</a>, reply to this email with your order number.`,
+      paidHero(order.amount_irr)
     ),
   };
 };

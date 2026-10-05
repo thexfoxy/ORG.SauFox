@@ -57,7 +57,7 @@
   <meta name="robots" content="noindex">
   <link rel="preload" href="assets/fonts/great-vibes.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/barlow-condensed-700i.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=111">
+  <link rel="stylesheet" href="css/style.css?v=112">
   <script>
     // Same header states as the home page (see index.html).
     (function () {
@@ -179,25 +179,41 @@
           </label>
           <p class="auth__message" role="status" aria-live="polite"></p>
           <button class="auth__submit" type="submit">Place order</button>
+          <div class="checkout-trust">
+            <p class="checkout-trust__line">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              <span>Secure payment on the Shaparak bank page</span>
+            </p>
+            <div class="checkout-trust__seals">
+              <a href="https://bitpay.ir/certificate-501341-saufoxentertainment.ir" target="_blank" rel="noopener"><img src="https://bitpay.ir/theme/public/images/trusted-logo.svg" alt="Bitpay" loading="lazy"></a>
+              <a referrerpolicy="origin" target="_blank" href="https://trustseal.enamad.ir/?id=7933711&amp;Code=bmrlXpeqo3ruMStc0SYwA5DAULWrzjwZ"><img referrerpolicy="origin" src="https://trustseal.enamad.ir/logo.aspx?id=7933711&amp;Code=bmrlXpeqo3ruMStc0SYwA5DAULWrzjwZ" alt="eNamad" loading="lazy"></a>
+            </div>
+          </div>
         </aside>
       </div>
     </form>
 
     <!-- After placing an order, and after coming back from the bank. -->
     <section class="checkout__done" hidden>
-      <div class="empty">
+      <div class="receipt">
+        <div class="receipt__glow" aria-hidden="true"></div>
         <span class="checkout__tick" aria-hidden="true">
+          <svg class="checkout__tick-ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="29"/></svg>
           <svg class="checkout__tick-ok" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <svg class="checkout__tick-no" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
         </span>
-        <p class="empty__title" data-slot="done-title">Your order is in</p>
-        <p class="empty__text" data-slot="done-number"></p>
-        <p class="empty__text" data-slot="done-text">It&rsquo;s waiting for payment. Online payment opens soon, and we&rsquo;ll email you when you can pay. You can follow or cancel it in your profile.</p>
+        <p class="receipt__title" data-slot="done-title">Your order is in</p>
+        <p class="receipt__text" data-slot="done-text">It&rsquo;s waiting for payment. Online payment opens soon, and we&rsquo;ll email you when you can pay. You can follow or cancel it in your profile.</p>
+        <p class="receipt__number" data-slot="done-number"></p>
+        <!-- The receipt (paid orders): filled from the member's own order. -->
+        <dl class="receipt__lines" data-slot="receipt" hidden></dl>
         <p class="auth__message" data-slot="done-message" role="status" aria-live="polite"></p>
         <div class="checkout__done-actions">
           <button class="empty__button empty__button--accent" type="button" data-action="pay-again" hidden>Try paying again</button>
+          <a class="empty__button empty__button--accent" href="profile#library" data-slot="library-link" hidden>My library</a>
+          <a class="empty__button" href="download" data-slot="launcher-link" hidden>Get the launcher</a>
           <a class="empty__button empty__button--accent" href="profile#orders" data-slot="orders-link">See my orders</a>
-          <a class="empty__button" href="/">Back to all works</a>
+          <a class="empty__button" href="/" data-slot="home-link">Back to all works</a>
         </div>
       </div>
     </section>
@@ -259,8 +275,8 @@
   <script src="/js/routes.js?v=102" defer></script>
   <script src="js/vendor/supabase.js?v=89" defer></script>
   <script src="js/numbers.js?v=104" defer></script>
-  <script src="js/fa.js?v=110" defer></script>
+  <script src="js/fa.js?v=111" defer></script>
   <script src="/js/credits.js?v=103" defer></script>
-  <script src="js/main.js?v=115" defer></script>
+  <script src="js/main.js?v=116" defer></script>
 </body>
 </html>

@@ -583,14 +583,37 @@ const fileSize = (bytes) => {
   return `${num(value, value < 10 ? 1 : 0)} ${unit}`;
 };
 // Sends the member to the bank. Returns a message if that can't happen.
+// A moment's screen while the bank page is on its way, so the jump to the
+// gateway isn't abrupt (and a second press can't start a second payment).
+const bankScreen = () => {
+  let el = document.querySelector(".bank-screen");
+  if (el) return el;
+  el = document.createElement("div");
+  el.className = "bank-screen";
+  el.setAttribute("role", "status");
+  el.innerHTML =
+    '<div class="bank-screen__card">' +
+    '<span class="bank-screen__ring" aria-hidden="true"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28"/></svg>' +
+    '<svg class="bank-screen__lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>' +
+    '<strong class="bank-screen__title"></strong><span class="bank-screen__text"></span></div>';
+  el.querySelector(".bank-screen__title").textContent = t("Taking you to the secure payment page…");
+  el.querySelector(".bank-screen__text").textContent = t("You'll enter your card on the bank's page through Bitpay, never on this site.");
+  document.body.append(el);
+  requestAnimationFrame(() => el.classList.add("is-in"));
+  return el;
+};
+
 const payOrder = async (orderId) => {
   const session = await verifiedSession();
   if (!session) return PAYMENT_ERRORS.signed_out;
+  const screen = bankScreen();
   const answer = await payment({ action: "start", order_id: orderId }, session);
   if (answer.url) {
-    location.href = answer.url;
+    // Let the screen show for a breath, then go.
+    setTimeout(() => (location.href = answer.url), 700);
     return "";
   }
+  screen.remove();
   return PAYMENT_ERRORS[answer.error] || "Couldn't reach the payment service. Check your connection and try again.";
 };
 
@@ -6919,7 +6942,45 @@ const ticketThread = async (list, messages, when) => {
   // "paid", or "failed" (back from the bank without paying).
   const doneSlot = (name) => done.querySelector(`[data-slot="${name}"]`);
   const retry = done.querySelector('[data-action="pay-again"]');
-  const finish = (state, { number, ref, note = "" }) => {
+  // A paid order's receipt, from the member's own order (what was bought,
+  // the amount, the card and when).
+  const fillReceipt = async (orderId, ref) => {
+    const box = doneSlot("receipt");
+    box.hidden = true;
+    if (!orderId) return;
+    const { data: order } = await account
+      .from("orders")
+      .select("number, title, plan_id, amount_irr, card_pan, paid_at, ref_id")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (!order) return;
+    const rows = [
+      [order.plan_id ? "Plan" : "Work", order.plan_id ? t(`${planName(order.plan_id)} plan`) : order.title, !order.plan_id],
+      ["Amount paid", money.IRR(order.amount_irr)],
+      ["Reference", order.ref_id || ref, true],
+      ...(order.card_pan ? [["Card", order.card_pan, true]] : []),
+      ...(order.paid_at ? [["Date", dateText(order.paid_at, { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })]] : []),
+    ];
+    box.replaceChildren(
+      ...rows.map(([label, value, ltr]) => {
+        const row = document.createElement("div");
+        const dt = document.createElement("dt");
+        dt.textContent = t(label);
+        const dd = document.createElement("dd");
+        dd.textContent = value;
+        if (ltr) {
+          dd.dir = "ltr";
+          dd.translate = false;
+          dd.classList.add("selectable");
+        }
+        row.append(dt, dd);
+        return row;
+      })
+    );
+    box.hidden = false;
+  };
+
+  const finish = (state, { number, ref, note = "", orderId = null, game = false }) => {
     const TEXT = {
       placed: [
         "Your order is in",
@@ -6947,7 +7008,20 @@ const ticketThread = async (list, messages, when) => {
     }
     doneSlot("done-message").textContent = note;
     retry.hidden = state !== "failed";
-    doneSlot("orders-link").classList.toggle("empty__button--accent", state !== "failed");
+    const paidWork = state === "paid" && !plan;
+    doneSlot("library-link").hidden = !paidWork;
+    doneSlot("launcher-link").hidden = !(paidWork && game);
+    doneSlot("orders-link").classList.toggle("empty__button--accent", state === "placed");
+    if (state === "paid") {
+      // The receipt replaces the one-line number and reference.
+      numberLine.hidden = true;
+      fillReceipt(orderId, ref).then(() => {
+        if (doneSlot("receipt").hidden) numberLine.hidden = false;
+      });
+    } else {
+      numberLine.hidden = false;
+      doneSlot("receipt").hidden = true;
+    }
     show(done);
     scrollTo(0, 0);
   };
@@ -6973,7 +7047,12 @@ const ticketThread = async (list, messages, when) => {
       return;
     }
     plan = answer.plan || null;
-    if (answer.paid) return finish("paid", { number: answer.number, ref: answer.ref_id });
+    if (answer.paid) {
+      // Games come with the launcher: offer it on the receipt.
+      const { data: bought } = await account.from("orders").select("works(kind)").eq("id", returning).maybeSingle();
+      const game = String(bought?.works?.kind || "").toLowerCase() === "game";
+      return finish("paid", { number: answer.number, ref: answer.ref_id, orderId: returning, game });
+    }
     finish("failed", { number: answer.number });
     retry.addEventListener("click", async () => {
       retry.disabled = true;
