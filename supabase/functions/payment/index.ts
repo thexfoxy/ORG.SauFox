@@ -5,8 +5,9 @@ import { verifiedCaller, memberClient } from "../_shared/auth.ts";
 //   -> { url }  the bank page to send them to
 // POST { action: "verify", order_id, authority, status, trans_id }
 //   -> { paid, number, ref_id? }  asks Bitpay whether the payment went through
-// GET or POST /payment/return/<order id>/<t|l>   (Bitpay sends the buyer here)
-//   -> 303 to checkout.html?order=…&Authority=…&Status=OK|NOK&tx=<trans_id>
+// Bitpay sends the buyer to <site>/pay/<order id>/<t|l>?trans_id=…&id_get=…,
+// which 404.html turns into checkout.html?order=…&Authority=…&Status=…&tx=…
+// (GET or POST /payment/return/<order id>/<t|l> does the same, for older ones)
 // POST { action: "placed", order_id }           signed-in member, own order
 //   -> { ok }  emails "order received" (sent while online payment is closed)
 // POST { action: "status-email", order_id }     admins, after changing a status
@@ -49,7 +50,10 @@ declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | unde
 const SITE = "https://saufoxentertainment.ir";
 // Bitpay's published key for its test gateway (not a secret).
 const TEST_API = "adxcv-zzadq-polkjsad-opp13opoz-1sdf455aadzmck1244567";
-const RETURN_URL = `${Deno.env.get("SUPABASE_URL")}/functions/v1/payment/return`;
+// Where Bitpay sends the buyer back: on the site's own domain (the live
+// gateway accepts only its registered domain); 404.html hands over to the
+// checkout page. The function's own /return route stays for older payments.
+const RETURN_URL = `${SITE}/pay`;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",

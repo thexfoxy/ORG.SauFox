@@ -17,6 +17,25 @@
     })();
   </script>
   <script>
+    // Back from Bitpay: it sends the buyer to /pay/<order>/<t|l> (on this
+    // domain, as the gateway requires) with ?trans_id=…&id_get=…. Hand over
+    // to the checkout page, which asks the server to verify; nothing here is
+    // trusted.
+    (function () {
+      var m = /^\/pay\/([0-9a-f-]{36})\/([tl])\/?$/i.exec(location.pathname);
+      if (!m) return;
+      document.documentElement.style.visibility = "hidden";
+      var p = new URLSearchParams(location.search);
+      var idGet = /^\d{1,18}$/.test(p.get("id_get") || "") ? p.get("id_get") : "";
+      var tx = /^\d{1,30}$/.test(p.get("trans_id") || "") ? p.get("trans_id") : "";
+      var to = "/checkout.html?order=" + m[1].toLowerCase();
+      if (idGet) to += "&Authority=bp" + (m[2].toLowerCase() === "t" ? "t" : "") + "-" + idGet;
+      to += "&Status=" + (idGet && tx ? "OK" : "NOK");
+      if (tx) to += "&tx=" + tx;
+      location.replace(to);
+    })();
+  </script>
+  <script>
     // Clean addresses: never ".html" in the address bar (GitHub Pages
     // serves /work for work.html), and the home page is just "/". Pages
     // start at the top: the browser doesn't bring back the old scroll
