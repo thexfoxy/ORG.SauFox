@@ -84,6 +84,7 @@
       z-index: 0;
       display: grid;
       align-content: center;
+      align-items: center;
       gap: 16px;
       transform: rotate(-9deg);
       pointer-events: none;
@@ -98,14 +99,15 @@
     .dlp__row:nth-child(even) .dlp__track { animation-direction: reverse; }
     .dlp__tile {
       flex: none;
-      width: clamp(200px, 22vw, 340px);
-      aspect-ratio: 16 / 10;
-      border-radius: 18px;
+      height: var(--h, 200px);
+      border-radius: 16px;
       object-fit: cover;
       background: #141317;
       opacity: 0;
       transition: opacity 1.2s ease;
     }
+    .dlp__tile--wide { aspect-ratio: 16 / 9; }
+    .dlp__tile--tall { aspect-ratio: 2 / 3; }
     .dlp__tile.is-in { opacity: 1; }
     @keyframes dlp-drift { to { transform: translateX(-50%); } }
 
@@ -132,42 +134,55 @@
     }
     .dlp__brand img { display: block; height: 26px; width: auto; filter: drop-shadow(0 2px 14px rgba(0, 0, 0, 0.7)); }
 
-    /* The button */
-    .dlp__button {
+    /* The text and the button: plain, sliding up into place. */
+    .dlp__main {
       position: relative;
       z-index: 2;
+      display: grid;
+      justify-items: center;
+      gap: 26px;
+      padding: 0 20px;
+      text-align: center;
+      color: #f6f4ef;
+      font-family: var(--font-body);
+      animation: dlp-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+    }
+    .dlp__title {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .dlp__about {
+      margin: 10px 0 0;
+      font-size: clamp(14px, 1.5vw, 16px);
+      line-height: 1.8;
+      color: rgba(246, 244, 239, 0.72);
+    }
+    .dlp__button {
       display: inline-flex;
       align-items: center;
-      gap: 14px;
-      padding: 20px 34px;
+      gap: 12px;
+      padding: 15px 30px;
+      border: 1.5px solid rgba(255, 255, 255, 0.55);
       border-radius: 999px;
-      font: 700 clamp(17px, 2vw, 20px)/1 var(--font-body);
+      font: 600 17px/1 var(--font-body);
       color: #fff;
       text-decoration: none;
-      background: linear-gradient(180deg, #ff9a45, #ff6a0a);
-      box-shadow:
-        0 18px 40px -12px rgba(255, 100, 10, 0.8),
-        0 0 0 1px rgba(255, 190, 130, 0.45),
-        inset 0 1px 0 rgba(255, 255, 255, 0.45);
-      animation: dlp-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
-      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s;
+      background: none;
+      transition: border-color 0.25s, color 0.25s, transform 0.25s;
     }
-    .dlp__button:hover {
-      transform: translateY(-3px);
-      box-shadow:
-        0 26px 52px -12px rgba(255, 100, 10, 0.95),
-        0 0 0 1px rgba(255, 210, 160, 0.7),
-        inset 0 1px 0 rgba(255, 255, 255, 0.5);
-    }
-    .dlp__button:active { transform: translateY(1px); transition-duration: 0.1s; }
-    .dlp__button:focus-visible { outline: 2px solid #ffd2a8; outline-offset: 5px; }
-    .dlp__button svg { width: 24px; height: 24px; flex: none; fill: currentColor; }
+    .dlp__button:hover { border-color: #ff8a2e; color: #ff8a2e; }
+    .dlp__button:active { transform: scale(0.98); }
+    .dlp__button:focus-visible { outline: 2px solid #ffd2a8; outline-offset: 4px; }
+    .dlp__button svg { width: 20px; height: 20px; flex: none; fill: currentColor; }
     @keyframes dlp-in {
       from { opacity: 0; transform: translateY(46px); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .dlp__track, .dlp__button { animation: none; }
+      .dlp__track, .dlp__main { animation: none; }
     }
   </style>
 </head>
@@ -181,62 +196,79 @@
       <button type="button" data-lang-switch translate="no">فارسی</button>
     </div>
 
-    <a class="dlp__button" href="https://github.com/thexfoxy/Launcher.SauFox/releases/latest/download/SauFox-Setup.exe">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v9.6l3.3-3.3 1.4 1.4L12 16.4 6.3 10.7l1.4-1.4L11 12.6V3ZM5 18h14v2H5z"/></svg>
-      <span data-only="en">Download the launcher</span><span data-only="fa">دانلود لانچر</span>
-    </a>
+    <div class="dlp__main">
+      <div>
+        <h1 class="dlp__title"><span data-only="en">SauFox Launcher</span><span data-only="fa">لانچر ساوفاکس</span></h1>
+        <p class="dlp__about">
+          <span data-only="en">For Windows 10 and 11 (64-bit) · Free<br>Your whole library in one place, and it keeps itself up to date.</span>
+          <span data-only="fa">برای ویندوز ۱۰ و ۱۱ (۶۴ بیتی) · رایگان<br>کل کتابخانه‌تان یک‌جا، و خودش به‌روز می‌ماند.</span>
+        </p>
+      </div>
+      <a class="dlp__button" href="https://github.com/thexfoxy/Launcher.SauFox/releases/latest/download/SauFox-Setup.exe">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3h2v9.6l3.3-3.3 1.4 1.4L12 16.4 6.3 10.7l1.4-1.4L11 12.6V3ZM5 18h14v2H5z"/></svg>
+        <span data-only="en">Download</span><span data-only="fa">دانلود</span>
+      </a>
+    </div>
   </main>
 
   <script>
-    // The collage: this site's own artwork straight away, then the studio's
-    // published works once the catalogue loads (js/main.js).
+    // The collage: only the works' banners (each work's wide hero art and
+    // its tall cover), in rows of different heights. It comes from the
+    // published catalogue (js/main.js), so new banners show up by themselves.
     (function () {
       var box = document.querySelector(".dlp__collage");
-      // Enough rows to fill the (tilted) screen top to bottom.
-      var tileHeight = Math.min(340, Math.max(200, innerWidth * 0.22)) * 10 / 16 + 16;
-      var ROWS = Math.max(4, Math.ceil((innerHeight * 1.6) / tileHeight));
       var shown = "";
-      function build(pictures) {
-        var key = pictures.join("|");
-        if (!pictures.length || key === shown) return;
+      function build(banners) {
+        var key = banners.map(function (b) { return b.src; }).join("|");
+        if (!banners.length || key === shown) return;
         shown = key;
         box.textContent = "";
-        for (var r = 0; r < ROWS; r++) {
-          // Each row starts somewhere else in the list, and holds enough
-          // tiles to cover a wide screen; then the same again, so the drift
-          // loops without a seam.
+        var small = innerWidth < 700;
+        var heights = small ? [150, 210, 120, 180] : [210, 290, 170, 250];
+        var filled = 0, r = 0;
+        // Enough rows to fill the tilted screen from top to bottom.
+        while (filled < innerHeight * 1.7) {
+          var height = heights[r % heights.length];
           var list = [];
-          for (var i = 0; list.length < Math.max(8, pictures.length); i++) list.push(pictures[(i + r * 3) % pictures.length]);
+          var width = 0;
+          // Wide enough to cover the screen, then the same again so the drift
+          // loops without a seam.
+          for (var i = 0; width < innerWidth * 1.6 || list.length < 4; i++) {
+            var b = banners[(i + r * 2) % banners.length];
+            list.push(b);
+            width += height * (b.wide ? 16 / 9 : 2 / 3) + 16;
+          }
           var row = document.createElement("div");
           row.className = "dlp__row";
           var track = document.createElement("div");
           track.className = "dlp__track";
-          track.style.setProperty("--speed", (80 + r * 18) + "s");
-          list.concat(list).forEach(function (src) {
+          track.style.setProperty("--speed", (70 + r * 13) % 120 + 50 + "s");
+          list.concat(list).forEach(function (b) {
             var img = document.createElement("img");
-            img.className = "dlp__tile";
+            img.className = "dlp__tile " + (b.wide ? "dlp__tile--wide" : "dlp__tile--tall");
+            img.style.setProperty("--h", height + "px");
             img.alt = "";
             img.decoding = "async";
             img.onload = function () { img.classList.add("is-in"); };
-            img.src = src;
+            img.src = b.src;
             track.append(img);
           });
           row.append(track);
           box.append(row);
+          filled += height + 16;
+          r++;
         }
       }
-      var local = ["hero", "1", "2", "3", "4", "5", "6", "poster"].map(function (n) { return "assets/works/candlewood-" + n + ".webp"; });
-      build(local);
       document.addEventListener("DOMContentLoaded", function () {
         if (typeof catalog === "undefined") return;
         catalog.then(function (works) {
-          var seen = {}, pictures = [];
+          var seen = {}, banners = [];
           works.forEach(function (w) {
-            [w.hero].concat(w.stills || [], w.images || []).forEach(function (src) {
-              if (src && !seen[src]) { seen[src] = 1; pictures.push(src); }
+            [[w.hero, true], [(w.images || [])[0], false]].forEach(function (pair) {
+              if (pair[0] && !seen[pair[0]]) { seen[pair[0]] = 1; banners.push({ src: pair[0], wide: pair[1] }); }
             });
           });
-          if (pictures.length >= local.length) build(pictures);
+          build(banners);
         });
       });
     })();
