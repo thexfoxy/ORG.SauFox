@@ -32,5 +32,11 @@ test('clipboard failure never reveals or selects the key', async () => {
 });
 test('the key redemption field masks typed and pasted keys', async () => {
   const page = await readFile(new URL('../profile.html', import.meta.url), 'utf8');
-  assert.match(page, /name="code" type="password"/);
+  const css = await readFile(new URL('../css/style.css', import.meta.url), 'utf8');
+  // Not a password field (browsers would offer saved passwords there), but masked.
+  assert.match(page, /name="license" type="text"[^>]*autocomplete="off"/);
+  assert.match(css, /\.redeem__field input \{[^}]*-webkit-text-security: disc/);
+});
+test('only key-shaped input is sent for redemption', () => {
+  assert.match(main, /if \(!\/\^SFOX\[A-Z0-9\]\{16\}\$\/\.test\(clean\)\) return/);
 });

@@ -5814,6 +5814,11 @@ a.hero__panel {
   color: var(--text);
   background: var(--bg);
   text-transform: uppercase;
+  /* Masked like a password (a key on screen can be read off a stream or
+     over a shoulder), without being one: a password field draws the
+     browser's saved-password suggestions, and could fill one in here. */
+  -webkit-text-security: disc;
+  text-security: disc;
 }
 
 .redeem__field input:focus {
