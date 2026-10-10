@@ -445,7 +445,7 @@ const loadSite = async () => {
 };
 
 // Started once, on the pages that show works.
-const site = document.querySelector(".hero, .works, .plans, .title-page, .login-bg, .profile-page, .checkout, .browse, .news")
+const site = document.querySelector(".hero, .works, .plans, .title-page, .login-bg, .profile-page, .checkout, .browse, .news, .dlp__collage")
   ? loadSite()
   : Promise.resolve({ works: [], settings: {}, offline: false });
 const catalog = site.then((data) => data.works);
