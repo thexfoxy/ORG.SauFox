@@ -2648,11 +2648,15 @@ const signedInGoHome = async (user) => {
     const message = redeem.querySelector(".redeem__message");
     redeem.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const code = redeem.elements.code.value.trim();
-      if (code.replace(/[^A-Za-z0-9]/g, "").length < 8) return (message.textContent = t("Enter your game key."));
+      message.classList.remove("is-ok");
+      const code = redeem.elements.license.value.trim();
+      const clean = code.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      if (clean.length < 8) return (message.textContent = t("Enter your game key."));
+      // Only something shaped like a key (SFOX and 16 letters/digits) is
+      // sent, so nothing else typed or pasted here ever leaves the browser.
+      if (!/^SFOX[A-Z0-9]{16}$/.test(clean)) return (message.textContent = t(REDEEM_ERRORS.SF031));
       const button = redeem.querySelector(".redeem__button");
       button.disabled = true;
-      message.classList.remove("is-ok");
       const { data, error } = await account.rpc("redeem_license", { p_code: code });
       button.disabled = false;
       if (error) return (message.textContent = t(REDEEM_ERRORS[error.code] || "That key couldn't be added. Try again."));
