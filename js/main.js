@@ -951,28 +951,14 @@ gl_FragColor=vec4(c,1.);}`;
 })();
 
 // Section 1 — Header: profile chip (signed-in users only).
-// Desktop expands it on hover (CSS). On touch screens the first tap expands
-// it, a second tap follows the link, and tapping elsewhere collapses it.
+// Desktop expands it on hover (CSS); a tap on a phone opens the profile
+// straight away.
 (function profileChip() {
   const chip = document.querySelector(".profile-chip");
   if (!chip) return;
 
   const avatar = local.get("avatar");
   if (avatar) chip.querySelector("img").src = avatar;
-
-  const canHover = window.matchMedia("(hover: hover)").matches;
-
-  chip.addEventListener("click", (event) => {
-    if (canHover) return;
-    if (!chip.classList.contains("is-open")) {
-      event.preventDefault();
-      chip.classList.add("is-open");
-    }
-  });
-
-  document.addEventListener("click", (event) => {
-    if (!chip.contains(event.target)) chip.classList.remove("is-open");
-  });
 })();
 
 // ---------- YouTube ----------
@@ -3154,6 +3140,14 @@ const signedInGoHome = async (user) => {
   // open yet.
   const play = page.querySelector('[data-action="trailer"]');
   const trailerSoon = page.querySelector('[data-slot="trailer-soon"]');
+  // The actions are icons: each one's words (which change: "Buy", "In your
+  // library"…) become its tooltip and its name for screen readers.
+  page.querySelectorAll(".title-actions .title-button:not(.title-button--soon)").forEach((button) => {
+    const label = button.querySelector("span");
+    const name = () => button.setAttribute("aria-label", label.textContent.trim());
+    name();
+    new MutationObserver(name).observe(label, { childList: true, characterData: true, subtree: true });
+  });
   // The trailer on YouTube: its thumbnail, under the actions.
   if (youtubeId(work.youtube)) {
     const video = youtubeCard(work.youtube, work.youtubeThumb, "Watch the trailer on YouTube");
@@ -3454,9 +3448,6 @@ const signedInGoHome = async (user) => {
   const show = (on) => {
     button.setAttribute("aria-pressed", String(on));
     label.textContent = on ? "We'll email you" : "Notify me";
-    button.title = on
-      ? "You'll get an email when it's out. Press again to stop."
-      : "Get an email when it's out, and when the trailer arrives.";
   };
   show(false);
   button.hidden = false;
